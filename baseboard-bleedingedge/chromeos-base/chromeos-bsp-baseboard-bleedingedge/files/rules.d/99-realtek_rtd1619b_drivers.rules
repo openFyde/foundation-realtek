@@ -1,0 +1,6 @@
+ACTION=="add", DRIVER=="rtk-rproc", SUBSYSTEM=="platform", RUN+="/sbin/modprobe rpmsg_rtk"
+ACTION=="add", KERNEL=="9801aa80.rtk_rpmsg:hifi-rpc.rpmsg_chrdev.4.0", SUBSYSTEM=="rpmsg", RUN+="/sbin/modprobe rtk_rpc_mem"
+ACTION=="add", KERNEL=="9801aa80.rtk_rpmsg:hifi-rpc.hifi-intr-channel.-1.-1", SUBSYSTEM=="rpmsg", RUN+="/sbin/modprobe rtk_krpc_agent"
+ACTION=="add", DRIVER=="rtk-krpc-agent", RUN+="/sbin/modprobe rtk_urpc_service"
+ACTION=="add", KERNEL=="rtk_urpc_service", RUN+="/sbin/modprobe rtk_drm"
+ACTION=="add", KERNEL=="card*", RUN+="/sbin/modprobe mali_kbase"

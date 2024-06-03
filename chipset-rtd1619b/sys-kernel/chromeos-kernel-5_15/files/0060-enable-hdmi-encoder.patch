@@ -1,0 +1,26 @@
+From 16ca0af47bbb902acfbc23f169a6df84d5aa1f7d Mon Sep 17 00:00:00 2001
+From: invalid_git config <unknown@unknown>
+Date: Fri, 10 May 2024 06:31:00 +0000
+Subject: [PATCH 60/69]
+
+---
+ drivers/gpu/drm/realtek/rtk_hdmi.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/gpu/drm/realtek/rtk_hdmi.c b/drivers/gpu/drm/realtek/rtk_hdmi.c
+index 91d3757a2..815997945 100644
+--- a/drivers/gpu/drm/realtek/rtk_hdmi.c
++++ b/drivers/gpu/drm/realtek/rtk_hdmi.c
+@@ -1339,6 +1339,9 @@ static void rtk_hdmi_enc_enable(struct drm_encoder *encoder)
+ 	struct rtk_hdmi *hdmi = to_rtk_hdmi(encoder);
+ 
+ 	dev_info(hdmi->dev, "Enable encoder");
++
++	if (!hdmi->is_hdmi_on)
++		rtk_hdmi_setup(hdmi, &hdmi->previous_mode);
+ }
+ 
+ static void rtk_hdmi_enc_disable(struct drm_encoder *encoder)
+-- 
+2.42.0
+

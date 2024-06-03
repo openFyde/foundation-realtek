@@ -1,0 +1,60 @@
+Character devices:
+  1 mem
+  2 pty
+  3 ttyp
+  4 /dev/vc/0
+  4 tty
+  4 ttyS
+  5 /dev/tty
+  5 /dev/console
+  5 /dev/ptmx
+  7 vcs
+ 10 misc
+ 13 input
+ 81 video4linux
+128 ptm
+136 pts
+180 usb
+189 usb_device
+212 DVB
+226 drm
+237 rtk_urpc
+238 rtk_fwdbg
+239 rpmb
+240 ftdi_spi_Dev
+241 uio
+242 bsg
+243 watchdog
+244 remoteproc
+245 ptp
+246 pps
+247 cec
+248 media
+249 rtc
+250 dma_heap
+251 tee
+252 rpmsg_ctrl
+253 rpmsg_char
+254 gpiochip
+
+Block devices:
+  1 ramdisk
+  7 loop
+  8 sd
+ 65 sd
+ 66 sd
+ 67 sd
+ 68 sd
+ 69 sd
+ 70 sd
+ 71 sd
+128 sd
+129 sd
+130 sd
+131 sd
+132 sd
+133 sd
+134 sd
+135 sd
+179 mmc
+259 blkext

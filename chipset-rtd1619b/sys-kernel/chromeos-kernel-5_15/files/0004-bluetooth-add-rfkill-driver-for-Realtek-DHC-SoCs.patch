@@ -1,0 +1,43 @@
+From 32788a08820d18b1dd67381824db25ef20294eac Mon Sep 17 00:00:00 2001
+From: James Tai <james.tai@realtek.com>
+Date: Thu, 17 Nov 2022 16:05:12 +0800
+Subject: [PATCH 04/69] bluetooth: add rfkill driver for Realtek DHC SoCs
+
+Change-Id: I2abd10ee0b8357cc067bad8c68123fd8fd43ffa3
+---
+ drivers/bluetooth/Kconfig  | 6 ++++++
+ drivers/bluetooth/Makefile | 1 +
+ 2 files changed, 7 insertions(+)
+
+diff --git a/drivers/bluetooth/Kconfig b/drivers/bluetooth/Kconfig
+index cbe806333..1e670b81d 100644
+--- a/drivers/bluetooth/Kconfig
++++ b/drivers/bluetooth/Kconfig
+@@ -52,6 +52,12 @@ config BT_HCIBTUSB_INTERVAL
+ 	  Say Y here to enable notification of USB polling interval for
+ 	  Bluetooth USB devices by default.
+ 
++config BT_RTKBTRFKILL
++	tristate "Realtek Bluetooth RFKILL driver"
++	default n
++	help
++	  Realtek Bluetooth rfkill driver
++
+ config BT_HCIBTUSB_BCM
+ 	bool "Broadcom protocol support"
+ 	depends on BT_HCIBTUSB
+diff --git a/drivers/bluetooth/Makefile b/drivers/bluetooth/Makefile
+index 3321a8aea..5b0a3e603 100644
+--- a/drivers/bluetooth/Makefile
++++ b/drivers/bluetooth/Makefile
+@@ -13,6 +13,7 @@ obj-$(CONFIG_BT_HCIBT3C)	+= bt3c_cs.o
+ obj-$(CONFIG_BT_HCIBLUECARD)	+= bluecard_cs.o
+ 
+ obj-$(CONFIG_BT_HCIBTUSB)	+= btusb.o
++obj-$(CONFIG_BT_RTKBTRFKILL)	+= rtk_rfkill.o
+ obj-$(CONFIG_BT_HCIBTSDIO)	+= btsdio.o
+ 
+ obj-$(CONFIG_BT_INTEL)		+= btintel.o
+-- 
+2.42.0
+

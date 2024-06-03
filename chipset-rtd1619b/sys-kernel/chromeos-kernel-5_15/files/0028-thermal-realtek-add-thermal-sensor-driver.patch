@@ -1,0 +1,34 @@
+From f7f86e5bb2b77f2a621dd5e295ad016f90e15bac Mon Sep 17 00:00:00 2001
+From: Cheng-Yu Lee <cylee12@realtek.com>
+Date: Tue, 13 Oct 2020 15:45:51 +0800
+Subject: [PATCH 28/69] thermal: realtek: add thermal sensor driver
+
+Change-Id: I248a66f1a822b7ef3ec07ca9f217ec47c9d14cd3
+---
+ drivers/thermal/Kconfig  | 1 +
+ drivers/thermal/Makefile | 2 ++
+ 2 files changed, 3 insertions(+)
+
+diff --git a/drivers/thermal/Kconfig b/drivers/thermal/Kconfig
+index 7a4ba50ba..984b2daac 100644
+--- a/drivers/thermal/Kconfig
++++ b/drivers/thermal/Kconfig
+@@ -487,4 +487,5 @@ config KHADAS_MCU_FAN_THERMAL
+ 	  If you say yes here you get support for the FAN controlled
+ 	  by the Microcontroller found on the Khadas VIM boards.
+ 
++source "drivers/thermal/realtek/Kconfig"
+ endif
+diff --git a/drivers/thermal/Makefile b/drivers/thermal/Makefile
+index 9729a2b08..b15b8598d 100644
+--- a/drivers/thermal/Makefile
++++ b/drivers/thermal/Makefile
+@@ -60,3 +60,5 @@ obj-$(CONFIG_UNIPHIER_THERMAL)	+= uniphier_thermal.o
+ obj-$(CONFIG_AMLOGIC_THERMAL)     += amlogic_thermal.o
+ obj-$(CONFIG_SPRD_THERMAL)	+= sprd_thermal.o
+ obj-$(CONFIG_KHADAS_MCU_FAN_THERMAL)	+= khadas_mcu_fan.o
++obj-$(CONFIG_RTK_THERMAL)	+= realtek/
++
+-- 
+2.42.0
+

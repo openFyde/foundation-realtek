@@ -1,0 +1,1 @@
+earlycon=uart8250,mmio32,0x98007800 console=ttyS0,460800 uio_pdrv_genirq.of_id=generic-uio init=/sbin/init root=/dev/mmcblk0p2 rw rootfstype=ext4 rootwait firmware_class.path=/lib/firmware/realtek/rtd1619b/ pd_ignore_unused clk_ignore_unused loglevel=4

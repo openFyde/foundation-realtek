@@ -1,0 +1,229 @@
+From 2a054d06efa8bd184f9783ca996de34c78e937da Mon Sep 17 00:00:00 2001
+From: simon_hsu <simon_hsu@realtek.com>
+Date: Mon, 20 May 2024 00:22:00 +0800
+Subject: [PATCH] gpu: drm: realtek: add feature DRIVER_RENDER and two ioctl
+ RTK_GEM_CREATE & RTK_GEM_MAP_OFFSET in drm driver
+
+Change-Id: I1df00ed85c5016dcac5929f5ffc46f18d2f6a796
+---
+ drivers/gpu/drm/realtek/rtk_drm_drv.c   |  8 ++--
+ drivers/gpu/drm/realtek/rtk_drm_drv.h   |  4 +-
+ drivers/gpu/drm/realtek/rtk_drm_gem.c   | 35 +++++++++++++++
+ drivers/gpu/drm/realtek/rtk_drm_gem.h   |  5 +++
+ drivers/gpu/drm/realtek/rtk_drm_plane.c |  9 +++-
+ include/uapi/drm/realtek_drm.h          | 60 +++++++++++++++++++++++++
+ 6 files changed, 115 insertions(+), 6 deletions(-)
+ create mode 100644 include/uapi/drm/realtek_drm.h
+
+diff --git a/drivers/gpu/drm/realtek/rtk_drm_drv.c b/drivers/gpu/drm/realtek/rtk_drm_drv.c
+index d8aa5784c932..618bebb16604 100644
+--- a/drivers/gpu/drm/realtek/rtk_drm_drv.c
++++ b/drivers/gpu/drm/realtek/rtk_drm_drv.c
+@@ -26,6 +26,7 @@
+ #include <linux/platform_device.h>
+ 
+ #include "../drm_internal.h"
++#include <drm/realtek_drm.h>
+ 
+ #include <linux/dma-map-ops.h>
+ #include "rtk_drm_drv.h"
+@@ -148,8 +149,8 @@ static const struct file_operations rtk_drm_driver_fops = {
+ };
+ 
+ static struct drm_ioctl_desc rtk_drm_ioctls[] = {
+-	DRM_IOCTL_DEF_DRV(RTK_GET_UNLOCK_BUF, rtk_fence_get_unlock_buf_ioctl, DRM_AUTH|DRM_RENDER_ALLOW),
+-	DRM_IOCTL_DEF_DRV(RTK_GET_BUF_ST, rtk_fence_get_buf_st_ioctl, DRM_AUTH|DRM_RENDER_ALLOW),
++	DRM_IOCTL_DEF_DRV(RTK_GEM_CREATE, rtk_gem_create_ioctl, DRM_UNLOCKED | DRM_AUTH | DRM_RENDER_ALLOW),
++	DRM_IOCTL_DEF_DRV(RTK_GEM_MAP_OFFSET, rtk_gem_map_offset_ioctl, DRM_UNLOCKED | DRM_AUTH | DRM_RENDER_ALLOW),
+ 	DRM_IOCTL_DEF_DRV(RTK_EXPORT_REFCLOCK_FD, rtk_plane_export_refclock_fd_ioctl, DRM_AUTH|DRM_RENDER_ALLOW),
+ 	DRM_IOCTL_DEF_DRV(RTK_SET_PAUSE, rtk_plane_set_pause_ioctl, DRM_AUTH|DRM_RENDER_ALLOW),
+ 	DRM_IOCTL_DEF_DRV(RTK_GET_PLANE_ID, rtk_plane_get_plane_id, DRM_AUTH|DRM_RENDER_ALLOW),
+@@ -179,7 +180,8 @@ static struct drm_ioctl_desc rtk_drm_ioctls[] = {
+ };
+ 
+ static struct drm_driver rtk_drm_driver = {
+-	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_ATOMIC,
++	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_ATOMIC |
++				  DRIVER_RENDER,
+ 	.dumb_create		= rtk_gem_dumb_create,
+ 	.dumb_map_offset	= rtk_gem_dumb_map_offset,
+ 	.prime_handle_to_fd     = drm_gem_prime_handle_to_fd,
+diff --git a/drivers/gpu/drm/realtek/rtk_drm_drv.h b/drivers/gpu/drm/realtek/rtk_drm_drv.h
+index b8e8d8d236a2..4f6126f55b94 100644
+--- a/drivers/gpu/drm/realtek/rtk_drm_drv.h
++++ b/drivers/gpu/drm/realtek/rtk_drm_drv.h
+@@ -13,8 +13,8 @@
+ #define RTK_GEM_INFO_MAX	128
+ 
+ /* VO specific ioctl */
+-#define RTK_GET_UNLOCK_BUF   0x0
+-#define RTK_GET_BUF_ST   0x1
++#define RTK_GEM_CREATE 0x0
++#define RTK_GEM_MAP_OFFSET 0x1
+ #define RTK_EXPORT_REFCLOCK_FD   0x2
+ #define RTK_SET_PAUSE   0x3
+ #define RTK_GET_PLANE_ID   0x4
+diff --git a/drivers/gpu/drm/realtek/rtk_drm_gem.c b/drivers/gpu/drm/realtek/rtk_drm_gem.c
+index 49cf17f50123..edb242ba5718 100644
+--- a/drivers/gpu/drm/realtek/rtk_drm_gem.c
++++ b/drivers/gpu/drm/realtek/rtk_drm_gem.c
+@@ -20,6 +20,8 @@
+ #include <drm/drm_file.h>
+ #include <drm/drm_gem_cma_helper.h>
+ 
++#include <drm/realtek_drm.h>
++
+ #include "rtk_drm_drv.h"
+ #include "rtk_drm_gem.h"
+ #include "rtk_drm_rpc.h"
+@@ -417,3 +419,36 @@ int rtk_gem_info_debugfs(struct seq_file *m, void *unused)
+ 	return 0;
+ }
+ #endif
++
++int rtk_gem_map_offset_ioctl(struct drm_device *drm, void *data,
++			     struct drm_file *file_priv)
++{
++	struct drm_rtk_gem_map_off *args = data;
++
++	return drm_gem_dumb_map_offset(file_priv, drm, args->handle,
++				       &args->offset);
++}
++
++int rtk_gem_create_ioctl(struct drm_device *drm, void *data,
++			 struct drm_file *file_priv)
++{
++	struct rtk_gem_object *rtk_obj;
++	struct drm_rtk_gem_create *args = data;
++	int ret;
++
++	rtk_obj = rtk_gem_object_create(drm, args->size, false);
++	if (IS_ERR(rtk_obj))
++		return PTR_ERR(rtk_obj);
++
++	ret = drm_gem_handle_create(file_priv, &rtk_obj->base, &args->handle);
++	if (ret)
++		goto err_create_handle;
++
++	drm_gem_object_put(&rtk_obj->base);
++
++	return 0;
++
++err_create_handle:
++	rtk_gem_free_object(&rtk_obj->base);
++	return ret;
++}
+diff --git a/drivers/gpu/drm/realtek/rtk_drm_gem.h b/drivers/gpu/drm/realtek/rtk_drm_gem.h
+index 4f179c3115c6..46749ef9521b 100644
+--- a/drivers/gpu/drm/realtek/rtk_drm_gem.h
++++ b/drivers/gpu/drm/realtek/rtk_drm_gem.h
+@@ -50,4 +50,9 @@ int rtk_gem_dumb_map_offset(struct drm_file *file_priv,
+ int rtk_gem_mmap(struct file *filp, struct vm_area_struct *vma);
+ int rtk_gem_info_debugfs(struct seq_file *m, void *unused);
+ 
++int rtk_gem_map_offset_ioctl(struct drm_device *drm, void *data,
++			     struct drm_file *file_priv);
++int rtk_gem_create_ioctl(struct drm_device *dev, void *data,
++			 struct drm_file *file_priv);
++
+ #endif  /* _RTK_DRM_GEM_H_ */
+diff --git a/drivers/gpu/drm/realtek/rtk_drm_plane.c b/drivers/gpu/drm/realtek/rtk_drm_plane.c
+index c354310bcaf8..6a8f26e39dc4 100644
+--- a/drivers/gpu/drm/realtek/rtk_drm_plane.c
++++ b/drivers/gpu/drm/realtek/rtk_drm_plane.c
+@@ -38,6 +38,7 @@ static const unsigned int osd_formats[] = {
+ 	DRM_FORMAT_XRGB8888,
+ 	DRM_FORMAT_ARGB8888,
+ 	DRM_FORMAT_BGRA8888,
++	DRM_FORMAT_ABGR8888,
+ 	DRM_FORMAT_RGB565,
+ 	DRM_FORMAT_RGB888,
+ 	DRM_FORMAT_BGR888,
+@@ -424,11 +425,17 @@ static int queue_ring_buffer(struct drm_plane *plane)
+ 		if (fb->format->format == DRM_FORMAT_XRGB8888) {
+ 			flags |= eBuffer_USE_GLOBAL_ALPHA;
+ 			obj->alpha = 0x3ff;
++			obj->format = INBAND_CMD_GRAPHIC_FORMAT_ARGB8888_LITTLE;
++		} else if (fb->format->format == DRM_FORMAT_ABGR8888) {
++			obj->format = INBAND_CMD_GRAPHIC_FORMAT_RGBA8888;
++		} else if (fb->format->format == DRM_FORMAT_ARGB8888) {
++			obj->format = INBAND_CMD_GRAPHIC_FORMAT_ARGB8888_LITTLE;
+ 		}
++
+ 		if (fb->modifier & AFBC_FORMAT_MOD_YTR) {
+ 			flags |= eBuffer_AFBC_Enable | eBuffer_AFBC_YUV_Transform;
+ 		}
+-		obj->format = INBAND_CMD_GRAPHIC_FORMAT_ARGB8888_LITTLE;
++
+ 		obj->context = rtk_plane->buflock_idx;
+ 		obj->width = fb->width;
+ 		obj->height = fb->height;
+diff --git a/include/uapi/drm/realtek_drm.h b/include/uapi/drm/realtek_drm.h
+new file mode 100644
+index 000000000000..e7a357454b88
+--- /dev/null
++++ b/include/uapi/drm/realtek_drm.h
+@@ -0,0 +1,60 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Copyright (C) 2019 Realtek Inc.
++ * Author: Simon Hsu <simon_hsu@realtek.com>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#ifndef _UAPI_REALTEK_DRM_H
++#define _UAPI_REALTEK_DRM_H
++
++#include <drm/drm.h>
++
++/**
++ * User-desired buffer creation information structure.
++ *
++ * @size: user-desired memory allocation size.
++ *	- this size value would be page-aligned internally.
++ * @flags: user request for setting memory type or cache attributes.
++ * @handle: returned a handle to created gem object.
++ *	- this handle will be set by gem module of kernel side.
++ */
++struct drm_rtk_gem_create {
++	uint64_t size;
++	uint32_t flags;
++	uint32_t handle;
++};
++
++/**
++ * A structure for getting buffer offset.
++ *
++ * @handle: a pointer to gem object created.
++ * @pad: just padding to be 64-bit aligned.
++ * @offset: relatived offset value of the memory region allocated.
++ *     - this value should be set by user.
++ */
++struct drm_rtk_gem_map_off {
++	uint32_t handle;
++	uint32_t pad;
++	uint64_t offset;
++};
++
++#define DRM_RTK_GEM_CREATE		0x00
++#define DRM_RTK_GEM_MAP_OFFSET		0x01
++
++#define DRM_IOCTL_RTK_GEM_CREATE	DRM_IOWR(DRM_COMMAND_BASE + \
++		DRM_RTK_GEM_CREATE, struct drm_rtk_gem_create)
++
++#define DRM_IOCTL_RTK_GEM_MAP_OFFSET	DRM_IOWR(DRM_COMMAND_BASE + \
++		DRM_RTK_GEM_MAP_OFFSET, struct drm_rtk_gem_map_off)
++
++
++#endif /* _UAPI_REALTEK_DRM_H */
+-- 
+2.34.1
+

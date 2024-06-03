@@ -1,0 +1,40 @@
+From 4e6c9778d04214ba614891f0d2f84751c93fb01a Mon Sep 17 00:00:00 2001
+From: James Tai <james.tai@realtek.com>
+Date: Wed, 7 Dec 2022 13:51:15 +0800
+Subject: [PATCH 09/69] mailbox: add ifcp mailbox driver for Realtek DHC SoCs
+
+Change-Id: I6d557a9f410572bb1552dad5b996afcd051462cd
+---
+ drivers/mailbox/Kconfig  | 7 +++++++
+ drivers/mailbox/Makefile | 2 ++
+ 2 files changed, 9 insertions(+)
+
+diff --git a/drivers/mailbox/Kconfig b/drivers/mailbox/Kconfig
+index 6cd2bcd56..404203141 100644
+--- a/drivers/mailbox/Kconfig
++++ b/drivers/mailbox/Kconfig
+@@ -282,4 +282,11 @@ config QCOM_IPCC
+ 	  acts as an interrupt controller for receiving interrupts from clients.
+ 	  Say Y here if you want to build this driver.
+ 
++config RTK_IFCP_MBOX
++	tristate "Realtek IFCP Mailbox Support"
++	depends on ARCH_REALTEK && RTK_IFCP
++	help
++	  Mailbox implementation for Realtek platform. This mailbox is used
++	  for communication to IFCP. If unsure say N.
++
+ endif
+diff --git a/drivers/mailbox/Makefile b/drivers/mailbox/Makefile
+index 18793e6ca..cc329e415 100644
+--- a/drivers/mailbox/Makefile
++++ b/drivers/mailbox/Makefile
+@@ -60,3 +60,5 @@ obj-$(CONFIG_SUN6I_MSGBOX)	+= sun6i-msgbox.o
+ obj-$(CONFIG_SPRD_MBOX)		+= sprd-mailbox.o
+ 
+ obj-$(CONFIG_QCOM_IPCC)		+= qcom-ipcc.o
++
++obj-$(CONFIG_RTK_IFCP_MBOX)     += rtk-ifcp-mailbox.o
+-- 
+2.42.0
+

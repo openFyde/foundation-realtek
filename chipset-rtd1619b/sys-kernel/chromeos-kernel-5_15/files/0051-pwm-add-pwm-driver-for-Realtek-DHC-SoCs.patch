@@ -1,0 +1,44 @@
+From 32a54484a49d81c0c7d92bb288547e924d351df0 Mon Sep 17 00:00:00 2001
+From: James Tai <james.tai@realtek.com>
+Date: Thu, 17 Nov 2022 15:51:14 +0800
+Subject: [PATCH 51/69] pwm: add pwm driver for Realtek DHC SoCs
+
+Change-Id: I30c76b8d79a1b5e59d3f214a1e24573b39d88251
+---
+ drivers/pwm/Kconfig  | 7 +++++++
+ drivers/pwm/Makefile | 1 +
+ 2 files changed, 8 insertions(+)
+
+diff --git a/drivers/pwm/Kconfig b/drivers/pwm/Kconfig
+index aa29841bb..1b82e25e0 100644
+--- a/drivers/pwm/Kconfig
++++ b/drivers/pwm/Kconfig
+@@ -471,6 +471,13 @@ config PWM_ROCKCHIP
+ 	  Generic PWM framework driver for the PWM controller found on
+ 	  Rockchip SoCs.
+ 
++config PWM_RTK
++	tristate "Realtek PWM support"
++	depends on ARCH_REALTEK
++	default n
++	help
++	  Say Y, if you want to enable PWM feature on Realtek platform.
++
+ config PWM_SAMSUNG
+ 	tristate "Samsung PWM support"
+ 	depends on PLAT_SAMSUNG || ARCH_S5PV210 || ARCH_EXYNOS || COMPILE_TEST
+diff --git a/drivers/pwm/Makefile b/drivers/pwm/Makefile
+index 708840b7f..bc2346519 100644
+--- a/drivers/pwm/Makefile
++++ b/drivers/pwm/Makefile
+@@ -43,6 +43,7 @@ obj-$(CONFIG_PWM_RASPBERRYPI_POE)	+= pwm-raspberrypi-poe.o
+ obj-$(CONFIG_PWM_RCAR)		+= pwm-rcar.o
+ obj-$(CONFIG_PWM_RENESAS_TPU)	+= pwm-renesas-tpu.o
+ obj-$(CONFIG_PWM_ROCKCHIP)	+= pwm-rockchip.o
++obj-$(CONFIG_PWM_RTK)		+= pwm-rtk.o
+ obj-$(CONFIG_PWM_SAMSUNG)	+= pwm-samsung.o
+ obj-$(CONFIG_PWM_SIFIVE)	+= pwm-sifive.o
+ obj-$(CONFIG_PWM_SL28CPLD)	+= pwm-sl28cpld.o
+-- 
+2.42.0
+

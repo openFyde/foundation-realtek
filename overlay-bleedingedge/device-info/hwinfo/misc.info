@@ -1,0 +1,15 @@
+183 hw_random
+118 rpc_mem
+119 ve1_mem
+120 cpu_dma_latency
+121 ashmem
+130 watchdog
+223 uinput
+237 loop-control
+122 vpu
+123 rtk_smcc_core
+124 mcp_core
+125 jpu
+235 autofs
+126 rtk_heap
+127 cachefiles

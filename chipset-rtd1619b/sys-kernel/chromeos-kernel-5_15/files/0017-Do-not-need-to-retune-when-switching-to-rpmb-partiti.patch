@@ -1,0 +1,37 @@
+From 00c9bd8f8b752d911ad3a24ccdbb6f159ce2812f Mon Sep 17 00:00:00 2001
+From: Jyan Chou <jyanchou@realtek.com>
+Date: Mon, 14 Aug 2023 18:28:41 +0800
+Subject: [PATCH 17/69] Do not need to retune when switching to rpmb partition
+
+Change-Id: I93ac16e05f6f0cac6dbe1f1d249f4200348168b7
+---
+ drivers/mmc/core/block.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/mmc/core/block.c b/drivers/mmc/core/block.c
+index 25077a1a3..b895c7960 100644
+--- a/drivers/mmc/core/block.c
++++ b/drivers/mmc/core/block.c
+@@ -847,7 +847,9 @@ static int mmc_blk_part_switch_pre(struct mmc_card *card,
+ 			if (ret)
+ 				return ret;
+ 		}
++#if !IS_ENABLED(CONFIG_MMC_DW_CQE_RTK13XX) && !IS_ENABLED(CONFIG_MMC_DW_CQE_RTK)
+ 		mmc_retune_pause(card->host);
++#endif
+ 	}
+ 
+ 	return ret;
+@@ -859,7 +861,9 @@ static int mmc_blk_part_switch_post(struct mmc_card *card,
+ 	int ret = 0;
+ 
+ 	if (part_type == EXT_CSD_PART_CONFIG_ACC_RPMB) {
++#if !IS_ENABLED(CONFIG_MMC_DW_CQE_RTK13XX) && !IS_ENABLED(CONFIG_MMC_DW_CQE_RTK)
+ 		mmc_retune_unpause(card->host);
++#endif
+ 		if (card->reenable_cmdq && !card->ext_csd.cmdq_en)
+ 			ret = mmc_cmdq_enable(card);
+ 	}
+-- 
+2.42.0
+

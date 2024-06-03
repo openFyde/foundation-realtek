@@ -1,0 +1,623 @@
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x412fd050]
+[    0.000000] Linux version 5.15.150-yocto-standard (oe-user@oe-host) (aarch64-poky-linux-gcc (GCC) 11.4.0, GNU ld (GNU Binutils) 2.38.20220708) #1 SMP PREEMPT Mon Mar 11 14:54:28 UTC 2024
+[    0.000000] Machine model: Realtek Bleeding Edge EVB (4GB)
+[    0.000000] earlycon: uart8250 at MMIO32 0x0000000098007800 (options '')
+[    0.000000] printk: bootconsole [uart8250] enabled
+[    0.000000] Reserved memory: created CMA memory pool at 0x0000000040000000, size 512 MiB
+[    0.000000] OF: reserved mem: initialized node linux,cma, compatible id shared-dma-pool
+[    0.000000] Reserved memory: created CMA memory pool at 0x0000000030000000, size 256 MiB
+[    0.000000] OF: reserved mem: initialized node linux,cma_1, compatible id shared-dma-pool
+[    0.000000] Zone ranges:
+[    0.000000]   DMA      [mem 0x0000000000040000-0x00000000feffffff]
+[    0.000000]   DMA32    empty
+[    0.000000]   Normal   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000000040000-0x0000000001003fff]
+[    0.000000]   node   0: [mem 0x0000000001004000-0x00000000041fffff]
+[    0.000000]   node   0: [mem 0x0000000004200000-0x00000000043fffff]
+[    0.000000]   node   0: [mem 0x0000000004400000-0x00000000047fffff]
+[    0.000000]   node   0: [mem 0x0000000004800000-0x000000000487cfff]
+[    0.000000]   node   0: [mem 0x000000000487d000-0x000000000f7fffff]
+[    0.000000]   node   0: [mem 0x000000000f800000-0x0000000013ffffff]
+[    0.000000]   node   0: [mem 0x0000000014000000-0x000000007fffffff]
+[    0.000000]   node   0: [mem 0x0000000080020000-0x00000000880fffff]
+[    0.000000]   node   0: [mem 0x000000008a100000-0x0000000097ffbfff]
+[    0.000000]   node   0: [mem 0x0000000098200000-0x0000000098feffff]
+[    0.000000]   node   0: [mem 0x0000000099000000-0x000000009fffffff]
+[    0.000000]   node   0: [mem 0x00000000a0000000-0x00000000a01fffff]
+[    0.000000]   node   0: [mem 0x00000000a0200000-0x00000000feffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000000040000-0x00000000feffffff]
+[    0.000000] On node 0, zone DMA: 64 pages in unavailable ranges
+[    0.000000] On node 0, zone DMA: 32 pages in unavailable ranges
+[    0.000000] On node 0, zone DMA: 8192 pages in unavailable ranges
+[    0.000000] On node 0, zone DMA: 516 pages in unavailable ranges
+[    0.000000] On node 0, zone DMA: 16 pages in unavailable ranges
+[    0.000000] On node 0, zone DMA: 4096 pages in unavailable ranges
+[    0.000000] psci: probing for conduit method from DT.
+[    0.000000] psci: PSCIv1.0 detected in firmware.
+[    0.000000] psci: Using standard PSCI v0.2 function IDs
+[    0.000000] psci: MIGRATE_INFO_TYPE not supported.
+[    0.000000] psci: SMC Calling Convention v1.0
+[    0.000000] percpu: Embedded 28 pages/cpu s75160 r8192 d31336 u114688
+[    0.000000] pcpu-alloc: s75160 r8192 d31336 u114688 alloc=28*4096
+[    0.000000] pcpu-alloc: [0] 0 [0] 1 [0] 2 [0] 3 
+[    0.000000] Detected VIPT I-cache on CPU0
+[    0.000000] CPU features: detected: GIC system register CPU interface
+[    0.000000] CPU features: detected: Virtualization Host Extensions
+[    0.000000] CPU features: detected: Qualcomm erratum 1009, or ARM erratum 1286807, 2441009
+[    0.000000] CPU features: detected: ARM errata 1165522, 1319367, or 1530923
+[    0.000000] alternatives: patching kernel code
+[    0.000000] Built 1 zonelists, mobility grouping on.  Total pages: 1021380
+[    0.000000] Kernel command line: earlycon=uart8250,mmio32,0x98007800 console=ttyS0,460800 uio_pdrv_genirq.of_id=generic-uio init=/sbin/init root=/dev/mmcblk0p2 rw rootfstype=ext4 rootwait firmware_class.path=/lib/firmware/realtek/rtd1619b/ pd_ignore_unused clk_ignore_unused loglevel=4
+[    0.000000] Dentry cache hash table entries: 524288 (order: 10, 4194304 bytes, linear)
+[    0.000000] Inode-cache hash table entries: 262144 (order: 9, 2097152 bytes, linear)
+[    0.000000] mem auto-init: stack:off, heap alloc:off, heap free:off
+[    0.000000] Memory: 3164292K/4142640K available (9344K kernel code, 1438K rwdata, 2440K rodata, 2048K init, 555K bss, 191916K reserved, 786432K cma-reserved)
+[    0.000000] trace event string verifier disabled
+[    0.000000] rcu: Preemptible hierarchical RCU implementation.
+[    0.000000] rcu: 	RCU event tracing is enabled.
+[    0.000000] 	Trampoline variant of Tasks RCU enabled.
+[    0.000000] 	Tracing variant of Tasks RCU enabled.
+[    0.000000] rcu: RCU calculated value of scheduler-enlistment delay is 25 jiffies.
+[    0.000000] NR_IRQS: 64, nr_irqs: 64, preallocated irqs: 0
+[    0.000000] GICv3: GIC: Using split EOI/Deactivate mode
+[    0.000000] GICv3: 128 SPIs implemented
+[    0.000000] GICv3: 0 Extended SPIs implemented
+[    0.000000] GICv3: Distributor has no Range Selector support
+[    0.000000] Root IRQ handler: gic_handle_irq
+[    0.000000] GICv3: 16 PPIs implemented
+[    0.000000] GICv3: CPU0: found redistributor 0 region 0:0x00000000ff140000
+[    0.000000] arch_timer: cp15 timer(s) running at 27.00MHz (phys).
+[    0.000000] clocksource: arch_sys_counter: mask: 0xffffffffffffff max_cycles: 0x63a1e71a3, max_idle_ns: 440795203123 ns
+[    0.000000] sched_clock: 56 bits at 27MHz, resolution 37ns, wraps every 4398046511093ns
+[    0.000386] Console: colour dummy device 80x25
+[    0.000413] Calibrating delay loop (skipped), value calculated using timer frequency.. 54.00 BogoMIPS (lpj=108000)
+[    0.000422] pid_max: default: 32768 minimum: 301
+[    0.000574] Mount-cache hash table entries: 8192 (order: 4, 65536 bytes, linear)
+[    0.000589] Mountpoint-cache hash table entries: 8192 (order: 4, 65536 bytes, linear)
+[    0.001599] rcu: Hierarchical SRCU implementation.
+[    0.001987] smp: Bringing up secondary CPUs ...
+[    0.010494] Detected VIPT I-cache on CPU1
+[    0.010524] GICv3: CPU1: found redistributor 100 region 0:0x00000000ff160000
+[    0.010553] CPU1: Booted secondary processor 0x0000000100 [0x412fd050]
+[    0.018506] Detected VIPT I-cache on CPU2
+[    0.018526] GICv3: CPU2: found redistributor 200 region 0:0x00000000ff180000
+[    0.018549] CPU2: Booted secondary processor 0x0000000200 [0x412fd050]
+[    0.026470] Detected VIPT I-cache on CPU3
+[    0.026487] GICv3: CPU3: found redistributor 300 region 0:0x00000000ff1a0000
+[    0.026507] CPU3: Booted secondary processor 0x0000000300 [0x412fd050]
+[    0.026560] smp: Brought up 1 node, 4 CPUs
+[    0.026569] SMP: Total of 4 processors activated.
+[    0.026573] CPU features: detected: 32-bit EL0 Support
+[    0.026576] CPU features: detected: Data cache clean to the PoU not required for I/D coherence
+[    0.026580] CPU features: detected: Common not Private translations
+[    0.026582] CPU features: detected: CRC32 instructions
+[    0.026586] CPU features: detected: RCpc load-acquire (LDAPR)
+[    0.026588] CPU features: detected: Privileged Access Never
+[    0.026591] CPU features: detected: RAS Extension Support
+[    0.026594] CPU features: detected: Speculative Store Bypassing Safe (SSBS)
+[    0.026638] CPU: All CPU(s) started at EL2
+[    0.027448] devtmpfs: initialized
+[    0.032069] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645041785100000 ns
+[    0.032083] futex hash table entries: 1024 (order: 4, 65536 bytes, linear)
+[    0.047352] pinctrl core: initialized pinctrl subsystem
+[    0.048093] NET: Registered PF_NETLINK/PF_ROUTE protocol family
+[    0.049131] DMA: preallocated 512 KiB GFP_KERNEL pool for atomic allocations
+[    0.049276] DMA: preallocated 512 KiB GFP_KERNEL|GFP_DMA pool for atomic allocations
+[    0.049414] DMA: preallocated 512 KiB GFP_KERNEL|GFP_DMA32 pool for atomic allocations
+[    0.049630] thermal_sys: Registered thermal governor 'step_wise'
+[    0.049926] cpuidle: using governor menu
+[    0.050066] hw-breakpoint: found 6 breakpoint and 4 watchpoint registers.
+[    0.050132] ASID allocator initialised with 65536 entries
+[    0.054364] rtd-pinctrl 9804e000.pinctrl: probed
+[    0.056964] gpio-rtd 98007100.gpio: probed
+[    0.059123] rtk-hwlock 9801a000.hwlock: add 1 lock(s) from base_id 0
+[    0.059271] rtk-hwlock 9801a62c.hwlock: add 1 lock(s) from base_id 1
+[    0.059415] rtk-hwlock 9801a630.hwlock: add 2 lock(s) from base_id 2 with map
+[    0.059534] rtk-hwlock 9801a63c.hwlock: add 2 lock(s) from base_id 4 with map
+[    0.066679] platform hdmi: Fixing up cyclic dependency with 98080000.vo
+[    0.070523] cryptd: max_cpu_qlen set to 1000
+[    0.073227] iommu: Default domain type: Translated 
+[    0.073233] iommu: DMA domain TLB invalidation policy: strict mode 
+[    0.073375] SCSI subsystem initialized
+[    0.073398] libata version 3.00 loaded.
+[    0.073441] usbcore: registered new interface driver usbfs
+[    0.073461] usbcore: registered new interface driver hub
+[    0.073479] usbcore: registered new device driver usb
+[    0.073541] mc: Linux media interface: v0.10
+[    0.073558] videodev: Linux video capture interface: v2.00
+[    0.073596] pps_core: LinuxPPS API ver. 1 registered
+[    0.073599] pps_core: Software ver. 5.3.6 - Copyright 2005-2007 Rodolfo Giometti <giometti@linux.it>
+[    0.073609] PTP clock support registered
+[    0.073833] rtk-efuse 98017000.efuse: use hwlock1
+[    0.074546] rtk-soc 9801a200.chip-info: bond_id: 0x00030001
+[    0.074680] rtk-soc 9801a200.chip-info: bond_id: 0x00030001
+[    0.074715] Realtek Stark RTD1619B (0x00006698) rev A00 (0x00000000) detected
+[    0.075309] clocksource: Switched to clocksource arch_sys_counter
+[    0.091542] FS-Cache: Loaded
+[    0.091663] CacheFiles: Loaded
+[    0.092025] rtk-gpc 98007b60.power-controller: add nbs to fix hwwdt issue
+[    0.092389] cpu-volt-sel: prop_name is bsv
+[    0.096222] rtk_media_heaps: rtk_protect_handler_ready: use Realtek media heap without Soc memory protection
+[    0.096234] rtk_media_heap rtk_media_heap: common , cma found 
+[    0.098195] NET: Registered PF_INET protocol family
+[    0.098345] IP idents hash table entries: 65536 (order: 7, 524288 bytes, linear)
+[    0.099679] tcp_listen_portaddr_hash hash table entries: 2048 (order: 3, 32768 bytes, linear)
+[    0.099709] Table-perturb hash table entries: 65536 (order: 6, 262144 bytes, linear)
+[    0.099717] TCP established hash table entries: 32768 (order: 6, 262144 bytes, linear)
+[    0.099860] TCP bind hash table entries: 32768 (order: 7, 524288 bytes, linear)
+[    0.100328] TCP: Hash tables configured (established 32768 bind 32768)
+[    0.100410] UDP hash table entries: 2048 (order: 4, 65536 bytes, linear)
+[    0.100456] UDP-Lite hash table entries: 2048 (order: 4, 65536 bytes, linear)
+[    0.100578] NET: Registered PF_UNIX/PF_LOCAL protocol family
+[    0.100599] PCI: CLS 0 bytes, default 64
+[    0.100763] realtek-i2c 98007d00.i2c_0: can't find nvmem cell node
+[    0.100823] realtek-i2c 98007d00.i2c_0: can't get pin state, bus recovery not support
+[    0.103009] realtek-i2c 98007d00.i2c_0: i2c sda hold time = 0x5
+[    0.103435] realtek-i2c 98007c00.i2c_1: can't find nvmem cell node
+[    0.103531] realtek-i2c 98007c00.i2c_1: i2c sda hold time = 0x33
+[    0.103731] realtek-i2c 9801b900.i2c_3: can't find nvmem cell node
+[    0.103776] realtek-i2c 9801b900.i2c_3: can't get pin state, bus recovery not support
+[    0.105960] realtek-i2c 9801b900.i2c_3: i2c sda hold time = 0x33
+[    0.106101] realtek-i2c 9801ba00.i2c_4: can't find nvmem cell node
+[    0.106138] realtek-i2c 9801ba00.i2c_4: can't get pin state, bus recovery not support
+[    0.108333] realtek-i2c 9801ba00.i2c_4: i2c sda hold time = 0x33
+[    0.108473] realtek-i2c 9801bb00.i2c_5: can't find nvmem cell node
+[    0.108509] realtek-i2c 9801bb00.i2c_5: can't get pin state, bus recovery not support
+[    0.110692] realtek-i2c 9801bb00.i2c_5: i2c sda hold time = 0x0
+[    0.111219] hw perfevents: enabled with armv8_pmuv3 PMU driver, 7 counters available
+[    0.114573] workingset: timestamp_bits=62 max_order=20 bucket_order=0
+[    0.114872] squashfs: version 4.0 (2009/01/31) Phillip Lougher
+[    0.114896] ntfs3: Max link count 4000
+[    0.115060] Block layer SCSI generic (bsg) driver version 0.4 loaded (major 242)
+[    0.115067] io scheduler mq-deadline registered
+[    0.115071] io scheduler kyber registered
+[    0.115085] io scheduler bfq registered
+[    0.116362] rtd-pcie-phy pcie1_phy: init done
+[    0.116498] rtd-pcie-phy pcie2_phy: init done
+[    0.116798] Realtek DHC PCIe 980a0000.pcie: host driver initial begin.
+[    0.116846] Realtek DHC PCIe 980a0000.pcie: PCIE Debug Mode off
+[    0.318215] Realtek DHC PCIe 980a0000.pcie: link down with device
+[    0.318222] Realtek DHC PCIe 980a0000.pcie: link init failed.
+[    0.319827] Realtek DHC PCIe 980a0000.pcie: host driver initial failed.
+[    0.319963] Realtek DHC PCIe 980c0000.pcie: host driver initial begin.
+[    0.319985] Realtek DHC PCIe 980c0000.pcie: PCIE Debug Mode off
+[    0.521327] Realtek DHC PCIe 980c0000.pcie: link down with device
+[    0.521333] Realtek DHC PCIe 980c0000.pcie: link init failed.
+[    0.522934] Realtek DHC PCIe 980c0000.pcie: host driver initial failed.
+[    0.523393] rtk-tee-cc tee-clocks: use legacy flow
+[    0.523730] rtk-bootstatus bootstatus: boot-type configured
+[    0.523737] rtk-bootstatus bootstatus: sw-cold-boot-count configured
+[    0.523863] [RTK_JPU] jpu_probe
+[    0.523885] [RTK_JPU] jpu base address get from DTB physical base addr=0x9803e000, virtual base=0xffffffc00917d000, size=0x1000
+[    0.523990] [RTK_JPU] get clock controller s_jpu_clk=0x(____ptrval____)
+[    0.524007] [RTK_JPU] s_jpu_irq:123 want to register jpu_irq_handler
+[    0.524031] [RTK_JPU] success to probe jpu device with non reserved video memory
+[    0.524886] rtk-usb-manager 98007088.rtk-usb-manager: ENTER rtk_usb_manager_probe
+[    0.524919] port_node: usb-port0 status is okay
+[    0.524940] rtk-usb-manager 98007088.rtk-usb-manager: port0 mapping gpio_num=48 on gpio0
+[    0.524960] port_node: usb-port1 status is okay
+[    0.524971] rtk-usb-manager 98007088.rtk-usb-manager: port1 mapping gpio_num=48 on gpio0
+[    0.524987] rtk-usb-manager 98007088.rtk-usb-manager: type c connector-switch-gpio no found
+[    0.525002] rtk-usb-manager 98007088.rtk-usb-manager: type c get plug-side-switch-gpio (id=53) OK
+[    0.525021] port_node: usb-port2 status is okay
+[    0.525035] rtk-usb-manager 98007088.rtk-usb-manager: port2 mapping gpio_num=49 on gpio1
+[    0.525055] rtk-usb-manager 98007088.rtk-usb-manager: TP1CK_MEM_TEST1_REG=9804ef14 to toggle bit 2 (val=0x501)
+[    0.525395] rtk-usb-manager 98007088.rtk-usb-manager: Realtek USB init OK
+[    0.525402] rtk-usb-manager 98007088.rtk-usb-manager: __gpio_on_off to set power (low active) off by gpio (id=48) OK
+[    0.525410] rtk-usb-manager 98007088.rtk-usb-manager: __gpio_on_off to set power (low active) off by gpio (id=49) OK
+[    0.525518] rtk-usb-manager 98007088.rtk-usb-manager: rtk_usb_manager_probe OK (take 0 ms)
+[    0.525527] rtk-usb-manager 98007088.rtk-usb-manager: rtk_usb_subnode_probe_work Start ...
+[    0.525535] rtk-usb-manager 98007088.rtk-usb-manager: rtk_usb_subnode_probe_work populate subnode device
+[    0.526309] [RTK_VE1] res.start:0x98007000, bonding_value:0x0
+[    0.526337] [RTK_VE1] s_ve1_irq:121 want to register ve1_irq_handler
+[    0.526383] [RTK_VE1] success to probe vpu device with non reserved video memory
+[    0.526741] rtk-gpu_wrap 981d0000.gpu-wrap: bist-rst-ctrl=2
+[    0.528518] rtk-usb-manager 98007088.rtk-usb-manager: Get extcon type_c fail (ret=-517)
+[    0.528527] rtk-usb-manager 98007088.rtk-usb-manager: rtk_usb_subnode_probe_work ... End (take 4 ms)
+[    0.551517] Serial: 8250/16550 driver, 3 ports, IRQ sharing disabled
+[    0.552320] printk: console [ttyS0] disabled
+[    0.552357] 98007800.serial: ttyS0 at MMIO 0x98007800 (irq = 18, base_baud = 27000000) is a 16550A
+[    0.552396] printk: console [ttyS0] enabled
+[    0.552401] printk: bootconsole [uart8250] disabled
+[    0.552934] 9801b200.serial: ttyS1 at MMIO 0x9801b200 (irq = 111, base_baud = 27000000) is a 16550A
+[    0.553410] 9801b400.serial: ttyS2 at MMIO 0x9801b400 (irq = 112, base_baud = 27000000) is a 16550A
+[    0.557484] brd: module loaded
+[    0.559128] loop: module loaded
+[    0.559324] apw8886 0-0012: (da) rev2
+[    0.559534] apw8886-regulator apw8886-regulator: DMA mask not set
+[    0.560719] ddr: supplied by vcc1v2-ddr
+[    0.561958] r8169 Gigabit Ethernet driver 1.5.4 loaded
+[    0.561982] r8169: get 3 phy_irq
+[    0.562016] r8169: get phy_irq 134 for bit 28
+[    0.562037] r8169: get phy_irq 135 for bit 29
+[    0.562056] r8169: get phy_irq 136 for bit 30
+[    0.562103] r8169: Get iso_base address
+[    0.562139] r8169: Get pinctrl_base address
+[    0.573197] GMAC wait 9 ms for init_autoload_done
+[    0.600661] r8169: wait 5 ms for PHY ready, current = 0x23
+[    0.602351] Ethernet PHY: wait 20 ns to start IOL tuning
+[    0.615421] r8169 98016000.r8169soc eth0: RTD16XXB, XID 10900800 IRQ 124
+[    0.615430] r8169 98016000.r8169soc eth0: jumbo features [frames: 9200 bytes, tx checksumming: ko]
+[    0.615481] r8169: request eth_phy0 IRQ 134 successfully
+[    0.615500] r8169: request eth_phy1 IRQ 135 successfully
+[    0.615516] r8169: request eth_phy2 IRQ 136 successfully
+[    0.637135] xhci-hcd xhci-hcd.1.auto: xHCI Host Controller
+[    0.637154] xhci-hcd xhci-hcd.1.auto: new USB bus registered, assigned bus number 1
+[    0.637248] xhci-hcd xhci-hcd.1.auto: hcc params 0x0220fe64 hci version 0x110 quirks 0x0000008000010010
+[    0.637282] xhci-hcd xhci-hcd.1.auto: irq 137, io mem 0x98020000
+[    0.637290] xhci-hcd xhci-hcd.1.auto: xHCI Host Controller
+[    0.637300] xhci-hcd xhci-hcd.1.auto: new USB bus registered, assigned bus number 2
+[    0.637308] xhci-hcd xhci-hcd.1.auto: Host supports USB 3.0 SuperSpeed
+[    0.637647] hub 1-0:1.0: USB hub found
+[    0.637668] hub 1-0:1.0: 1 port detected
+[    0.637867] usb usb2: We don't know the algorithms for LPM for this host, disabling LPM.
+[    0.638140] hub 2-0:1.0: USB hub found
+[    0.638158] hub 2-0:1.0: config failed, hub doesn't have any ports! (err -19)
+[    0.639987] rtk-usb-manager 98007088.rtk-usb-manager: gpio_num=48 active_port=0x1 active_port_mask=0x3  ==> No turn on
+[    0.640137] xhci-hcd xhci-hcd.3.auto: xHCI Host Controller
+[    0.640151] xhci-hcd xhci-hcd.3.auto: new USB bus registered, assigned bus number 3
+[    0.640237] xhci-hcd xhci-hcd.3.auto: hcc params 0x0220fe64 hci version 0x110 quirks 0x0000008000010010
+[    0.640272] xhci-hcd xhci-hcd.3.auto: irq 138, io mem 0x98029000
+[    0.640279] xhci-hcd xhci-hcd.3.auto: xHCI Host Controller
+[    0.640288] xhci-hcd xhci-hcd.3.auto: new USB bus registered, assigned bus number 4
+[    0.640296] xhci-hcd xhci-hcd.3.auto: Host supports USB 3.0 SuperSpeed
+[    0.640585] hub 3-0:1.0: USB hub found
+[    0.640603] hub 3-0:1.0: 1 port detected
+[    0.640791] usb usb4: We don't know the algorithms for LPM for this host, disabling LPM.
+[    0.641056] hub 4-0:1.0: USB hub found
+[    0.641076] hub 4-0:1.0: config failed, hub doesn't have any ports! (err -19)
+[    0.642891] rtk-usb-manager 98007088.rtk-usb-manager: __gpio_on_off to set power (low active) on by gpio (id=48) OK
+[    0.643127] usbcore: registered new interface driver uas
+[    0.643170] usbcore: registered new interface driver usb-storage
+[    0.643175] Driver Major = 240, Minor = 0
+[    0.643200] usbcore: registered new interface driver ftdi-spi
+[    0.643282] mousedev: PS/2 mouse device common for all mice
+[    0.643847] Registered IR keymap rc-realtek-dhc
+[    0.643904] rc rc0: rtk-ir-hw as /devices/platform/soc@0/98000000.rbus/98007000.syscon/98007400.irda/rc/rc0
+[    0.643981] input: rtk-ir-hw as /devices/platform/soc@0/98000000.rbus/98007000.syscon/98007400.irda/rc/rc0/input0
+[    0.644287] rc_core: Couldn't load IR keymap rc-ruwido
+[    0.645567] Registered IR keymap rc-empty
+[    0.645596] rc rc1: rtk-ir-hw1 as /devices/platform/soc@0/98000000.rbus/98007000.syscon/98007400.irda/rc/rc1
+[    0.645659] input: rtk-ir-hw1 as /devices/platform/soc@0/98000000.rbus/98007000.syscon/98007400.irda/rc/rc1/input1
+[    0.646085] rtk-cec 98037800.cec: cec clock source use xtal clock
+[    0.646193] rtk-cec 98037800.cec: rpu read from otp value=0x13
+[    0.646200] rtk-cec 98037800.cec: rpu value=0x13
+[    0.646909] rtk-thermal-sensor 9801db00.thermal-sensor: wait 11ms to be ready
+[    0.663898] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    0.664294] sdhci: Secure Digital Host Controller Interface driver
+[    0.664298] sdhci: Copyright(c) Pierre Ossman
+[    0.664577] rtk-sdmmc: build at : #1 SMP PREEMPT Mon Mar 11 14:54:28 UTC 2024 
+[    0.664581] rtk-sdmmc: CONFIG_MMC_BLOCK_BOUNCE disable
+[    0.664639] [rtk_sdmmc_probe] get sdmmc-bounce value : 1 
+[    0.672998] Allocate SDMMC bounce buffer !!!
+[    0.674096] SD CD irq=56
+[    0.674100] SD WP irq=55
+[    0.707834] rtk_sdmmc_get_cd: SD card does not exist, card_exist = 0x7e23bf0c
+[    0.711413] sdhci-pltfm: SDHCI platform and OF driver helper
+[    0.711419] Synopsys Designware Multimedia Card Interface Driver
+[    0.712736] [dw_mci_rtk_parse_dt] emmc mode : 3
+[    0.713868] cannot get the uuid info !
+[    0.713870] priv->emmc_mode = 3
+[    0.713873] [dw_mci_rtk_parse_dt] cmdq mode : 1
+[    0.714999] [dw_mci_rtk_parse_dt] get rdq-ctrl : 0
+[    0.720249] dw_mci_init_slot: regulator support volage ocr_avail=0x80
+[    0.721892] mmc_host mmc0: card is non-removable.
+[    0.734834] Bus speed (slot 0) = 189001510Hz (slot req 400000Hz, actual 399580HZ div = 473)
+[    0.747636] mmc0: CQHCI version 5.10
+[    0.747810] usbcore: registered new interface driver usbhid
+[    0.747815] usbhid: USB HID core driver
+[    0.747958] ashmem: initialized
+[    0.748626] extcon-rtk-type_c 98007220.type-c: First check USB_DR_MODE_PERIPHERAL
+[    0.748951] NET: Registered PF_INET6 protocol family
+[    0.749485] Segment Routing with IPv6
+[    0.749507] In-situ OAM (IOAM) with IPv6
+[    0.749540] sit: IPv6, IPv4 and MPLS over IPv4 tunneling driver
+[    0.749807] NET: Registered PF_PACKET protocol family
+[    0.750390] rtk-tee-cc tee-clocks: use legacy flow
+[    0.750644] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    0.750868] rtk-tee-cc tee-clocks: use legacy flow
+[    0.751052] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    0.751277] clk: Not disabling unused clocks
+[    0.751286] PM: genpd: Not disabling unused power domains
+[    0.751661] dw-apb-uart 98007800.serial: forbid DMA for kernel console
+[    0.751778] Waiting for root device /dev/mmcblk0p2...
+[    0.895712] Bus speed (slot 0) = 189001510Hz (slot req 52000000Hz, actual 47250377HZ div = 4)
+[    0.895967] Bus speed (slot 0) = 189001510Hz (slot req 200000000Hz, actual 189001510HZ div = 1)
+[    0.899596] rx_window=0xffe3ffff, rx_best=0x3
+[    0.900836] check write protect region 0 during tuning: 0x0
+[    0.911317] usb 1-1: new low-speed USB device number 2 using xhci-hcd
+[    0.912317] tx_window=0xfff9ffff, tx_best=0x1
+[    0.963316] usb 3-1: new low-speed USB device number 2 using xhci-hcd
+[    0.971720] Bus speed (slot 0) = 189001510Hz (slot req 52000000Hz, actual 47250377HZ div = 4)
+[    1.031707] Bus speed (slot 0) = 189001510Hz (slot req 200000000Hz, actual 189001510HZ div = 1)
+[    1.034069] rx_window=0xfffdffff, rx_best=0x1
+[    1.041110] max sample point=25, bitmap=0x1ffffff, DQS=0x118
+[    1.042698] check write protect region 0 during tuning: 0x0
+[    1.050968] tx_window=0xbff8, tx_best=0x8
+[    1.053116] mmc0: Command Queue Engine enabled
+[    1.053127] mmc0: new HS400 MMC card at address 0001
+[    1.053494] mmcblk0: mmc0:0001 DI4064 59.2 GiB 
+[    1.056136]  mmcblk0: p1 p2
+[    1.056520] mmcblk0boot0: mmc0:0001 DI4064 4.00 MiB 
+[    1.057048] mmcblk0boot1: mmc0:0001 DI4064 4.00 MiB 
+[    1.057481] mmcblk0rpmb: mmc0:0001 DI4064 16.0 MiB, chardev (239:0)
+[    1.057626] rtk-tee-cc tee-clocks: use legacy flow
+[    1.057867] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    1.080837] input: SIGMACHIP Usb Mouse as /devices/platform/soc@0/98000000.rbus/98007088.rtk-usb-manager/98013200.usb-port0/98020000.dwc3/xhci-hcd.1.auto/usb1/1-1/1-1:1.0/0003:1C4F:0034.0001/input/input2
+[    1.080973] hid-generic 0003:1C4F:0034.0001: input: USB HID v1.10 Mouse [SIGMACHIP Usb Mouse] on usb-xhci-hcd.1.auto-1/input0
+[    1.081082] rtk-tee-cc tee-clocks: use legacy flow
+[    1.081281] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    1.081442] rtk-tee-cc tee-clocks: use legacy flow
+[    1.095325] EXT4-fs (mmcblk0p2): mounted filesystem with ordered data mode. Opts: (null). Quota mode: disabled.
+[    1.095363] VFS: Mounted root (ext4 filesystem) on device 179:2.
+[    1.095789] Freeing unused kernel memory: 2048K
+[    1.103367] Run /sbin/init as init process
+[    1.103372]   with arguments:
+[    1.103374]     /sbin/init
+[    1.103376]   with environment:
+[    1.103378]     HOME=/
+[    1.103380]     TERM=linux
+[    1.143298] input: SINO WEALTH USB KEYBOARD as /devices/platform/soc@0/98000000.rbus/98007088.rtk-usb-manager/98013c00.usb-port1/98029000.dwc3/xhci-hcd.3.auto/usb3/3-1/3-1:1.0/0003:5C0A:8502.0002/input/input3
+[    1.174431] systemd[1]: System time before build time, advancing clock.
+[    1.190625] systemd[1]: systemd 250.5+ running in system mode (+PAM -AUDIT -SELINUX -APPARMOR +IMA -SMACK +SECCOMP -GCRYPT -GNUTLS -OPENSSL +ACL +BLKID -CURL -ELFUTILS -FIDO2 -IDN2 -IDN -IPTC +KMOD -LIBCRYPTSETUP +LIBFDISK -PCRE2 -PWQUALITY -P11KIT -QRENCODE -BZIP2 -LZ4 -XZ -ZLIB +ZSTD -BPF_FRAMEWORK +XKBCOMMON +UTMP +SYSVINIT default-hierarchy=hybrid)
+[    1.191088] systemd[1]: Detected architecture arm64.
+[    1.203425] hid-generic 0003:5C0A:8502.0002: input: USB HID v1.10 Keyboard [SINO WEALTH USB KEYBOARD] on usb-xhci-hcd.3.auto-1/input0
+[    1.203762] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    1.203978] rtk-tee-cc tee-clocks: use legacy flow
+[    1.223701] input: SINO WEALTH USB KEYBOARD Mouse as /devices/platform/soc@0/98000000.rbus/98007088.rtk-usb-manager/98013c00.usb-port1/98029000.dwc3/xhci-hcd.3.auto/usb3/3-1/3-1:1.1/0003:5C0A:8502.0003/input/input4
+[    1.223895] input: SINO WEALTH USB KEYBOARD System Control as /devices/platform/soc@0/98000000.rbus/98007088.rtk-usb-manager/98013c00.usb-port1/98029000.dwc3/xhci-hcd.3.auto/usb3/3-1/3-1:1.1/0003:5C0A:8502.0003/input/input5
+[    1.247801] systemd[1]: Hostname set to <bleedingedge-rtd1619b-chromium>.
+[    1.287541] input: SINO WEALTH USB KEYBOARD Consumer Control as /devices/platform/soc@0/98000000.rbus/98007088.rtk-usb-manager/98013c00.usb-port1/98029000.dwc3/xhci-hcd.3.auto/usb3/3-1/3-1:1.1/0003:5C0A:8502.0003/input/input6
+[    1.287623] hid-generic 0003:5C0A:8502.0003: input: USB HID v1.10 Mouse [SINO WEALTH USB KEYBOARD] on usb-xhci-hcd.3.auto-1/input1
+[    1.288001] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    1.288223] rtk-tee-cc tee-clocks: use legacy flow
+[    1.487339] systemd[1]: Queued start job for default target Graphical Interface.
+[    1.499872] systemd[1]: Created slice Slice /system/getty.
+[    1.512246] systemd[1]: Created slice Slice /system/modprobe.
+[    1.528149] systemd[1]: Created slice Slice /system/serial-getty.
+[    1.539894] systemd[1]: Created slice User and Session Slice.
+[    1.551326] rtk-usb-manager 98007088.rtk-usb-manager: rtk_usb_subnode_probe_work Start ...
+[    1.551345] rtk-usb-manager 98007088.rtk-usb-manager: rtk_usb_type_c_plug_config type plug to cc1 by gpio 53
+[    1.551543] systemd[1]: Started Dispatch Password Requests to Console Directory Watch.
+[    1.561394] rtk-usb-manager 98007088.rtk-usb-manager: __gpio_on_off to set power (low active) off by gpio (id=49) OK
+[    1.561402] rtk-usb-manager 98007088.rtk-usb-manager: rtk_usb_subnode_probe_work ... End (take 8 ms)
+[    1.563524] systemd[1]: Started Forward Password Requests to Wall Directory Watch.
+[    1.575591] systemd[1]: Reached target Path Units.
+[    1.587423] systemd[1]: Reached target Remote File Systems.
+[    1.599405] systemd[1]: Reached target Slice Units.
+[    1.611432] systemd[1]: Reached target Swaps.
+[    1.632310] systemd[1]: Listening on RPCbind Server Activation Socket.
+[    1.643464] systemd[1]: Reached target RPC Port Mapper.
+[    1.655834] systemd[1]: Listening on Syslog Socket.
+[    1.667592] systemd[1]: Listening on initctl Compatibility Named Pipe.
+[    1.667662] xhci-hcd xhci-hcd.5.auto: xHCI Host Controller
+[    1.667684] xhci-hcd xhci-hcd.5.auto: new USB bus registered, assigned bus number 5
+[    1.667890] xhci-hcd xhci-hcd.5.auto: hcc params 0x0220fe64 hci version 0x110 quirks 0x0000008000010010
+[    1.667931] xhci-hcd xhci-hcd.5.auto: irq 139, io mem 0x98050000
+[    1.667939] xhci-hcd xhci-hcd.5.auto: xHCI Host Controller
+[    1.667951] xhci-hcd xhci-hcd.5.auto: new USB bus registered, assigned bus number 6
+[    1.667959] xhci-hcd xhci-hcd.5.auto: Host supports USB 3.0 SuperSpeed
+[    1.668342] hub 5-0:1.0: USB hub found
+[    1.668366] hub 5-0:1.0: 1 port detected
+[    1.668603] usb usb6: We don't know the algorithms for LPM for this host, disabling LPM.
+[    1.668905] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    1.668924] hub 6-0:1.0: USB hub found
+[    1.668947] hub 6-0:1.0: 1 port detected
+[    1.669302] rtk-tee-cc tee-clocks: use legacy flow
+[    1.669548] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    1.681666] systemd[1]: Journal Audit Socket was skipped because of a failed condition check (ConditionSecurity=audit).
+[    1.682080] systemd[1]: Listening on Journal Socket (/dev/log).
+[    1.695755] systemd[1]: Listening on Journal Socket.
+[    1.707865] systemd[1]: Listening on Network Service Netlink Socket.
+[    1.719794] systemd[1]: Listening on udev Control Socket.
+[    1.731640] systemd[1]: Listening on udev Kernel Socket.
+[    1.743627] systemd[1]: Listening on User Database Manager Socket.
+[    1.755766] systemd[1]: Huge Pages File System was skipped because of a failed condition check (ConditionPathExists=/sys/kernel/mm/hugepages).
+[    1.756027] systemd[1]: POSIX Message Queue File System was skipped because of a failed condition check (ConditionPathExists=/proc/sys/fs/mqueue).
+[    1.756305] systemd[1]: Kernel Debug File System was skipped because of a failed condition check (ConditionPathExists=/sys/kernel/debug).
+[    1.758194] systemd[1]: Mounting Kernel Trace File System...
+[    1.769828] systemd[1]: Mounting Temporary Directory /tmp...
+[    1.779648] systemd[1]: Create List of Static Device Nodes was skipped because of a failed condition check (ConditionFileNotEmpty=/lib/modules/5.15.150-yocto-standard/modules.devname).
+[    1.781996] systemd[1]: Starting Load Kernel Module configfs...
+[    1.793563] systemd[1]: Starting Load Kernel Module drm...
+[    1.805644] systemd[1]: Starting Load Kernel Module fuse...
+[    1.818532] systemd[1]: Starting RPC Bind...
+[    1.831518] systemd[1]: File System Check on Root Device was skipped because of a failed condition check (ConditionPathIsReadWrite=!/).
+[    1.834945] systemd[1]: Starting Journal Service...
+[    1.850552] systemd[1]: Starting Load Kernel Modules...
+[    1.860089] rtkvdec: loading out-of-tree module taints kernel.
+[    1.861033] [VDEC]  Device registered as /dev/video0
+[    1.861214] rtk-tee-cc tee-clocks: use legacy flow
+[    1.861493] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    1.866045] systemd[1]: Starting Generate network units from Kernel command line...
+[    1.866324] [VDEC]  Registered video engine VE1 ops
+[    1.870425]  9801aa80.rtk_rpmsg:acpu-rpc: use hwlock2
+[    1.871142]  9801aa80.rtk_rpmsg:acpu-rpc: probed
+[    1.871270] rtk-tee-cc tee-clocks: use legacy flow
+[    1.871590] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    1.871913]  9801aa80.rtk_rpmsg:vcpu-rpc: probed
+[    1.872007] rtk-tee-cc tee-clocks: use legacy flow
+[    1.872257] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    1.872548]  9801aa80.rtk_rpmsg:hifi-rpc: probed
+[    1.872646] rtk-tee-cc tee-clocks: use legacy flow
+[    1.872897] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    1.873104] rtk-tee-cc tee-clocks: use legacy flow
+[    1.874009] rtk-krpc-agent 9801aa80.rtk_rpmsg:acpu-rpc:acpu-kernel-channel:acpu-kernel-agent: probe
+[    1.876421] rtk-krpc-agent 9801aa80.rtk_rpmsg:vcpu-rpc:vcpu-kernel-channel:vcpu-kernel-agent: probe
+[    1.876591] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    1.878775] rtk-krpc-agent 9801aa80.rtk_rpmsg:hifi-rpc:hifi-kernel-channel:hifi-kernel-agent: probe
+[    1.878908] rtk-tee-cc tee-clocks: use legacy flow
+[    1.881473] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    1.881699] rtk-tee-cc tee-clocks: use legacy flow
+[    1.882549] rtk-rproc 9801b000.syscon:rtk_rproc: Register rproc type avcert
+[    1.882668] remoteproc remoteproc0: rtk_rproc is available
+[    1.882675] remoteproc remoteproc0: powering up rtk_rproc
+[    1.883582] systemd[1]: Starting Remount Root and Kernel File Systems...
+[    1.883868] remoteproc remoteproc0: Booting fw image AFW_Certificate_final.bin, size 1024
+[    1.883879] rtk-rproc 9801b000.syscon:rtk_rproc: Find FW Name: AFW_Certificate_final.bin
+[    1.883884] rtk-rproc 9801b000.syscon:rtk_rproc: size 0x400
+[    1.905926] rtk-rproc 9801b000.syscon:rtk_rproc:acpu-rproc: Register rproc type acpu
+[    1.906047] remoteproc remoteproc1: acpu-rproc is available
+[    1.906064] remoteproc remoteproc1: powering up acpu-rproc
+[    1.916213] remoteproc remoteproc1: Booting fw image bluecore.audio.enc.A00-stark-noaudio-nonsecure-0112, size 2097140
+[    1.916235] rtk-rproc 9801b000.syscon:rtk_rproc:acpu-rproc: Find FW Name: bluecore.audio.enc.A00-stark-noaudio-nonsecure-0112
+[    1.916241] rtk-rproc 9801b000.syscon:rtk_rproc:acpu-rproc: size 0x1ffff4
+[    1.918103] EXT4-fs (mmcblk0p2): re-mounted. Opts: (null). Quota mode: disabled.
+[    1.918297] systemd[1]: Starting Coldplug All udev Devices...
+[    1.936414] systemd[1]: Started RPC Bind.
+[    1.950355] remoteproc remoteproc1: afw bring up
+[    1.950545] remoteproc remoteproc1: remote processor acpu-rproc is now up
+[    1.951141] rtk-rproc 9801b000.syscon:rtk_rproc:vcpu-rproc: Register rproc type vcpu
+[    1.951194] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    1.951474] rtk-tee-cc tee-clocks: use legacy flow
+[    1.951595] remoteproc remoteproc2: vcpu-rproc is available
+[    1.951603] remoteproc remoteproc2: powering up vcpu-rproc
+[    1.959906] systemd[1]: Mounted Kernel Trace File System.
+[    1.962053] remoteproc remoteproc2: Booting fw image video_firmware.bin.enc, size 2097140
+[    1.962073] rtk-rproc 9801b000.syscon:rtk_rproc:vcpu-rproc: Find FW Name: video_firmware.bin.enc
+[    1.962079] rtk-rproc 9801b000.syscon:rtk_rproc:vcpu-rproc: size 0x1ffff4
+[    1.971805] systemd[1]: Mounted Temporary Directory /tmp.
+[    1.994518] remoteproc remoteproc2: vfw bring up
+[    1.994567] remoteproc remoteproc2: remote processor vcpu-rproc is now up
+[    1.995189] rtk-rproc 9801b000.syscon:rtk_rproc:hifi-rproc: Register rproc type hifi
+[    1.995225] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    1.995394] remoteproc remoteproc3: hifi-rproc is available
+[    1.995401] remoteproc remoteproc3: powering up hifi-rproc
+[    1.995994] rtk-tee-cc tee-clocks: use legacy flow
+[    2.007849] systemd[1]: Started Journal Service.
+[    2.025019] remoteproc remoteproc3: Booting fw image HIFI.bin-stark-nonsecure-allcache, size 8388596
+[    2.025042] rtk-rproc 9801b000.syscon:rtk_rproc:hifi-rproc: Find FW Name: HIFI.bin-stark-nonsecure-allcache
+[    2.025048] rtk-rproc 9801b000.syscon:rtk_rproc:hifi-rproc: size 0x7ffff4
+[    2.144233] remoteproc remoteproc3: hifi bring up
+[    2.148485] [NPU] set hifi pll and do bisr takes 4 ms.
+[    2.149300] remoteproc remoteproc3: [hifi_start] smc ret: 0x0
+[    2.149307] remoteproc remoteproc3: remote processor hifi-rproc is now up
+[    2.150088] remoteproc remoteproc0: remote processor rtk_rproc is now up
+[    2.150407] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    2.150714] rtk-tee-cc tee-clocks: use legacy flow
+[    2.152798] [VDEC]  Registered video engine VE2 ops
+[    2.248022] systemd-journald[138]: Received client request to flush runtime journal.
+[    2.461680] [VDEC]  Created instance: (____ptrval____), m2m_ctx: (____ptrval____)
+[    2.461792] [VDEC]  Releasing instance (____ptrval____)
+[    2.461805] [VDEC]  Releasing done
+[    2.486441]  9801aa80.rtk_rpmsg:acpu-rpc: acpu-rpc OK (SYNC_FLAG = 0x01000000)
+[    2.496041] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    2.496391] rtk-tee-cc tee-clocks: use legacy flow
+[    2.575510] rtk-fwdbg rtk_fwdbg: probe
+[    2.576556] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    2.577956] rtk-tee-cc tee-clocks: use legacy flow
+[    2.578229] rtk-urpc rtk_urpc_service: probe
+[    2.578481] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    2.584909] [VDEC]  Created instance: (____ptrval____), m2m_ctx: (____ptrval____)
+[    2.585018] [VDEC]  Releasing instance (____ptrval____)
+[    2.585031] [VDEC]  Releasing done
+[    2.586345] rtk-tee-cc tee-clocks: use legacy flow
+[    2.590567] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    2.598280] rtk-tee-cc tee-clocks: use legacy flow
+[    2.598622] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    2.598917] display-subsystem: failed to get krpc-agent phandle
+[    2.600441] realtek-drm display-subsystem: failed to get krpc hifi ept info, 0xffffffffffffffea
+[    2.727838] [drm:rtk_plane_init [rtk_drm]] *ERROR* Not create 1 plane for device attribute
+[    2.735410] realtek-crtc 98080000.vo: use hwlock3
+[    2.735432] realtek-drm display-subsystem: bound 98080000.vo (ops rtk_crtc_component_ops [rtk_drm])
+[    2.735599] rtk-hdmi hdmi: get hdcp on/off setting: 0x2
+[    2.735636] rtk-hdmi hdmi: hotplug gpio(7)
+[    2.735653] rtk-hdmi hdmi: hdmi5v gpio(5)
+[    2.735728] rtk-hdmi hdmi: is_new_mac=0
+[    2.735867] rtk-hdmi hdmi: Found audio-out node
+[    2.735872] rtk-hdmi hdmi: ao_in_hifi=0
+[    2.735953] rtk-hdmi hdmi: hdcp2_tee open_context
+[    2.735961] rtk-hdmi hdmi: hdcp2_tee open_context fail
+[    2.737241] rtk-hdmi hdmi: RealTek HDCP init failed
+[    2.738454] rtk-hdmi hdmi: rxsense_mode=1
+[    2.739195] realtek-drm display-subsystem: bound hdmi (ops rtk_hdmi_ops [rtk_drm])
+[    2.751607] [drm] Initialized realtek 2.1.1 20170207 for display-subsystem on minor 0
+[    2.751822] rtk-tee-cc tee-clocks: use legacy flow
+[    2.752193] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    2.772221] rtk-cec 98037800.cec: pre-div: 0x21, timer_div: 0x14
+[    2.772266] rtk-hdmi hdmi: get edid done
+[    2.772270] rtk-hdmi hdmi: HPD(1) RxSense(1)
+[    2.772315] rtk-hdmi hdmi: is_connected=1
+[    2.796526] rtk-hdmi hdmi: HPD(0) RxSense(1)
+[    2.796580] rtk-hdmi hdmi: is_connected=0
+[    2.949796] rtk-cec 98037800.cec: pre-div: 0x21, timer_div: 0x14
+[    2.949836] rtk-hdmi hdmi: get edid done
+[    2.949841] rtk-hdmi hdmi: HPD(1) RxSense(1)
+[    2.949881] rtk-hdmi hdmi: is_connected=1
+[    3.066718] rpc_ion_alloc_handler alloc_size=0x1e0000  ion_alloc_flags=0x80 
+[    3.072716] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.074954] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.077825] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.080697] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.083605] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.086219] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.089077] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.091386] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.094301] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.097182] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.100023] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.102890] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.105781] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.108178] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.108254] usb 1-1: USB disconnect, device number 2
+[    3.110463] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.114463] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.116826] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.119709] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.122539] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.125507] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.128354] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.131127] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.133505] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.135801] rpc_ion_alloc_handler alloc_size=0x11  ion_alloc_flags=0x80 
+[    3.136747]  9801aa80.rtk_rpmsg:vcpu-rpc: vcpu-rpc OK (SYNC_FLAG = 0x01000000)
+[    3.140072] rtk-tee-cc tee-clocks: use legacy flow
+[    3.140448] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    3.427321] usb 1-1: new low-speed USB device number 3 using xhci-hcd
+[    3.601056] input: SIGMACHIP Usb Mouse as /devices/platform/soc@0/98000000.rbus/98007088.rtk-usb-manager/98013200.usb-port0/98020000.dwc3/xhci-hcd.1.auto/usb1/1-1/1-1:1.0/0003:1C4F:0034.0004/input/input7
+[    3.601228] hid-generic 0003:1C4F:0034.0004: input: USB HID v1.10 Mouse [SIGMACHIP Usb Mouse] on usb-xhci-hcd.1.auto-1/input0
+[    3.601419] rtk-tee-cc tee-clocks: use legacy flow
+[    3.601730] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    4.203315] random: crng init done
+[    5.628375] usb 1-1: USB disconnect, device number 3
+[    5.947320] usb 1-1: new low-speed USB device number 4 using xhci-hcd
+[    6.120891] input: SIGMACHIP Usb Mouse as /devices/platform/soc@0/98000000.rbus/98007088.rtk-usb-manager/98013200.usb-port0/98020000.dwc3/xhci-hcd.1.auto/usb1/1-1/1-1:1.0/0003:1C4F:0034.0005/input/input8
+[    6.121039] hid-generic 0003:1C4F:0034.0005: input: USB HID v1.10 Mouse [SIGMACHIP Usb Mouse] on usb-xhci-hcd.1.auto-1/input0
+[    6.121231] rtk-tee-cc tee-clocks: use legacy flow
+[    6.121536] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    6.121777] rtk-tee-cc tee-clocks: use legacy flow
+[    6.121976] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    6.122222] rtk-tee-cc tee-clocks: use legacy flow
+[    6.122415] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    6.140164]  9801aa80.rtk_rpmsg:hifi-rpc: hifi-rpc timeout (SYNC_FLAG = 0xffffffff)
+[    6.142269] rtk-tee-cc tee-clocks: use legacy flow
+[    6.142627] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    6.160933] could not get clk_sys: -2
+[    6.161860] rtd-rng 98001000.rng: hwrng registration failed
+[    6.163249] rtd-rng: probe of 98001000.rng failed with error -2
+[    6.221433] r8169 98016000.r8169soc eth0: rtl_csiar_cond == 0 (loop: 100, delay: 10).
+[    6.241211] r8169 98016000.r8169soc eth0: rtl_csiar_cond == 1 (loop: 100, delay: 10).
+[    6.256991] r8169 98016000.r8169soc eth0: link up
+[    6.257030] r8169 98016000.r8169soc eth0: link up
+[    6.257150] IPv6: ADDRCONF(NETDEV_CHANGE): eth0: link becomes ready
+[    6.276391] r8169 98016000.r8169soc eth0: rtl_csiar_cond == 0 (loop: 100, delay: 10).
+[    6.280766] r8169 98016000.r8169soc eth0: rtl_csiar_cond == 1 (loop: 100, delay: 10).
+[    6.284685] r8169 98016000.r8169soc eth0: link up
+[    6.298570] panfrost 981d0000.gpu: clock rate = 702000000
+[    6.310527] panfrost 981d0000.gpu: [drm:panfrost_devfreq_init [panfrost]] Failed to register cooling device
+[    6.310616] panfrost 981d0000.gpu: mali-g57 id 0x9091 major 0x0 minor 0x1 status 0x0
+[    6.310624] panfrost 981d0000.gpu: features: 00000000,67c00007, issues: 00000001,80000400
+[    6.310630] panfrost 981d0000.gpu: Features: L2:0x07100206 Shader:0x00000000 Tiler:0x00000809 Mem:0x1 MMU:0x00002830 AS:0xff JS:0x7
+[    6.310637] panfrost 981d0000.gpu: shader_present=0x1 l2_present=0x1
+[    6.314667] [drm] Initialized panfrost 1.2.0 20180908 for 981d0000.gpu on minor 1
+[    6.314897] rtk-tee-cc tee-clocks: use legacy flow
+[    6.315260] cpu-volt-sel: dev_pm_opp_set_prop_name: name=bsv
+[    6.390000] FAT-fs (mmcblk0p1): Volume was not properly unmounted. Some data may be corrupt. Please run fsck.
+[    6.639217] systemd-journald[138]: Oldest entry in /run/log/journal/cc1c89bfb76c4e8490a89dd042e5326f/system.journal is older than the configured file retention duration (1month), suggesting rotation.
+[    6.639238] systemd-journald[138]: /run/log/journal/cc1c89bfb76c4e8490a89dd042e5326f/system.journal: Journal header limits reached or header out-of-date, rotating.
+[    8.743229] rtk-hdmi hdmi: vic=16 RGB-8bit SDR
+[    8.743253] rtk-hdmi hdmi: clock=148500, edid_scdc=0, clock_ratio=0, en_scramb=0
+[    8.863337] rtk-hdmi hdmi: Clear AVmute
+[    8.863362] rtk-hdmi hdmi: Enable encoder

@@ -1,0 +1,46 @@
+From af6c1b79ae35264706ccb2fa7cc7454cf5520b96 Mon Sep 17 00:00:00 2001
+From: James Tai <james.tai@realtek.com>
+Date: Mon, 14 Nov 2022 16:17:10 +0800
+Subject: [PATCH 27/69] spi: add GSPI controller driver
+
+Change-Id: Id9ecc7bb70241e75cd8df6645213b6bc6ab932ab
+---
+ drivers/spi/Kconfig  | 9 +++++++++
+ drivers/spi/Makefile | 1 +
+ 2 files changed, 10 insertions(+)
+
+diff --git a/drivers/spi/Kconfig b/drivers/spi/Kconfig
+index 29160e4b3..82d6883a8 100644
+--- a/drivers/spi/Kconfig
++++ b/drivers/spi/Kconfig
+@@ -297,6 +297,15 @@ config SPI_DW_BT1_DIRMAP
+ 
+ endif
+ 
++config SPI_DW_RTK
++	tristate "Realtek SPI controller based on DW SPI core"
++	select SPI_DESIGNWARE
++	depends on ARCH_REALTEK
++	default n
++	help
++	  Driver for the SPI controller core from DesignWare on
++	  Realtek RTD139x, RTD16xx, RTD13xx, or RTD16xxb platform.
++
+ config SPI_DLN2
+        tristate "Diolan DLN-2 USB SPI adapter"
+        depends on MFD_DLN2
+diff --git a/drivers/spi/Makefile b/drivers/spi/Makefile
+index 070918a79..dfcdc3a21 100644
+--- a/drivers/spi/Makefile
++++ b/drivers/spi/Makefile
+@@ -44,6 +44,7 @@ spi-dw-$(CONFIG_SPI_DW_DMA)		+= spi-dw-dma.o
+ obj-$(CONFIG_SPI_DW_BT1)		+= spi-dw-bt1.o
+ obj-$(CONFIG_SPI_DW_MMIO)		+= spi-dw-mmio.o
+ obj-$(CONFIG_SPI_DW_PCI)		+= spi-dw-pci.o
++obj-$(CONFIG_SPI_DW_RTK)		+= spi-dw-rtk.o
+ obj-$(CONFIG_SPI_EP93XX)		+= spi-ep93xx.o
+ obj-$(CONFIG_SPI_FALCON)		+= spi-falcon.o
+ obj-$(CONFIG_SPI_FSI)			+= spi-fsi.o
+-- 
+2.42.0
+

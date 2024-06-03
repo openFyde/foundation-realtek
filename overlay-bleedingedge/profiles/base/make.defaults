@@ -1,0 +1,5 @@
+USE=""
+USE="has_chromeos_config_bsp"
+CHROMEOS_DTBS="rtd1619b-bleedingedge-4gb.dtb"
+
+TTY_CONSOLE="ttyS0"

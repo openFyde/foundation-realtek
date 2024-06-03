@@ -1,0 +1,74 @@
+From bf0b899b4ffeed6a2ae5feb7926237d9b0a76d93 Mon Sep 17 00:00:00 2001
+From: Stanley Chang <stanley_chang@realtek.com>
+Date: Tue, 16 Jan 2024 11:12:11 +0800
+Subject: [PATCH 45/69] usb: host: rtk: add ehci and ohci host support
+
+Kylin usb port3 is ehci/ohci host.
+
+Change-Id: Ia2e812f0004c5eaf72825900c033c2bc12e66cc8
+---
+ drivers/usb/host/Kconfig  | 20 ++++++++++++++++++++
+ drivers/usb/host/Makefile |  2 ++
+ 2 files changed, 22 insertions(+)
+
+diff --git a/drivers/usb/host/Kconfig b/drivers/usb/host/Kconfig
+index f3c054608..a8f0c33c0 100644
+--- a/drivers/usb/host/Kconfig
++++ b/drivers/usb/host/Kconfig
+@@ -212,6 +212,16 @@ config USB_EHCI_FSL
+ 	help
+ 	  Variation of ARC USB block used in some Freescale chips.
+ 
++config USB_EHCI_HCD_RTK
++	tristate "Support for RTK on-chip EHCI USB controller"
++	depends on USB_EHCI_HCD
++	select RTK_USB_RLE0599_PHY
++	help
++	  The Realtek chips are dual-role host/peripheral USB controllers.
++
++	  Enable this option to support this chip in host controller mode.
++	  If unsure, say N.
++
+ config USB_EHCI_HCD_NPCM7XX
+ 	tristate "Support for Nuvoton NPCM7XX on-chip EHCI USB controller"
+ 	depends on (USB_EHCI_HCD && ARCH_NPCM7XX) || COMPILE_TEST
+@@ -426,6 +436,16 @@ config USB_OHCI_HCD
+ 
+ if USB_OHCI_HCD
+ 
++config USB_OHCI_HCD_RTK
++	bool "Support for RTK on-chip OHCI USB controller"
++	depends on USB_OHCI_HCD
++	select RTK_USB_RLE0599_PHY
++	help
++	  The Realtek chips are dual-role host/peripheral USB controllers.
++
++	  Enable this option to support this chip in host controller mode.
++	  If unsure, say N.
++
+ config USB_OHCI_HCD_OMAP1
+ 	tristate "OHCI support for OMAP1/2 chips"
+ 	depends on ARCH_OMAP1
+diff --git a/drivers/usb/host/Makefile b/drivers/usb/host/Makefile
+index 171de4df5..eba5ce65a 100644
+--- a/drivers/usb/host/Makefile
++++ b/drivers/usb/host/Makefile
+@@ -46,6 +46,7 @@ obj-$(CONFIG_USB_EHCI_HCD_STI)	+= ehci-st.o
+ obj-$(CONFIG_USB_EHCI_EXYNOS)	+= ehci-exynos.o
+ obj-$(CONFIG_USB_EHCI_HCD_AT91) += ehci-atmel.o
+ obj-$(CONFIG_USB_EHCI_BRCMSTB)	+= ehci-brcm.o
++obj-$(CONFIG_USB_EHCI_HCD_RTK)	+= ehci-rtk.o
+ 
+ obj-$(CONFIG_USB_OXU210HP_HCD)	+= oxu210hp-hcd.o
+ obj-$(CONFIG_USB_ISP116X_HCD)	+= isp116x-hcd.o
+@@ -63,6 +64,7 @@ obj-$(CONFIG_USB_OHCI_HCD_S3C2410)	+= ohci-s3c2410.o
+ obj-$(CONFIG_USB_OHCI_HCD_LPC32XX)	+= ohci-nxp.o
+ obj-$(CONFIG_USB_OHCI_HCD_PXA27X)	+= ohci-pxa27x.o
+ obj-$(CONFIG_USB_OHCI_HCD_DAVINCI)	+= ohci-da8xx.o
++obj-$(CONFIG_USB_OHCI_HCD_RTK)	+= ohci-rtk.o
+ 
+ obj-$(CONFIG_USB_UHCI_HCD)	+= uhci-hcd.o
+ obj-$(CONFIG_USB_FHCI_HCD)	+= fhci.o
+-- 
+2.42.0
+

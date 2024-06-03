@@ -1,0 +1,1 @@
+sys-kernel/chromeos-kernel-5_15 -fit_compression_kernel_lz4 fit_compression_kernel_lzma -dt_compression device_tree vtpm_proxy

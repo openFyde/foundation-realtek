@@ -1,0 +1,17 @@
+Module                  Size  Used by
+governor_simpleondemand    16384  -2
+panfrost               61440  -2
+rtd_rng                16384  -2
+gpu_sched              28672  -2
+rng_core               20480  -2
+rtk_drm               131072  -2
+drm_kms_helper        172032  -2
+rtk_urpc_service       16384  -2
+rtk_fwdbg              16384  -2
+rtk_rpc_mem            20480  -2
+rtkve2                 32768  -2
+rtk_fw_remoteproc      20480  -2
+rtk_krpc_agent         16384  -2
+rpmsg_rtk              24576  -2
+rtkve1                442368  -2
+rtkvdec                32768  -2

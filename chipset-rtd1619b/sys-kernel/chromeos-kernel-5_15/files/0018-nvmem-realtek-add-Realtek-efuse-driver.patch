@@ -1,0 +1,43 @@
+From d045363e21d47634e5ec9aded8e490cc62e990a6 Mon Sep 17 00:00:00 2001
+From: James Tai <james.tai@realtek.com>
+Date: Thu, 10 Nov 2022 17:27:47 +0800
+Subject: [PATCH 18/69] nvmem: realtek: add Realtek efuse driver
+
+Change-Id: Ieed58241ca286704c32ed73aff9a2579470f85ab
+---
+ drivers/nvmem/Kconfig  | 10 ++++++++++
+ drivers/nvmem/Makefile |  2 ++
+ 2 files changed, 12 insertions(+)
+
+diff --git a/drivers/nvmem/Kconfig b/drivers/nvmem/Kconfig
+index da414617a..ec3d0e423 100644
+--- a/drivers/nvmem/Kconfig
++++ b/drivers/nvmem/Kconfig
+@@ -300,4 +300,14 @@ config NVMEM_BRCM_NVRAM
+ 	  This driver provides support for Broadcom's NVRAM that can be accessed
+ 	  using I/O mapping.
+ 
++config RTK_EFUSE
++	tristate "Realtek SoCs eFuse support"
++	depends on ARCH_REALTEK || COMPILE_TEST
++	depends on HAS_IOMEM
++	help
++	  This is a driver to access specific data from eFuse
++
++	  This driver can also be built as a module. If so, the module
++	  will be called efuse-rtk.
++
+ endif
+diff --git a/drivers/nvmem/Makefile b/drivers/nvmem/Makefile
+index dcbbde35b..7adaff6dc 100644
+--- a/drivers/nvmem/Makefile
++++ b/drivers/nvmem/Makefile
+@@ -61,3 +61,5 @@ obj-$(CONFIG_NVMEM_RMEM) 	+= nvmem-rmem.o
+ nvmem-rmem-y			:= rmem.o
+ obj-$(CONFIG_NVMEM_BRCM_NVRAM)	+= nvmem_brcm_nvram.o
+ nvmem_brcm_nvram-y		:= brcm_nvram.o
++obj-$(CONFIG_RTK_EFUSE)		+= nvmem_rtk-efuse.o
++nvmem_rtk-efuse-y		:= rtk-efuse.o
+-- 
+2.42.0
+
