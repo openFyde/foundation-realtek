@@ -9,10 +9,10 @@ Subject: [PATCH] fix available buffer update
  sound/soc/realtek/common/snd-hifi-realtek.h   |  3 ++
  3 files changed, 65 insertions(+), 1 deletion(-)
 
-diff --git a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
-index 90a38c168..4cea0ba36 100644
---- a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
-+++ b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+Index: realtek-kernel/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+===================================================================
+--- realtek-kernel.orig/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
++++ realtek-kernel/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
 @@ -73,3 +73,25 @@ CONFIG_MALI_GATOR_SUPPORT=n
  CONFIG_MALI_DEVFREQ=y
  CONFIG_MALI_MIDGARD_ENABLE_TRACE=y
@@ -39,11 +39,11 @@ index 90a38c168..4cea0ba36 100644
 +CONFIG_RTK_PM_HIFI=m
 +CONFIG_RTK_CACHEABLE_HEADER=y
 +
-diff --git a/sound/soc/realtek/common/snd-hifi-realtek.c b/sound/soc/realtek/common/snd-hifi-realtek.c
-index 562427881..1b06c6c59 100644
---- a/sound/soc/realtek/common/snd-hifi-realtek.c
-+++ b/sound/soc/realtek/common/snd-hifi-realtek.c
-@@ -71,6 +71,7 @@ static void snd_card_capture_setup_pts(struct snd_pcm_runtime *runtime,
+Index: realtek-kernel/sound/soc/realtek/common/snd-hifi-realtek.c
+===================================================================
+--- realtek-kernel.orig/sound/soc/realtek/common/snd-hifi-realtek.c
++++ realtek-kernel/sound/soc/realtek/common/snd-hifi-realtek.c
+@@ -71,6 +71,7 @@ static void snd_card_capture_setup_pts(s
  static int rtk_snd_capture_hdmirx_enable(void);
  static void rtk_snd_capture_handle_HDMI_plug_out(struct snd_pcm_substream *substream);
  
@@ -51,7 +51,7 @@ index 562427881..1b06c6c59 100644
  static void rtk_playback_realtime_function(struct snd_pcm_runtime *runtime);
  static enum hrtimer_restart rtk_capture_timer_function(struct hrtimer *timer);
  static void snd_card_capture_calculate_pts(struct snd_pcm_runtime *runtime,
-@@ -1700,6 +1701,10 @@ static int snd_card_playback_open(struct snd_pcm_substream *substream)
+@@ -1700,6 +1701,10 @@ static int snd_card_playback_open(struct
  
  	dpcm->mixer = (struct rtk_snd_mixer *)(substream->pcm->card->private_data);
  
@@ -85,7 +85,7 @@ index 562427881..1b06c6c59 100644
  static int snd_card_playback_ack(struct snd_pcm_substream *substream)
  {
  	struct snd_pcm_runtime *runtime = substream->runtime;
-@@ -2061,6 +2082,7 @@ static int snd_card_playback_close(struct snd_pcm_substream *substream)
+@@ -2061,6 +2082,7 @@ static int snd_card_playback_close(struc
  	phys_addr_t dat;
  	void *vaddr;
  	size_t size;
@@ -93,7 +93,7 @@ index 562427881..1b06c6c59 100644
  
  	pr_info("[ALSA %s %d]\n", __func__, __LINE__);
  
-@@ -2113,6 +2135,17 @@ static int snd_card_playback_close(struct snd_pcm_substream *substream)
+@@ -2113,6 +2135,17 @@ static int snd_card_playback_close(struc
  		filp_close(dpcm->fp, NULL);
  #endif
  
@@ -111,7 +111,7 @@ index 562427881..1b06c6c59 100644
  exit:
  	rpc_release_ao_flash_pin(dpcm->phy_addr_rpc,
  				 dpcm->vaddr_rpc,
-@@ -2299,7 +2332,7 @@ static snd_pcm_uframes_t snd_card_playback_pointer(struct snd_pcm_substream *sub
+@@ -2299,7 +2332,7 @@ static snd_pcm_uframes_t snd_card_playba
  		       (unsigned int)(dpcm->dec_inring->begin_addr + dpcm->dec_inring->size),
  		       (unsigned int)dpcm->dec_inring->write_ptr,
  		       (unsigned int)dpcm->dec_inring->read_ptr[0]);
@@ -120,7 +120,7 @@ index 562427881..1b06c6c59 100644
  		       hw_ringrp, runtime->period_size, runtime->periods);
  		pr_err("[snd_pcm_playback_avail %d runtime->control->avail_min %d]\n",
  		       (int)snd_pcm_playback_avail(runtime),
-@@ -2577,6 +2610,8 @@ static int snd_card_playback_prepare(struct snd_pcm_substream *substream)
+@@ -2577,6 +2610,8 @@ static int snd_card_playback_prepare(str
  		       (int)runtime->status->hw_ptr);
  	}
  
@@ -129,7 +129,7 @@ index 562427881..1b06c6c59 100644
  	if (dpcm->init_ring) {
  		/* Reset the ptr about playback.
  		 * prehw_ptr will influence the next ptr update in timer function.
-@@ -3148,8 +3183,12 @@ static int snd_card_playback_trigger(struct snd_pcm_substream *substream, int cm
+@@ -3148,8 +3183,12 @@ static int snd_card_playback_trigger(str
  
  	switch (cmd) {
  	case SNDRV_PCM_TRIGGER_STOP:
@@ -142,10 +142,19 @@ index 562427881..1b06c6c59 100644
  		break;
  	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
  		break;
-diff --git a/sound/soc/realtek/common/snd-hifi-realtek.h b/sound/soc/realtek/common/snd-hifi-realtek.h
-index c6b7cbf59..636e97c00 100644
---- a/sound/soc/realtek/common/snd-hifi-realtek.h
-+++ b/sound/soc/realtek/common/snd-hifi-realtek.h
+@@ -3680,7 +3719,7 @@ static struct attribute_group rtk_alsa_a
+ };
+ 
+ static struct kobject *alsa_kobj;
+-static int __init alsa_sysfs_init(void)
++static int alsa_sysfs_init(void)
+ {
+ 	int ret;
+ 
+Index: realtek-kernel/sound/soc/realtek/common/snd-hifi-realtek.h
+===================================================================
+--- realtek-kernel.orig/sound/soc/realtek/common/snd-hifi-realtek.h
++++ realtek-kernel/sound/soc/realtek/common/snd-hifi-realtek.h
 @@ -413,6 +413,9 @@ struct snd_rtk_pcm {
  	mm_segment_t fs;
  #endif
@@ -156,6 +165,16 @@ index c6b7cbf59..636e97c00 100644
  	int dec_agent_id;
  	int dec_pin_id;
  	int ao_agent_id;
--- 
-2.34.1
-
+Index: realtek-kernel/sound/soc/realtek/common/snd-realtek.c
+===================================================================
+--- realtek-kernel.orig/sound/soc/realtek/common/snd-realtek.c
++++ realtek-kernel/sound/soc/realtek/common/snd-realtek.c
+@@ -3799,7 +3799,7 @@ static struct attribute_group rtk_alsa_a
+ };
+ 
+ static struct kobject *alsa_kobj;
+-static int __init alsa_sysfs_init(void)
++static int alsa_sysfs_init(void)
+ {
+ 	int ret;
+ 
