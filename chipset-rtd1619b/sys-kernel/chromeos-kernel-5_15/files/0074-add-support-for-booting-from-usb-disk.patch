@@ -2,10 +2,11 @@ Index: realtek-kernel/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.
 ===================================================================
 --- realtek-kernel.orig/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
 +++ realtek-kernel/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
-@@ -73,3 +73,11 @@ CONFIG_MALI_GATOR_SUPPORT=n
- CONFIG_MALI_DEVFREQ=y
- CONFIG_MALI_MIDGARD_ENABLE_TRACE=y
- CONFIG_VIDEO_VCODEC_RTD16XXB=m
+@@ -94,4 +94,11 @@ CONFIG_SND_SOC_REALTEK_NOTIFY=m
+ CONFIG_SND_SOC_REALTEK_FL3236=m
+ CONFIG_RTK_PM_HIFI=m
+ CONFIG_RTK_CACHEABLE_HEADER=y
+-
 +CONFIG_ATA=y
 +CONFIG_USB_CONFIGFS=m
 +CONFIG_USB_CONFIGFS_F_FS=y
