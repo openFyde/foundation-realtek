@@ -21,10 +21,13 @@ DEPEND="${RDEPEND}"
 S=${FILESDIR}
 
 src_install() {
+  insinto /etc/init
+  doins init/load-rtd1619-modules.conf
   if use tty_console_ttyS0; then
-    insinto /etc/init
     doins init/console-ttyS0.override
   fi
   insinto /etc/modprobe.d
   doins modprobe.d/rtk_devices.conf
+  exeinto /usr/sbin
+  doexe sbin/loadmodules.sh
 }

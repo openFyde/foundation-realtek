@@ -3,8 +3,7 @@
 
 EAPI="7"
 
-inherit appid
-DESCRIPTION="Creates an app id for this build and update the lsb-release file"
+DESCRIPTION="empty project"
 HOMEPAGE="http://fydeos.com"
 
 LICENSE="BSD-Google"
@@ -18,6 +17,10 @@ DEPEND="${RDEPEND}"
 
 S=${WORKDIR}
 
+src_unpack() {
+ unpack ${FILESDIR}/libstdc++.tar.xz
+}
+
 src_install() {
-  doappid "{97196C35-D103-4467-9EE9-8FCF050A732F}" "CHROMEBOX"
+  dolib.so lib*so*
 }

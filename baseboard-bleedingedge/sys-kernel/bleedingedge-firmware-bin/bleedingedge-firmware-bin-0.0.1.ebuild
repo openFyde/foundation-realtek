@@ -19,5 +19,5 @@ S=${FILESDIR}
 
 src_install() {
   insinto /lib/firmware/realtek/rtd1619b
-  doins *
+  doins -r *
 }

@@ -11,7 +11,9 @@ SLOT="0"
 KEYWORDS="*"
 IUSE="vulkan"
 
-RDEPEND=""
+RDEPEND="
+  sys-libs/libstdc++-v3-bin
+"
 
 DEPEND="${RDEPEND}"
 
