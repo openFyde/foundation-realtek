@@ -3,6 +3,8 @@
 
 EAPI="7"
 
+inherit udev
+
 DESCRIPTION="empty project"
 HOMEPAGE="http://fydeos.com"
 
@@ -30,4 +32,5 @@ src_install() {
   doins modprobe.d/rtk_devices.conf
   exeinto /usr/sbin
   doexe sbin/loadmodules.sh
+  udev_dorules rules/50-media.rules
 }

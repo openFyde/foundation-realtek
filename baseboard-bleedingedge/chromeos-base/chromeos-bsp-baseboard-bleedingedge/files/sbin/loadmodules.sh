@@ -10,6 +10,8 @@ modules=(
   mali_kbase
   snd_soc_hifi_realtek
   snd_soc_realtek
+  rtkve1
+  rtkve2
 )
 
 for module in ${modules[@]}; do

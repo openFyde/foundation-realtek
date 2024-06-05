@@ -1,0 +1,1 @@
+ACTION=="add", SUBSYSTEM=="video4linux", ATTR{name}=="realtek-vpu", SYMLINK+="video-dec0"
