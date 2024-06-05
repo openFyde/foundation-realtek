@@ -1,77 +1,36 @@
-commit 1df590d05ef99ec465b41997fb3c0ce156557dcd
-Author: Edward Wu <edwardwu@realtek.com>
-Date:   Wed Jun 5 07:25:29 2024 +0800
+From 83fce2b63c455743b4b3eed8c9a7d72f57efe612 Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Wed, 5 Jun 2024 09:55:16 +0800
+Subject: [PATCH] v4l2_v2
 
-    v4l2_new
-    
-    Change-Id: I504b3adeb44ef1ed31ff0115ad962e24db91202a
+Change-Id: Ifd84ba879ab12bed334e0bb9af598b6cd69fb170
+---
+ .../media/platform/rtk_vdec_rtd16xxb/drv_if.c |  33 +-
+ .../platform/rtk_vdec_rtd16xxb/ve1_config.h   |  29 -
+ .../platform/rtk_vdec_rtd16xxb/ve1_decode.c   |  47 +-
+ .../platform/rtk_vdec_rtd16xxb/ve1_mem.c      |   6 -
+ .../media/platform/rtk_vdec_rtd16xxb/ve1_mm.c |   9 -
+ .../platform/rtk_vdec_rtd16xxb/ve1_product.c  |   6 -
+ .../platform/rtk_vdec_rtd16xxb/ve1_v4l2.c     | 107 +--
+ .../platform/rtk_vdec_rtd16xxb/ve1_v4l2.h     |  22 +-
+ .../platform/rtk_vdec_rtd16xxb/ve1_vdi.c      | 699 +-----------------
+ .../platform/rtk_vdec_rtd16xxb/ve1_vdi_osal.c | 226 +-----
+ .../platform/rtk_vdec_rtd16xxb/ve1_vdi_osal.h |   4 -
+ .../platform/rtk_vdec_rtd16xxb/ve1_vpu.c      | 174 +----
+ .../platform/rtk_vdec_rtd16xxb/ve1_vpuapi.c   | 276 +------
+ .../platform/rtk_vdec_rtd16xxb/ve1_vpuapi.h   |  12 +-
+ .../rtk_vdec_rtd16xxb/ve1_vpuapifunc.c        | 105 ---
+ .../rtk_vdec_rtd16xxb/ve1_vpuapifunc.h        |  10 +-
+ .../platform/rtk_vdec_rtd16xxb/ve1_wrapper.c  | 557 ++++----------
+ .../platform/rtk_vdec_rtd16xxb/ve1_wrapper.h  |   1 -
+ .../media/platform/rtk_vdec_rtd16xxb/ve2.c    |  86 ++-
+ .../platform/rtk_vdec_rtd16xxb/ve2_frame.h    |  29 +-
+ .../media/platform/rtk_vdec_rtd16xxb/ve2rpc.c | 339 +++------
+ .../media/platform/rtk_vdec_rtd16xxb/ve2rpc.h |  11 +-
+ .../media/platform/rtk_vdec_rtd16xxb/vpu.c    | 208 ++++--
+ .../media/platform/rtk_vdec_rtd16xxb/vpu.h    |   9 +-
+ 24 files changed, 570 insertions(+), 2435 deletions(-)
 
-diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/Makefile b/drivers/media/platform/rtk_vdec_rtd16xxb/Makefile
-index bf3fee104..418127006 100644
---- a/drivers/media/platform/rtk_vdec_rtd16xxb/Makefile
-+++ b/drivers/media/platform/rtk_vdec_rtd16xxb/Makefile
-@@ -1,24 +1,39 @@
--subdir-ccflags-y += -DANDROID
--subdir-ccflags-y += -DENABLE_SHOW_VIDEO_INFO
--GIT_VERSION := $(shell git rev-parse --short HEAD)
--subdir-ccflags-y += -DGIT_VERSION=\"$(GIT_VERSION)\"
--subdir-ccflags-$(CONFIG_ENABLE_CC) += -DVPU_GET_CC
--subdir-ccflags-y += -I$(srctree)/drivers/soc/realtek/rtd16xxb/rtk_ve/ve1
--
--rtkvdec-y := drv_if.o \
--             vpu.o
--rtkve1-y := ve1_v4l2.o \
--             ve1_decode.o \
--             ve1_mem.o \
--             ve1_mm.o \
--             ve1_vdi.o \
--             ve1_vdi_osal.o \
--             ve1_vpu.o \
--             ve1_product.o \
--             ve1_vpuapifunc.o \
--             ve1_vpuapi.o \
--             ve1_wrapper.o
--rtkve1-$(CONFIG_COMPAT) += ve1_mem_compat.o
-+PWD=$(shell pwd)
-+
-+KDIR ?= $(PWD)/$(LINUX_KERNEL_PATH)
-+ROOTFSDIR ?=
-+
-+ifeq ($(KDIR),)
-+$(error Must specify KDIR to build this module)
-+endif
-+
-+rtkvdec-y := drv_if.o vpu.o
-+rtkve1-y := ve1_v4l2.o ve1_decode.o ve1_mem.o ve1_mm.o ve1_vdi.o ve1_vdi_osal.o ve1_vpu.o ve1_product.o ve1_vpuapifunc.o ve1_vpuapi.o ve1_wrapper.o
- rtkve2-y := ve2.o ve2rpc.o
- 
--obj-$(CONFIG_VIDEO_VCODEC_RTD16XXB) += rtkvdec.o rtkve1.o rtkve2.o
-+obj-m += rtkvdec.o rtkve1.o rtkve2.o
-+
-+ifdef CONFIG_COMPAT
-+	rtkve1-y       += ve1_mem_compat.o
-+endif
-+
-+DECFLAGS = -DANDROID -DENABLE_SHOW_VIDEO_INFO
-+
-+ifeq ($(CONFIG_ENABLE_CC), y)
-+	DECFLAGS += -DVPU_GET_CC
-+endif
-+
-+
-+GIT_VERSION := $(shell git rev-parse --short HEAD)
-+DECFLAGS +=-DGIT_VERSION=\"$(GIT_VERSION)\"
-+
-+.PHONY: all modules_install clean
-+
-+all:
-+	$(MAKE) V=$(V) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS="-I$(PWD) -I$(KDIR)/drivers/soc/realtek/rtd16xxb/rtk_ve/ve1 $(DECFLAGS)"
-+
-+modules_install:
-+	$(MAKE) V=$(V) -C $(KDIR) M=$(PWD) modules_install
-+
-+clean:
-+	$(MAKE) V=$(V) -C $(KDIR) M=$(PWD) clean
 diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/drv_if.c b/drivers/media/platform/rtk_vdec_rtd16xxb/drv_if.c
 index f1941ff7c..687277e2f 100644
 --- a/drivers/media/platform/rtk_vdec_rtd16xxb/drv_if.c
@@ -473,19 +432,6 @@ index c15556ac1..af4df2b49 100644
  }
  
 -//fs_initcall(ve1_mem_device_create);
-diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_mem_compat.c b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_mem_compat.c
-index 36d97457c..a2f8287c9 100644
---- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_mem_compat.c
-+++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_mem_compat.c
-@@ -22,6 +22,8 @@ extern int ve1_mem_reg_fd(unsigned long phys_addr, unsigned long *offset,
- long compat_ve1_mem_ioctl(struct file *filp, unsigned int cmd,
- 			  unsigned long arg)
- {
-+	long ret = 0;
-+
- 	if (!filp->f_op->unlocked_ioctl)
- 		return -ENOTTY;
- 
 diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_mm.c b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_mm.c
 index 06af3ec41..0ddc5e936 100644
 --- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_mm.c
@@ -594,7 +540,7 @@ index d9ae6eb27..f6e824340 100644
  	int productId;
  	RetCode ret = RETCODE_NOT_FOUND_VPU_DEVICE;
 diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_v4l2.c b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_v4l2.c
-index 257a81771..c2ed6d485 100644
+index 257a81771..6766fcf27 100644
 --- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_v4l2.c
 +++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_v4l2.c
 @@ -7,7 +7,6 @@
@@ -792,7 +738,7 @@ index 257a81771..c2ed6d485 100644
  		mutex_unlock(&ctx->ve1_mutex);
  	}
  
-@@ -551,10 +506,10 @@ static void ve1_start_work(void *fh, struct ve1_ctx *ctx)
+@@ -551,7 +506,7 @@ static void ve1_start_work(void *fh, struct ve1_ctx *ctx)
  	}
  }
  
@@ -800,11 +746,7 @@ index 257a81771..c2ed6d485 100644
 +static int ve1_out_qbuf(void *fh, uint8_t *buf, uint32_t len, uint64_t timestamp,
  			uint32_t sequence)
  {
--	int ret = 0;
-+	int ret;
- 	struct ve1_ctx *ctx;
- 	DecInitialInfo *initialInfo;
- 
+ 	int ret = 0;
 @@ -569,8 +524,8 @@ static int ve1_out_qbuf(void *fh, uint8_t *buf, uint32_t len, uint64_t pts,
  	}
  
@@ -938,15 +880,6 @@ index 257a81771..c2ed6d485 100644
  	VE1_DecCheckComplete(ctx);
  	mutex_unlock(&ctx->ve1_mutex);
  
-@@ -977,7 +913,7 @@ static void ve1_free_context(void *pCtx)
- static int ve1_stop_cmd(void *fh, int pixelformat)
- {
- 	int ret = 0;
--	struct ve1_ctx *ctx = NULL;
-+	struct ve1_ctx *ctx;
- 	struct vpu_ctx *vpu_ctx;
- 	bool queueRet = false;
- 
 @@ -1012,8 +948,6 @@ static int ve1_stop_cmd(void *fh, int pixelformat)
  	}
  	if (ctx->streamon_out &&
@@ -1054,7 +987,7 @@ index ef4153374..b0ab2d49e 100644
  						  unsigned long phys_base,
  						  unsigned long virt_base)
 diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vdi.c b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vdi.c
-index 9b466e22b..0fc9bd002 100644
+index 9b466e22b..460c724c0 100644
 --- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vdi.c
 +++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vdi.c
 @@ -11,42 +11,10 @@
@@ -1218,7 +1151,7 @@ index 9b466e22b..0fc9bd002 100644
 -    do {
 -        int i;
 -        int inUse = 0;
- 
+-
 -        if (device->info->owner_core == -1)
 -            break;
 -
@@ -1235,7 +1168,7 @@ index 9b466e22b..0fc9bd002 100644
 -
 -        if (inUse)
 -            break;
--
+ 
 -        device->info->owner_core    = -1;
 -        device->info->generation++;
 -    } while(0);
@@ -1771,25 +1704,16 @@ index 9b466e22b..0fc9bd002 100644
  		return 0;
  	}
  
-@@ -1409,9 +1098,6 @@ static int Internal_vdi_lock(unsigned long core_idx)
- {
+@@ -1410,7 +1099,7 @@ static int Internal_vdi_lock(unsigned long core_idx)
  	vdi_info_t *vdi;
  	const int MUTEX_TIMEOUT = 0x7fffffff;
--#if defined(ANDROID) || !defined(PTHREAD_MUTEX_ROBUST_NP)
+ #if defined(ANDROID) || !defined(PTHREAD_MUTEX_ROBUST_NP)
 -  int _ret = 0, j;
--#endif
++	int _ret = 0, j;
+ #endif
  
  	if (core_idx >= MAX_NUM_VPU_CORE)
- 		return -1;
-@@ -1422,6 +1108,7 @@ static int Internal_vdi_lock(unsigned long core_idx)
- 		return -1;
- #if defined(ANDROID) ||                                                        \
- 	!defined(PTHREAD_MUTEX_ROBUST_NP) //[r] need to be modify
-+	int _ret, j;
- 	for (j = 0;
- 	     (_ret = vdi_pthread_mutex_trylock(
- 		      core_idx, 1000, (MUTEX_HANDLE *)vdi->vpu_mutex)) != 0 &&
-@@ -1447,8 +1134,6 @@ static int Internal_vdi_lock(unsigned long core_idx)
+@@ -1447,8 +1136,6 @@ static int Internal_vdi_lock(unsigned long core_idx)
  
  	if (_ret == 0)
  		return 0;
@@ -1798,7 +1722,7 @@ index 9b466e22b..0fc9bd002 100644
  #else
  	while (1) {
  		int _ret, i;
-@@ -1552,18 +1237,13 @@ static void Internal_vdi_unlock(unsigned long core_idx)
+@@ -1552,9 +1239,7 @@ static void Internal_vdi_unlock(unsigned long core_idx)
  	if (!vdi || vdi->vpu_fd == -1 || vdi->vpu_fd == 0x00)
  		return;
  
@@ -1808,24 +1732,16 @@ index 9b466e22b..0fc9bd002 100644
  }
  
  int vdi_disp_lock(unsigned long core_idx)
- {
+@@ -1562,7 +1247,7 @@ int vdi_disp_lock(unsigned long core_idx)
  	vdi_info_t *vdi;
  	const int MUTEX_TIMEOUT = 5000; // ms
--#if defined(ANDROID) || !defined(PTHREAD_MUTEX_ROBUST_NP)
+ #if defined(ANDROID) || !defined(PTHREAD_MUTEX_ROBUST_NP)
 -  int _ret = 0, j;
--#endif
++	int _ret = 0, j;
+ #endif
  
  	if (core_idx >= MAX_NUM_VPU_CORE)
- 		return -1;
-@@ -1576,6 +1256,7 @@ int vdi_disp_lock(unsigned long core_idx)
- 	}
- #if defined(ANDROID) ||                                                        \
- 	!defined(PTHREAD_MUTEX_ROBUST_NP) //[r] need to be modify
-+	int _ret, j;
- 	for (j = 0; (_ret = vdi_pthread_mutex_trylock(
- 			     core_idx, 1000,
- 			     (MUTEX_HANDLE *)vdi->vpu_disp_mutex)) != 0 &&
-@@ -1604,8 +1285,6 @@ int vdi_disp_lock(unsigned long core_idx)
+@@ -1604,8 +1289,6 @@ int vdi_disp_lock(unsigned long core_idx)
  		unlock_vdi_info(vdi, core_idx);
  		return 0;
  	}
@@ -1834,7 +1750,7 @@ index 9b466e22b..0fc9bd002 100644
  #else
  	while (1) {
  		int _ret, i;
-@@ -1663,9 +1342,7 @@ static void Internal_vdi_disp_unlock(unsigned long core_idx)
+@@ -1663,9 +1346,7 @@ static void Internal_vdi_disp_unlock(unsigned long core_idx)
  	if (!vdi || vdi->vpu_fd == -1 || vdi->vpu_fd == 0x00)
  		return;
  
@@ -1844,7 +1760,7 @@ index 9b466e22b..0fc9bd002 100644
  }
  
  void vdi_write_register(unsigned long core_idx, unsigned int addr,
-@@ -1740,7 +1417,6 @@ static unsigned int Internal_vdi_read_register(unsigned long core_idx,
+@@ -1740,7 +1421,6 @@ static unsigned int Internal_vdi_read_register(unsigned long core_idx,
  
  int vdi_clear_memory(unsigned long core_idx, unsigned int addr, int len,
  		     int endian)
@@ -1852,7 +1768,7 @@ index 9b466e22b..0fc9bd002 100644
  {
  	vdi_info_t *vdi;
  	vpudrv_buffer_t vdb;
-@@ -1791,7 +1467,6 @@ int vdi_clear_memory(unsigned long core_idx, unsigned int addr, int len,
+@@ -1791,7 +1471,6 @@ int vdi_clear_memory(unsigned long core_idx, unsigned int addr, int len,
  
  void vdi_set_sdram(unsigned long coreIdx, unsigned int addr, int len,
  		   unsigned char data, int endian)
@@ -1860,7 +1776,7 @@ index 9b466e22b..0fc9bd002 100644
  {
  	vdi_info_t *vdi = lock_vdi_info(coreIdx);
  	unsigned char *buf;
-@@ -1943,7 +1618,6 @@ int vdi_allocate_dma_memory(unsigned long core_idx, vpu_buffer_t *vb,
+@@ -1943,7 +1622,6 @@ int vdi_allocate_dma_memory(unsigned long core_idx, vpu_buffer_t *vb,
  	unlock_vdi_info(vdi, core_idx);
  	return ret;
  }
@@ -1868,7 +1784,7 @@ index 9b466e22b..0fc9bd002 100644
  
  static int Internal_vdi_allocate_dma_memory(unsigned long core_idx,
  					    vpu_buffer_t *vb, void *filp)
-@@ -1978,7 +1652,6 @@ static int Internal_vdi_allocate_dma_memory(unsigned long core_idx,
+@@ -1978,7 +1656,6 @@ static int Internal_vdi_allocate_dma_memory(unsigned long core_idx,
  	//RTK
  	while (1) {
  		ret = rtd16xxb_vdi_ioctl_allocate_physical_memory(filp, &vdb);
@@ -1876,7 +1792,7 @@ index 9b466e22b..0fc9bd002 100644
  		if (ret >= 0)
  			break;
  		else {
-@@ -1988,7 +1661,6 @@ static int Internal_vdi_allocate_dma_memory(unsigned long core_idx,
+@@ -1988,7 +1665,6 @@ static int Internal_vdi_allocate_dma_memory(unsigned long core_idx,
  				     "[%d][VDI] fail to rtd16xxb_vdi_ioctl_allocate_physical_memory size=%d, wait 50ms and retry count=%d\n",
  				     __LINE__, vb->size, retry);
  				msleep(50);
@@ -1884,7 +1800,7 @@ index 9b466e22b..0fc9bd002 100644
  			} else {
  				VLOG(ERR,
  				     "[%d][VDI] fail to rtd16xxb_vdi_ioctl_allocate_physical_memory size=%d\n",
-@@ -1997,16 +1669,7 @@ static int Internal_vdi_allocate_dma_memory(unsigned long core_idx,
+@@ -1997,16 +1673,7 @@ static int Internal_vdi_allocate_dma_memory(unsigned long core_idx,
  			}
  		}
  	}
@@ -1902,7 +1818,7 @@ index 9b466e22b..0fc9bd002 100644
  	vb->phys_addr = (unsigned long)vdb.phys_addr;
  	vb->base = (unsigned long)vdb.base;
  	vb->virt_addr = vdb.virt_addr;
-@@ -2050,7 +1713,6 @@ int vdi_allocate_dma_memory_no_mmap(unsigned long core_idx, vpu_buffer_t *vb,
+@@ -2050,7 +1717,6 @@ int vdi_allocate_dma_memory_no_mmap(unsigned long core_idx, vpu_buffer_t *vb,
  	unlock_vdi_info(vdi, core_idx);
  	return ret;
  }
@@ -1910,7 +1826,7 @@ index 9b466e22b..0fc9bd002 100644
  
  static int Internal_vdi_allocate_dma_memory_no_mmap(unsigned long core_idx,
  						    vpu_buffer_t *vb,
-@@ -2096,7 +1758,6 @@ static int Internal_vdi_allocate_dma_memory_no_mmap(unsigned long core_idx,
+@@ -2096,7 +1762,6 @@ static int Internal_vdi_allocate_dma_memory_no_mmap(unsigned long core_idx,
  				     "[%d][VDI] fail to rtd16xxb_vdi_ioctl_allocate_physical_memory_no_mmap size=%d, wait 50ms and retry count=%d\n",
  				     __LINE__, vb->size, retry);
  				msleep(50);
@@ -1918,7 +1834,7 @@ index 9b466e22b..0fc9bd002 100644
  			} else {
  				VLOG(ERR,
  				     "[%d][VDI] fail to rtd16xxb_vdi_ioctl_allocate_physical_memory_no_mmap size=%d\n",
-@@ -2240,7 +1901,6 @@ void vdi_free_dma_memory(unsigned long core_idx, vpu_buffer_t *vb)
+@@ -2240,7 +1905,6 @@ void vdi_free_dma_memory(unsigned long core_idx, vpu_buffer_t *vb)
  	unlock_vdi_info(vdi, core_idx);
  	return;
  }
@@ -1926,7 +1842,7 @@ index 9b466e22b..0fc9bd002 100644
  
  static void Internal_vdi_free_dma_memory(unsigned long core_idx,
  					 vpu_buffer_t *vb)
-@@ -2283,14 +1943,7 @@ static void Internal_vdi_free_dma_memory(unsigned long core_idx,
+@@ -2283,14 +1947,7 @@ static void Internal_vdi_free_dma_memory(unsigned long core_idx,
  	}
  
  	rtd16xxb_vdi_ioctl_free_physical_memory(&vdb);
@@ -1942,7 +1858,7 @@ index 9b466e22b..0fc9bd002 100644
  	VLOG(TRACE,
  	     "[%d][VDI] Internal_vdi_free_dma_memory, physaddr=0x%lx, virtaddr=0x%lx, size=%d, index=%d\n",
  	     __LINE__, vb->phys_addr, vb->virt_addr, vb->size, i);
-@@ -2306,7 +1959,6 @@ void vdi_free_dma_memory_no_mmap(unsigned long core_idx, vpu_buffer_t *vb)
+@@ -2306,7 +1963,6 @@ void vdi_free_dma_memory_no_mmap(unsigned long core_idx, vpu_buffer_t *vb)
  	unlock_vdi_info(vdi, core_idx);
  	return;
  }
@@ -1950,7 +1866,7 @@ index 9b466e22b..0fc9bd002 100644
  
  static void Internal_vdi_free_dma_memory_no_mmap(unsigned long core_idx,
  						 vpu_buffer_t *vb)
-@@ -2368,18 +2020,8 @@ int vdi_get_sram_memory(unsigned long core_idx, vpu_buffer_t *vb)
+@@ -2368,18 +2024,8 @@ int vdi_get_sram_memory(unsigned long core_idx, vpu_buffer_t *vb)
  		return -1;
  	}
  
@@ -1969,7 +1885,7 @@ index 9b466e22b..0fc9bd002 100644
  	switch (vdi->product_code) {
  	case BODA950_CODE:
  	case CODA960_CODE:
-@@ -2391,14 +2033,10 @@ int vdi_get_sram_memory(unsigned long core_idx, vpu_buffer_t *vb)
+@@ -2391,14 +2037,10 @@ int vdi_get_sram_memory(unsigned long core_idx, vpu_buffer_t *vb)
  		VLOG(ERR, "Check SRAM_SIZE(%d)\n", vdi->product_code);
  		break;
  	}
@@ -1984,16 +1900,7 @@ index 9b466e22b..0fc9bd002 100644
  		vb->size = sram_size;
  		VLOG(TRACE, "[%s:%d] core_idx:%d.phys_addr:0x%x.size:%d.\n",
  		     __FUNCTION__, __LINE__, core_idx, vb->phys_addr, vb->size);
-@@ -2425,7 +2063,7 @@ int vdi_set_clock_gate(unsigned long core_idx, int enable)
- static int Internal_vdi_set_clock_gate(unsigned long core_idx, int enable)
- {
- 	vdi_info_t *vdi = NULL;
--	int ret = 0;
-+	int ret;
- 
- 	if (core_idx >= MAX_NUM_VPU_CORE)
- 		return -1;
-@@ -2434,7 +2072,6 @@ static int Internal_vdi_set_clock_gate(unsigned long core_idx, int enable)
+@@ -2434,7 +2076,6 @@ static int Internal_vdi_set_clock_gate(unsigned long core_idx, int enable)
  		return -1;
  	}
  	vdi->clock_state = enable;
@@ -2001,7 +1908,7 @@ index 9b466e22b..0fc9bd002 100644
  
  	return ret;
  }
-@@ -2465,18 +2102,11 @@ int vdi_wait_bus_busy(unsigned long core_idx, int timeout,
+@@ -2465,18 +2106,11 @@ int vdi_wait_bus_busy(unsigned long core_idx, int timeout,
  	struct timespec64 ts_base;
  	struct timespec64 ts;
  	struct timespec64 ts_delta;
@@ -2020,7 +1927,7 @@ index 9b466e22b..0fc9bd002 100644
  
  	while (1) {
  		if (PRODUCT_CODE_NOT_W_SERIES(vdi->product_code)) {
-@@ -2493,12 +2123,8 @@ int vdi_wait_bus_busy(unsigned long core_idx, int timeout,
+@@ -2493,12 +2127,8 @@ int vdi_wait_bus_busy(unsigned long core_idx, int timeout,
  		if (timeout > 0) {
  			ktime_get_ts64(&ts);
  			ts_delta = timespec64_sub(ts, ts_base);
@@ -2033,7 +1940,7 @@ index 9b466e22b..0fc9bd002 100644
  			{
  				VLOG(ERR,
  				     "[VDI] vdi_wait_bus_busy timeout, PC=0x%lx\n",
-@@ -2519,8 +2145,6 @@ int vdi_wait_vpu_busy(unsigned long core_idx, int timeout,
+@@ -2519,8 +2149,6 @@ int vdi_wait_vpu_busy(unsigned long core_idx, int timeout,
  	struct timespec64 ts_base;
  	struct timespec64 ts;
  	struct timespec64 ts_delta;
@@ -2042,7 +1949,7 @@ index 9b466e22b..0fc9bd002 100644
  	Uint32 pc;
  	Uint32 code, normalReg = TRUE;
  
-@@ -2529,11 +2153,6 @@ int vdi_wait_vpu_busy(unsigned long core_idx, int timeout,
+@@ -2529,11 +2157,6 @@ int vdi_wait_vpu_busy(unsigned long core_idx, int timeout,
  		return -1;
  
  	ktime_get_ts64(&ts_base);
@@ -2054,7 +1961,7 @@ index 9b466e22b..0fc9bd002 100644
  
  	code = Internal_vdi_read_register(
  		core_idx, VPU_PRODUCT_CODE_REGISTER); /* read product code */
-@@ -2556,12 +2175,8 @@ int vdi_wait_vpu_busy(unsigned long core_idx, int timeout,
+@@ -2556,12 +2179,8 @@ int vdi_wait_vpu_busy(unsigned long core_idx, int timeout,
  		if (timeout > 0) {
  			ktime_get_ts64(&ts);
  			ts_delta = timespec64_sub(ts, ts_base);
@@ -2067,7 +1974,7 @@ index 9b466e22b..0fc9bd002 100644
  			{
  				Uint32 index;
  				for (index = 0; index < 50; index++) {
-@@ -2585,7 +2200,6 @@ int vdi_wait_vpu_busy(unsigned long core_idx, int timeout,
+@@ -2585,7 +2204,6 @@ int vdi_wait_vpu_busy(unsigned long core_idx, int timeout,
  
  int vdi_wait_interrupt(unsigned long coreIdx, int timeout,
  		       unsigned int addr_bit_int_reason)
@@ -2075,7 +1982,7 @@ index 9b466e22b..0fc9bd002 100644
  {
  	int intr_reason = 0;
  	int ret;
-@@ -2607,7 +2221,6 @@ int vdi_wait_interrupt(unsigned long coreIdx, int timeout,
+@@ -2607,7 +2225,6 @@ int vdi_wait_interrupt(unsigned long coreIdx, int timeout,
  	intr_info.intr_reason = 0;
  
  	ret = rtd16xxb_vdi_ioctl_wait_interrupt(&intr_info);
@@ -2083,7 +1990,7 @@ index 9b466e22b..0fc9bd002 100644
  	if (ret != 0) {
  		unlock_vdi_info(vdi, coreIdx);
  		return -1;
-@@ -2677,7 +2290,6 @@ static int read_pinfo_buffer(int core_idx, int addr)
+@@ -2677,7 +2294,6 @@ static int read_pinfo_buffer(int core_idx, int addr)
  
  	rdata = Internal_vdi_read_register(core_idx, VDI_LOG_GDI_PINFO_DATA);
  
@@ -2091,7 +1998,7 @@ index 9b466e22b..0fc9bd002 100644
  	return rdata;
  }
  
-@@ -2789,36 +2401,12 @@ static void printf_gdi_info(int core_idx, int num, int reset)
+@@ -2789,36 +2405,12 @@ static void printf_gdi_info(int core_idx, int num, int reset)
  		}
  	}
  }
@@ -2105,13 +2012,13 @@ index 9b466e22b..0fc9bd002 100644
 -    unlock_vdi_info(vdi, coreIdx);
 -    return;
 -}
- 
+-
 -static void Internal_vdi_print_vpu_status(unsigned long coreIdx)
 -{
 -    unsigned int product_code;
 -
 -    product_code = Internal_vdi_read_register(coreIdx, VPU_PRODUCT_CODE_REGISTER);
--
+ 
 -    if (PRODUCT_CODE_NOT_W_SERIES(product_code)) {
 -    }
 -    else {
@@ -2128,7 +2035,7 @@ index 9b466e22b..0fc9bd002 100644
  	val &= 0xffff;
  	if (step == 1)
  		VLOG(TRACE, "\n**%s start(%d)\n", str, val);
-@@ -2926,11 +2514,9 @@ void vdi_log(unsigned long core_idx, int cmd, int step)
+@@ -2926,11 +2518,9 @@ void vdi_log(unsigned long core_idx, int cmd, int step)
  			     Internal_vdi_read_register(core_idx, i + 8),
  			     Internal_vdi_read_register(core_idx, i + 0xc));
  		}
@@ -2140,7 +2047,7 @@ index 9b466e22b..0fc9bd002 100644
  		if (cmd == VPU_RESET) {
  			printf_gdi_info(core_idx, 32, 0);
  
-@@ -3232,7 +2818,6 @@ static void Internal_vdi_set_rtk_clk_gating(Uint32 coreIdx, BOOL clk_en)
+@@ -3232,7 +2822,6 @@ static void Internal_vdi_set_rtk_clk_gating(Uint32 coreIdx, BOOL clk_en)
  #endif
  
  	rtd16xxb_vdi_ioctl_set_rtk_clk_gating(&clockInfo);
@@ -2148,7 +2055,7 @@ index 9b466e22b..0fc9bd002 100644
  }
  
  unsigned int vdi_get_rtk_clk_rate(Uint32 coreIdx)
-@@ -3243,7 +2828,6 @@ unsigned int vdi_get_rtk_clk_rate(Uint32 coreIdx)
+@@ -3243,7 +2832,6 @@ unsigned int vdi_get_rtk_clk_rate(Uint32 coreIdx)
  	clockInfo.core_idx = coreIdx;
  	clockInfo.value = 0;
  
@@ -2156,7 +2063,7 @@ index 9b466e22b..0fc9bd002 100644
  	VLOG(TRACE, "[VDI]  %s, %d... coreIdx:%d, clk_rate:%d\n", __FUNCTION__,
  	     __LINE__, coreIdx, clockInfo.value);
  	unlock_vdi_info(vdi, coreIdx);
-@@ -3273,122 +2857,15 @@ typedef enum {
+@@ -3273,122 +2861,15 @@ typedef enum {
  
  unsigned int vdi_get_support_vtype(Uint32 coreIdx)
  {
@@ -2279,7 +2186,7 @@ index 9b466e22b..0fc9bd002 100644
  int vdi_set_ve_prot_mode(Uint32 core_idx, BOOL enable)
  {
  	vdi_info_t *vdi;
-@@ -3404,11 +2881,9 @@ int vdi_set_ve_prot_mode(Uint32 core_idx, BOOL enable)
+@@ -3404,11 +2885,9 @@ int vdi_set_ve_prot_mode(Uint32 core_idx, BOOL enable)
  		    0) // if BIT processor is not running.
  		{
  			if (enable == TRUE) {
@@ -2291,7 +2198,7 @@ index 9b466e22b..0fc9bd002 100644
  				Internal_vdi_write_register(core_idx,
  							    VE1_PROT_CTRL, 0x2);
  			}
-@@ -3445,8 +2920,6 @@ unsigned int vdi_set_dovi_flag(unsigned long core_idx, unsigned long inst_idx,
+@@ -3445,8 +2924,6 @@ unsigned int vdi_set_dovi_flag(unsigned long core_idx, unsigned long inst_idx,
  	dovi_flag.inst_idx = inst_idx;
  	dovi_flag.enable = enable;
  
@@ -2300,7 +2207,7 @@ index 9b466e22b..0fc9bd002 100644
  	unlock_vdi_info(vdi, core_idx);
  	return dovi_flag.enable;
  }
-@@ -3475,8 +2948,6 @@ static int Internal_vdi_get_total_instance_num(unsigned long core_idx)
+@@ -3475,8 +2952,6 @@ static int Internal_vdi_get_total_instance_num(unsigned long core_idx)
  	if (!vdi || vdi->vpu_fd == -1 || vdi->vpu_fd == 0x00)
  		return -1;
  
@@ -2309,7 +2216,7 @@ index 9b466e22b..0fc9bd002 100644
  	return inst_info.inst_open_count;
  }
  
-@@ -3501,7 +2972,6 @@ static void Internal_vdi_set_thumb_num(unsigned long core_idx,
+@@ -3501,7 +2976,6 @@ static void Internal_vdi_set_thumb_num(unsigned long core_idx,
  	vdi = &s_vdi_info[core_idx];
  
  	mutex_lock(vdi->vpu_thumb_mutex);
@@ -2317,7 +2224,7 @@ index 9b466e22b..0fc9bd002 100644
  	if (enable) {
  		*vdi->thumb_num = *vdi->thumb_num + 1;
  		;
-@@ -3510,7 +2980,6 @@ static void Internal_vdi_set_thumb_num(unsigned long core_idx,
+@@ -3510,7 +2984,6 @@ static void Internal_vdi_set_thumb_num(unsigned long core_idx,
  			*vdi->thumb_num = *vdi->thumb_num - 1;
  	}
  	mutex_unlock(vdi->vpu_thumb_mutex);
@@ -2325,7 +2232,7 @@ index 9b466e22b..0fc9bd002 100644
  }
  
  unsigned int vdi_get_thumb_num(unsigned long core_idx)
-@@ -3535,10 +3004,8 @@ static unsigned int Internal_vdi_get_thumb_num(unsigned long core_idx)
+@@ -3535,10 +3008,8 @@ static unsigned int Internal_vdi_get_thumb_num(unsigned long core_idx)
  	vdi = &s_vdi_info[core_idx];
  
  	mutex_lock(vdi->vpu_thumb_mutex);
@@ -2336,7 +2243,7 @@ index 9b466e22b..0fc9bd002 100644
  
  	return ret;
  }
-@@ -3566,7 +3033,6 @@ static unsigned int Internal_vdi_set_thumb_used(unsigned long core_idx,
+@@ -3566,7 +3037,6 @@ static unsigned int Internal_vdi_set_thumb_used(unsigned long core_idx,
  	vdi = &s_vdi_info[core_idx];
  
  	mutex_lock(vdi->vpu_thumb_mutex);
@@ -2344,7 +2251,7 @@ index 9b466e22b..0fc9bd002 100644
  	if (enable) {
  		if (*vdi->thumb_used == 0) {
  			*vdi->thumb_used = 1;
-@@ -3576,152 +3042,7 @@ static unsigned int Internal_vdi_set_thumb_used(unsigned long core_idx,
+@@ -3576,152 +3046,7 @@ static unsigned int Internal_vdi_set_thumb_used(unsigned long core_idx,
  		*vdi->thumb_used = 0;
  	}
  	mutex_unlock(vdi->vpu_thumb_mutex);
@@ -2498,7 +2405,7 @@ index 9b466e22b..0fc9bd002 100644
 -#endif // #if 0
 -//#endif	//#if defined(linux) || defined(__linux) || defined(ANDROID)
 diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vdi_osal.c b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vdi_osal.c
-index 812b2ab7f..2e8286f2d 100644
+index 812b2ab7f..71b88c562 100644
 --- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vdi_osal.c
 +++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vdi_osal.c
 @@ -3,40 +3,13 @@
@@ -2542,7 +2449,7 @@ index 812b2ab7f..2e8286f2d 100644
  static int log_colors[MAX_LOG_LEVEL] = {
  	0,
  	TERM_COLOR_R | TERM_COLOR_G | TERM_COLOR_B | TERM_COLOR_BRIGHT, //INFO
-@@ -48,31 +21,22 @@ static int log_colors[MAX_LOG_LEVEL] = {
+@@ -48,7 +21,6 @@ static int log_colors[MAX_LOG_LEVEL] = {
  static unsigned log_decor = LOG_HAS_TIME | LOG_HAS_FILE | LOG_HAS_MICRO_SEC |
  			    LOG_HAS_NEWLINE | LOG_HAS_SPACE | LOG_HAS_COLOR;
  static int max_log_level = MAX_LOG_LEVEL;
@@ -2550,21 +2457,17 @@ index 812b2ab7f..2e8286f2d 100644
  
  static void term_restore_color(void);
  static void term_set_color(int color);
- #ifdef SUPPORT_SW_UART
- static pthread_mutex_t s_log_mutex;
+@@ -57,7 +29,6 @@ static pthread_mutex_t s_log_mutex;
  #endif
--int InitLog(void)
-+int InitLog()
+ int InitLog(void)
  {
 -	//fpLog = osal_fopen("ErrorLog.txt", "w");
  #ifdef SUPPORT_SW_UART
  	pthread_mutex_init(&s_log_mutex, NULL);
  #endif
- 	return 1;
- }
+@@ -66,13 +37,6 @@ int InitLog(void)
  
--void DeInitLog(void)
-+void DeInitLog()
+ void DeInitLog(void)
  {
 -/*
 -    if (fpLog)
@@ -2576,24 +2479,6 @@ index 812b2ab7f..2e8286f2d 100644
  #ifdef SUPPORT_SW_UART
  	pthread_mutex_destroy(&s_log_mutex);
  #endif
-@@ -93,7 +57,7 @@ void SetLogDecor(int decor)
- 	log_decor = decor;
- }
- 
--int GetLogDecor(void)
-+int GetLogDecor()
- {
- 	return log_decor;
- }
-@@ -102,7 +66,7 @@ void SetMaxLogLevel(int level)
- {
- 	max_log_level = level;
- }
--int GetMaxLogLevel(void)
-+int GetMaxLogLevel()
- {
- 	return max_log_level;
- }
 @@ -135,26 +99,16 @@ void LogMsg(int level, const char *format, ...)
  #ifdef ANDROID
  	if (level == ERR) {
@@ -3361,7 +3246,7 @@ index 7de09b99b..c569e1fda 100644
  	RetCode ret = RETCODE_SUCCESS;
  
 diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vpuapi.c b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vpuapi.c
-index 183130d8b..6e41deb36 100644
+index 183130d8b..d307b2661 100644
 --- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vpuapi.c
 +++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vpuapi.c
 @@ -18,8 +18,6 @@
@@ -3495,19 +3380,16 @@ index 183130d8b..6e41deb36 100644
  }
  
  RetCode VPU_InitWithBitcode(Uint32 coreIdx, const Uint16 *code, Uint32 size)
-@@ -485,11 +441,7 @@ RetCode VPU_DecOpen(DecHandle *pHandle, DecOpenParam *pop)
+@@ -485,8 +441,6 @@ RetCode VPU_DecOpen(DecHandle *pHandle, DecOpenParam *pop)
  	CodecInst *pCodecInst = 0;
  	DecInfo *pDecInfo;
  	RetCode ret;
 -	//Uint32      versionInfo;
 -	//Uint32      revision;
--#if defined(ENABLE_TEE_DRM_FLOW)
+ #if defined(ENABLE_TEE_DRM_FLOW)
  	int ret_teeapi;
--#endif
- 
- 	VLOG(TRACE, "[+] [%d]%s\n", __LINE__, __func__);
- 	ret = ProductCheckDecOpenParam(pop);
-@@ -757,13 +709,6 @@ RetCode VPU_DecOpen(DecHandle *pHandle, DecOpenParam *pop)
+ #endif
+@@ -757,13 +711,6 @@ RetCode VPU_DecOpen(DecHandle *pHandle, DecOpenParam *pop)
  	}
  #endif // #ifdef DAH_222_PREALLOC_MV_SLICE_BUFFER
  
@@ -3521,17 +3403,7 @@ index 183130d8b..6e41deb36 100644
  	// for debug, enable logging by vpuapi self
  	//pCodecInst->loggingEnable = 1;
  
-@@ -780,9 +725,7 @@ RetCode VPU_DecClose(DecHandle handle)
- 	DecInfo *pDecInfo;
- 	RetCode ret;
- 	int i;
--#if defined(ENABLE_TEE_DRM_FLOW)
- 	int ret_teeapi;
--#endif
- 
- 	VLOG(TRACE, "[+] [%d]%s.h:0x%x\n", __LINE__, __func__, handle);
- 	ret = CheckDecInstanceValidity(handle);
-@@ -1038,7 +981,6 @@ RetCode VPU_DecGetInitialInfo(DecHandle handle, DecInitialInfo *info)
+@@ -1038,7 +985,6 @@ RetCode VPU_DecGetInitialInfo(DecHandle handle, DecInitialInfo *info)
  			VLOG(WARN, "In[%s][%d] usleep 50ms and try again\n",
  			     __func__, __LINE__);
  			msleep(50);
@@ -3539,7 +3411,7 @@ index 183130d8b..6e41deb36 100644
  			if (GetPendingInst(pCodecInst->coreIdx)) {
  				LeaveLock(pCodecInst->coreIdx);
  				return RETCODE_FRAME_NOT_COMPLETE;
-@@ -1130,7 +1072,6 @@ RetCode VPU_DecIssueSeqInit(DecHandle handle)
+@@ -1130,7 +1076,6 @@ RetCode VPU_DecIssueSeqInit(DecHandle handle)
  			VLOG(WARN, "In[%s][%d] usleep 50ms and try again\n",
  			     __func__, __LINE__);
  			msleep(50);
@@ -3547,7 +3419,7 @@ index 183130d8b..6e41deb36 100644
  			if (GetPendingInst(pCodecInst->coreIdx)) {
  				LeaveLock(pCodecInst->coreIdx);
  				VLOG(ERR,
-@@ -1335,7 +1276,6 @@ static RetCode DecRegisterFrameBuffer(DecHandle handle, FrameBuffer *bufArray,
+@@ -1335,7 +1280,6 @@ static RetCode DecRegisterFrameBuffer(DecHandle handle, FrameBuffer *bufArray,
  			VLOG(WARN, "In[%s][%d] usleep 50ms and try again\n",
  			     __func__, __LINE__);
  			msleep(50);
@@ -3555,7 +3427,7 @@ index 183130d8b..6e41deb36 100644
  			if (GetPendingInst(pCodecInst->coreIdx)) {
  				LeaveLock(pCodecInst->coreIdx);
  				return RETCODE_FRAME_NOT_COMPLETE;
-@@ -1674,13 +1614,12 @@ RetCode VPU_DecSetDispFlag(DecHandle handle, int dispFlag) // [r] unused
+@@ -1674,13 +1618,12 @@ RetCode VPU_DecSetDispFlag(DecHandle handle, int dispFlag) // [r] unused
  		LeaveDispFlagLock(pCodecInst->coreIdx);
  	} else {
  		EnterLock(pCodecInst->coreIdx);
@@ -3570,7 +3442,7 @@ index 183130d8b..6e41deb36 100644
  RetCode VPU_DecGetBitstreamBuffer(DecHandle handle, PhysicalAddress *prdPtr,
  				  PhysicalAddress *pwrPtr, Uint32 *size)
  {
-@@ -1849,7 +1788,6 @@ RetCode VPU_DecUpdateBitstreamBuffer(DecHandle handle, int size)
+@@ -1849,7 +1792,6 @@ RetCode VPU_DecUpdateBitstreamBuffer(DecHandle handle, int size)
  	BOOL running;
  	VpuAttr *pAttr;
  
@@ -3578,7 +3450,7 @@ index 183130d8b..6e41deb36 100644
  	ret = CheckDecInstanceValidity(handle);
  	if (ret != RETCODE_SUCCESS) {
  		VLOG(ERR, "[-] [%d]%s.h:0x%x.size:%d.ret:%d\n", __LINE__,
-@@ -1895,7 +1833,6 @@ RetCode VPU_DecUpdateBitstreamBuffer(DecHandle handle, int size)
+@@ -1895,7 +1837,6 @@ RetCode VPU_DecUpdateBitstreamBuffer(DecHandle handle, int size)
  		// Discuss with FuChun, vpuapi can't know BS buffer is ring buffer or line buffer.
  		// Gregory use "bitstreamMode != BS_MODE_PIC_END" to determine BS buffer is ring buffer is not correct due to we have PIC_END + ring buffer case.
  		// If line buffer, wrPts won't be bigger than pDecInfo->streamBufEndAddr, so mark this condition is also ok for line buffer.
@@ -3586,7 +3458,7 @@ index 183130d8b..6e41deb36 100644
  		if (wrPtr > pDecInfo->streamBufEndAddr) {
  			room = wrPtr - pDecInfo->streamBufEndAddr;
  			wrPtr = pDecInfo->streamBufStartAddr;
-@@ -1903,7 +1840,6 @@ RetCode VPU_DecUpdateBitstreamBuffer(DecHandle handle, int size)
+@@ -1903,7 +1844,6 @@ RetCode VPU_DecUpdateBitstreamBuffer(DecHandle handle, int size)
  		} else if (wrPtr == pDecInfo->streamBufEndAddr) {
  			wrPtr = pDecInfo->streamBufStartAddr;
  		}
@@ -3594,7 +3466,7 @@ index 183130d8b..6e41deb36 100644
  
  		pDecInfo->streamWrPtr = wrPtr;
  		pDecInfo->streamRdPtr = rdPtr;
-@@ -1917,165 +1853,11 @@ RetCode VPU_DecUpdateBitstreamBuffer(DecHandle handle, int size)
+@@ -1917,165 +1857,11 @@ RetCode VPU_DecUpdateBitstreamBuffer(DecHandle handle, int size)
  	ret = ProductVpuDecSetBitstreamFlag(pCodecInst, running, size);
  
  	SetClockGate(pCodecInst->coreIdx, 0);
@@ -3760,25 +3632,23 @@ index 183130d8b..6e41deb36 100644
  RetCode VPU_HWReset(Uint32 coreIdx)
  {
  	if (vdi_hw_reset(coreIdx) < 0)
-@@ -2101,15 +1883,12 @@ RetCode VPU_HWReset(Uint32 coreIdx)
+@@ -2101,15 +1887,11 @@ RetCode VPU_HWReset(Uint32 coreIdx)
  RetCode VPU_SWReset(Uint32 coreIdx, SWResetMode resetMode, void *pendingInst)
  {
  	RetCode ret = RETCODE_SUCCESS;
 -//#define DEMO
 -#ifndef DEMO
--	CodecInst *pCodecInst = (CodecInst *)pendingInst;
+ 	CodecInst *pCodecInst = (CodecInst *)pendingInst;
 -#endif
  
  	VLOG(TRACE, "[+] [%d]%s.coreIdx:%d.resetMode:%d.pendingInst:%p\n",
  	     __LINE__, __func__, coreIdx, resetMode, pendingInst);
  	SetClockGate(coreIdx, 1);
 -#ifndef DEMO //Disable for DEMO
-+
-+	CodecInst *pCodecInst = (CodecInst *)pendingInst;
  	ret = ProductVpuReset(coreIdx, resetMode);
  
  	if (ret != RETCODE_SUCCESS) //RTK
-@@ -2145,10 +1924,7 @@ RetCode VPU_SWReset(Uint32 coreIdx, SWResetMode resetMode, void *pendingInst)
+@@ -2145,10 +1927,7 @@ RetCode VPU_SWReset(Uint32 coreIdx, SWResetMode resetMode, void *pendingInst)
  			}
  		}
  	}
@@ -3790,7 +3660,7 @@ index 183130d8b..6e41deb36 100644
  	SetClockGate(coreIdx, 0);
  
  	VLOG(TRACE, "[-] [%d]%s.coreIdx:%d.ret:%d\n", __LINE__, __func__,
-@@ -2158,7 +1934,6 @@ RetCode VPU_SWReset(Uint32 coreIdx, SWResetMode resetMode, void *pendingInst)
+@@ -2158,7 +1937,6 @@ RetCode VPU_SWReset(Uint32 coreIdx, SWResetMode resetMode, void *pendingInst)
  
  //---- VPU_SLEEP/WAKE
  RetCode VPU_SleepWake(Uint32 coreIdx, int iSleepWake)
@@ -3798,7 +3668,7 @@ index 183130d8b..6e41deb36 100644
  {
  	SetClockGate(coreIdx, TRUE);
  	SetClockGate(coreIdx, FALSE);
-@@ -2173,15 +1948,7 @@ RetCode VPU_DecStartOneFrame(DecHandle handle, DecParam *param)
+@@ -2173,15 +1951,7 @@ RetCode VPU_DecStartOneFrame(DecHandle handle, DecParam *param)
  	Uint32 val = 0;
  	RetCode ret = RETCODE_SUCCESS;
  	VpuAttr *pAttr = NULL;
@@ -3815,7 +3685,7 @@ index 183130d8b..6e41deb36 100644
  	VLOG(TRACE, "[+] [%d]%s.h:0x%x.DecParam(%d,%d,%d)\n", __LINE__,
  	     __func__, handle, param->iframeSearchEnable, param->skipframeMode,
  	     param->craAsBlaFlag);
-@@ -2212,7 +1979,6 @@ RetCode VPU_DecStartOneFrame(DecHandle handle, DecParam *param)
+@@ -2212,7 +1982,6 @@ RetCode VPU_DecStartOneFrame(DecHandle handle, DecParam *param)
  			VLOG(WARN, "In[%s][%d] usleep 50ms and try again\n",
  			     __func__, __LINE__);
  			msleep(50);
@@ -3823,7 +3693,7 @@ index 183130d8b..6e41deb36 100644
  			if (GetPendingInst(pCodecInst->coreIdx)) {
  				LeaveLock(pCodecInst->coreIdx);
  				VLOG(ERR,
-@@ -2234,7 +2000,6 @@ RetCode VPU_DecStartOneFrame(DecHandle handle, DecParam *param)
+@@ -2234,7 +2003,6 @@ RetCode VPU_DecStartOneFrame(DecHandle handle, DecParam *param)
  		val = pDecInfo->frameDisplayFlag;
  		val |= pDecInfo->setDisplayIndexes;
  		val &= ~(Uint32)(pDecInfo->clearDisplayIndexes);
@@ -3831,7 +3701,7 @@ index 183130d8b..6e41deb36 100644
  		VpuWriteReg(pCodecInst->coreIdx,
  			    pDecInfo->frameDisplayFlagRegAddr, val);
  		pDecInfo->clearDisplayIndexes = 0;
-@@ -2513,11 +2278,6 @@ RetCode VPU_DecGetOutputInfo(DecHandle handle, DecOutputInfo *info)
+@@ -2513,11 +2281,6 @@ RetCode VPU_DecGetOutputInfo(DecHandle handle, DecOutputInfo *info)
  			info->dispPicWidth = info->decPicWidth;
  			info->dispPicHeight = info->decPicHeight;
  		} else {
@@ -3843,7 +3713,7 @@ index 183130d8b..6e41deb36 100644
  			info->dispPicWidth =
  				pDecInfo->decOutInfo[displayIndex].decPicWidth;
  			info->dispPicHeight =
-@@ -2748,7 +2508,6 @@ RetCode VPU_DecFrameBufferFlush(DecHandle handle, DecOutputInfo *pRemainings,
+@@ -2748,7 +2511,6 @@ RetCode VPU_DecFrameBufferFlush(DecHandle handle, DecOutputInfo *pRemainings,
  			VLOG(WARN, "In[%s][%d] usleep 50ms and try again\n",
  			     __func__, __LINE__);
  			msleep(50);
@@ -3851,7 +3721,7 @@ index 183130d8b..6e41deb36 100644
  			if (GetPendingInst(pCodecInst->coreIdx)) {
  				LeaveLock(pCodecInst->coreIdx);
  				VLOG(ERR,
-@@ -2773,7 +2532,6 @@ RetCode VPU_DecFrameBufferFlush(DecHandle handle, DecOutputInfo *pRemainings,
+@@ -2773,7 +2535,6 @@ RetCode VPU_DecFrameBufferFlush(DecHandle handle, DecOutputInfo *pRemainings,
  		val = pDecInfo->frameDisplayFlag;
  		val |= pDecInfo->setDisplayIndexes;
  		val &= ~(Uint32)(pDecInfo->clearDisplayIndexes);
@@ -3859,7 +3729,7 @@ index 183130d8b..6e41deb36 100644
  		VpuWriteReg(pCodecInst->coreIdx,
  			    pDecInfo->frameDisplayFlagRegAddr, val);
  		pDecInfo->clearDisplayIndexes = 0;
-@@ -3013,7 +2771,6 @@ RetCode VPU_DecClrDispFlag(DecHandle handle, int index)
+@@ -3013,7 +2774,6 @@ RetCode VPU_DecClrDispFlag(DecHandle handle, int index)
  	supportCommandQueue = (pAttr->supportCommandQueue == TRUE);
  	if (supportCommandQueue == TRUE) {
  		EnterLock(pCodecInst->coreIdx);
@@ -3867,7 +3737,7 @@ index 183130d8b..6e41deb36 100644
  		LeaveLock(pCodecInst->coreIdx);
  	} else {
  		EnterDispFlagLock(pCodecInst->coreIdx);
-@@ -3695,7 +3452,6 @@ RetCode VPU_DecGiveCommand(DecHandle handle, CodecCommand cmd, void *param)
+@@ -3695,7 +3455,6 @@ RetCode VPU_DecGiveCommand(DecHandle handle, CodecCommand cmd, void *param)
  		supportCommandQueue = (pAttr->supportCommandQueue == TRUE);
  		if (supportCommandQueue == TRUE) {
  			EnterLock(pCodecInst->coreIdx);
@@ -3875,15 +3745,16 @@ index 183130d8b..6e41deb36 100644
  			LeaveLock(pCodecInst->coreIdx);
  		} else {
  			EnterDispFlagLock(pCodecInst->coreIdx);
-@@ -3773,7 +3529,6 @@ RetCode VPU_DecGiveCommand(DecHandle handle, CodecCommand cmd, void *param)
+@@ -3773,7 +3532,7 @@ RetCode VPU_DecGiveCommand(DecHandle handle, CodecCommand cmd, void *param)
  		if (pCodecInst->codecMode != HEVC_DEC) {
  			return RETCODE_NOT_SUPPORTED_FEATURE;
  		}
 -    fallthrough;
++		break;
  	case DEC_SET_BWB_CUR_FRAME_IDX:
  		pDecInfo->chBwbFrameIdx = *(Uint32 *)param;
  		break;
-@@ -3995,7 +3750,6 @@ RetCode VPU_EncOpen(EncHandle *pHandle, EncOpenParam *pop)
+@@ -3995,7 +3754,6 @@ RetCode VPU_EncOpen(EncHandle *pHandle, EncOpenParam *pop)
  		LeaveLock(pop->coreIdx);
  		return RETCODE_NOT_INITIALIZED;
  	}
@@ -3891,7 +3762,7 @@ index 183130d8b..6e41deb36 100644
  	ret = GetCodecInstance(pop->coreIdx, &pCodecInst, pop->filp);
  	if (ret == RETCODE_FAILURE) {
  		*pHandle = 0;
-@@ -4185,7 +3939,6 @@ RetCode VPU_EncGetInitialInfo(EncHandle handle, EncInitialInfo *info)
+@@ -4185,7 +3943,6 @@ RetCode VPU_EncGetInitialInfo(EncHandle handle, EncInitialInfo *info)
  			VLOG(WARN, "In[%s][%d] usleep 50ms and try again\n",
  			     __func__, __LINE__);
  			msleep(50);
@@ -3899,7 +3770,7 @@ index 183130d8b..6e41deb36 100644
  			if (GetPendingInst(pCodecInst->coreIdx)) {
  				LeaveLock(pCodecInst->coreIdx);
  				return RETCODE_FRAME_NOT_COMPLETE;
-@@ -4263,7 +4016,6 @@ RetCode VPU_EncRegisterFrameBuffer(EncHandle handle, FrameBuffer *bufArray,
+@@ -4263,7 +4020,6 @@ RetCode VPU_EncRegisterFrameBuffer(EncHandle handle, FrameBuffer *bufArray,
  			VLOG(WARN, "In[%s][%d] usleep 50ms and try again\n",
  			     __func__, __LINE__);
  			msleep(50);
@@ -3907,7 +3778,7 @@ index 183130d8b..6e41deb36 100644
  			if (GetPendingInst(pCodecInst->coreIdx)) {
  				LeaveLock(pCodecInst->coreIdx);
  				return RETCODE_FRAME_NOT_COMPLETE;
-@@ -4311,15 +4063,12 @@ RetCode VPU_EncRegisterFrameBuffer(EncHandle handle, FrameBuffer *bufArray,
+@@ -4311,15 +4067,12 @@ RetCode VPU_EncRegisterFrameBuffer(EncHandle handle, FrameBuffer *bufArray,
  			openParam->frameEndian, &pEncInfo->vbFrame, 0,
  			FB_TYPE_CODEC);
  		if (ret != RETCODE_SUCCESS) {
@@ -3923,7 +3794,7 @@ index 183130d8b..6e41deb36 100644
  	LeaveLock(pCodecInst->coreIdx);
  
  	return ret;
-@@ -4511,7 +4260,6 @@ RetCode VPU_EncStartOneFrame(EncHandle handle, EncParam *param)
+@@ -4511,7 +4264,6 @@ RetCode VPU_EncStartOneFrame(EncHandle handle, EncParam *param)
  			VLOG(WARN, "In[%s][%d] usleep 50ms and try again\n",
  			     __func__, __LINE__);
  			msleep(50);
@@ -3931,7 +3802,7 @@ index 183130d8b..6e41deb36 100644
  			if (GetPendingInst(pCodecInst->coreIdx)) {
  				LeaveLock(pCodecInst->coreIdx);
  				return RETCODE_FRAME_NOT_COMPLETE;
-@@ -4984,11 +4732,6 @@ RetCode VPU_EncCompleteSeqInit(EncHandle handle, EncInitialInfo *info)
+@@ -4984,11 +4736,6 @@ RetCode VPU_EncCompleteSeqInit(EncHandle handle, EncInitialInfo *info)
  		pEncInfo->initialInfoObtained = 1;
  	}
  
@@ -3943,7 +3814,7 @@ index 183130d8b..6e41deb36 100644
  	pEncInfo->initialInfo = *info;
  
  	SetPendingInst(pCodecInst->coreIdx, NULL);
-@@ -5190,12 +4933,6 @@ RetCode RTK_VPU_InitWithBitcode(Uint32 coreIdx, BOOL protect)
+@@ -5190,12 +4937,6 @@ RetCode RTK_VPU_InitWithBitcode(Uint32 coreIdx, BOOL protect)
  	}
  
  	if (coreIdx == 0) {
@@ -3956,7 +3827,7 @@ index 183130d8b..6e41deb36 100644
  		firmware = (Uint8 *)osal_malloc(VPU_FIRMWARE_SIZE);
  		VLOG(TRACE, "[%d]firmware:0x%px\n", __LINE__, firmware);
  		VLOG(TRACE, "[%d]size:%d\n", __LINE__, VPU_FIRMWARE_SIZE);
-@@ -5222,7 +4959,6 @@ RetCode RTK_VPU_InitWithBitcode(Uint32 coreIdx, BOOL protect)
+@@ -5222,7 +4963,6 @@ RetCode RTK_VPU_InitWithBitcode(Uint32 coreIdx, BOOL protect)
  
  RetCode RTK_VPU_InitWithBitcodeExt(Uint32 coreIdx, BOOL protect, void *sess,
  				   void *rtk_sess, void *filp)
@@ -3964,7 +3835,7 @@ index 183130d8b..6e41deb36 100644
  {
  	RetCode ret = RETCODE_SUCCESS;
  	Uint8 *firmware = NULL;
-@@ -5237,12 +4973,6 @@ RetCode RTK_VPU_InitWithBitcodeExt(Uint32 coreIdx, BOOL protect, void *sess,
+@@ -5237,12 +4977,6 @@ RetCode RTK_VPU_InitWithBitcodeExt(Uint32 coreIdx, BOOL protect, void *sess,
  	}
  
  	if (coreIdx == 0) {
@@ -3977,20 +3848,7 @@ index 183130d8b..6e41deb36 100644
  		firmware = (Uint8 *)osal_malloc(VPU_FIRMWARE_SIZE);
  		if (firmware != NULL) {
  			osal_memcpy((void *)firmware, bit_code,
-@@ -5276,11 +5006,11 @@ RetCode VPU_DBG_DUMP_SDATA(DecHandle handle, unsigned int phy_addr,
- 			   unsigned char *dst_buf, int dst_buf_size)
- {
- 	RetCode ret = RETCODE_SUCCESS;
--#ifdef ENABLE_TEE_DRM_FLOW
- 	int taRet;
- 	CodecInst *pCodecInst;
- 	vpu_buffer_t *vb = NULL;
- 
-+#ifdef ENABLE_TEE_DRM_FLOW
- 	VLOG(TRACE,
- 	     "[+] [%d]%s.handle:0x%px.phy_addr:0x%x.dst_buf:0x%px.dst_buf_size:%d\n",
- 	     __LINE__, __func__, handle, phy_addr, dst_buf, dst_buf_size);
-@@ -5356,4 +5086,4 @@ exit:
+@@ -5356,4 +5090,4 @@ exit:
  	ret = RETCODE_FAILURE;
  #endif // #ifdef ENABLE_TEE_DRM_FLOW
  	return ret;
@@ -4292,32 +4150,8 @@ index 2d2071b99..2d6837b15 100644
  RetCode SetParaSet(DecHandle handle, int paraSetType, DecParamSet *para);
  void DecSetHostParaAddr(Uint32 coreIdx, PhysicalAddress baseAddr,
  			PhysicalAddress paraAddr);
-diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vpuerror.h b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vpuerror.h
-index 821b929c8..361f8dace 100644
---- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vpuerror.h
-+++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vpuerror.h
-@@ -118,14 +118,13 @@
- #define WAVE4_SPEC_OVER_CHROMA_FORMAT                                          \
- 	0x00040000 // Spec over	ERROR	chroma format is not 4:2:0
- #define WAVE4_SPEC_OVER_BIT_DEPTH                                              \
--	0x00080000
--     // luma or chroma bit depth over.
--		// In WAVE410 v1.0 luma and chroma bit depth should be 8 bits.
-+	0x00080000 // luma or chroma bit depth over.                           \
-+		// In WAVE410 v1.0 luma and chroma bit depth should be 8 bits. \
- 		// In WAVE410 v2.0 luma and chroma bit depth should be up to 10 bits repectively.
- #define WAVE4_SPEC_OVER_PROFILE                                                                                             \
--	0x00100000 // Spec over	WARNING
--		// general_profile_idc and general_profile_compatibility_flag over.
--		// In WAVE410 v1.0. general_profile_idc and general_profile_compatibility_flag should specify Main profile.
-+	0x00100000 // Spec over	WARNING                                                                                     \
-+		// general_profile_idc and general_profile_compatibility_flag over.                                         \
-+		// In WAVE410 v1.0. general_profile_idc and general_profile_compatibility_flag should specify Main profile. \
- 		// In WAVE410 v2.0. general_profile_idc and general_profile_compatibility_flag should specify Main or Main10 profile.
- #define WAVE4_SPEC_OVER_LEVEL                                                  \
- 	0x00200000 // Spec over	WARNING	general_level_idc over.
 diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_wrapper.c b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_wrapper.c
-index 58cc47284..8763cb18e 100644
+index 58cc47284..b60b802e7 100644
 --- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_wrapper.c
 +++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_wrapper.c
 @@ -10,7 +10,6 @@
@@ -4541,12 +4375,7 @@ index 58cc47284..8763cb18e 100644
  		return ret;
  	}
  	ctx->dpb[i].size = size;
-@@ -574,11 +549,11 @@ int rtkve1_add_capbuf_to_dpb(void *pCtx, unsigned long size,
- 	ctx->dpb[i].vb2_v4l2_buf = vb2_v4l2_buf;
- 	ctx->cntCap2Dpb++;
- 	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
--		"add capbuf to dpb[%d].phys_addr:0x%lx.size:%u.vb2_v4l2_buf:0x%px.cntCap2Dpb:%d\n",
-+		"add capbuf to dpb[%d].phys_addr:0x%lx.size:%ld.vb2_v4l2_buf:0x%px.cntCap2Dpb:%d\n",
+@@ -578,7 +553,7 @@ int rtkve1_add_capbuf_to_dpb(void *pCtx, unsigned long size,
  		i, ctx->dpb[i].phys_addr, ctx->dpb[i].size,
  		ctx->dpb[i].vb2_v4l2_buf, ctx->cntCap2Dpb);
  	ret = i;
@@ -4607,7 +4436,7 @@ index 58cc47284..8763cb18e 100644
  		virt_addr = dma_alloc_coherent(ctx->pdev, PAGE_ALIGN(size),
  					       &dma_phys_addr,
  					       (GFP_DMA | GFP_KERNEL));
-@@ -674,17 +649,13 @@ int ve1_alloc_frame_buffer(void *pCtx, unsigned int size,
+@@ -674,9 +649,6 @@ int ve1_alloc_frame_buffer(void *pCtx, unsigned int size,
  		ctx->dpb[i].phys_addr = (unsigned long)*phys_addr;
  		ctx->dpb[i].virt_addr = (unsigned long)virt_addr;
  
@@ -4617,10 +4446,9 @@ index 58cc47284..8763cb18e 100644
  		// register dpb[i] to ve1_mem
  		entry = kzalloc(sizeof(ve1_mem_reg_entry_t), GFP_KERNEL);
  		if (entry) {
- 			entry->dev = ctx->pdev;
+@@ -684,7 +656,6 @@ int ve1_alloc_frame_buffer(void *pCtx, unsigned int size,
  			entry->phys_addr = ctx->dpb[i].phys_addr;
--			entry->addr = (void *) ctx->dpb[i].virt_addr;
-+			entry->addr = ctx->dpb[i].virt_addr;
+ 			entry->addr = (void *) ctx->dpb[i].virt_addr;
  			entry->size = ctx->dpb[i].size;
 -			//ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG, "ve1_mem_reg_add.slot_i:%d.dev:0x%px.phys_addr:0x%lx.virt_addr:0x%px.size:%ld\n",i,entry->dev,entry->phys_addr,entry->addr,entry->size);
  			ve1_mem_reg_add(entry);
@@ -4635,16 +4463,15 @@ index 58cc47284..8763cb18e 100644
  
  	return ret;
  }
-@@ -700,7 +671,7 @@ int ve1_alloc_frame_buffer(void *pCtx, unsigned int size,
+@@ -700,7 +671,6 @@ int ve1_alloc_frame_buffer(void *pCtx, unsigned int size,
  void ve1_free_frame_buffer(void *pCtx, unsigned long phys_addr)
  {
  	struct ve1_ctx *ctx;
 -//	struct ion_client *ve1_client;
-+	struct ion_client *ve1_client;
  
  	if ((pCtx == NULL) || (phys_addr == 0)) {
  		ve1_err(VE1_WRAPPER_TAG,
-@@ -710,7 +681,7 @@ void ve1_free_frame_buffer(void *pCtx, unsigned long phys_addr)
+@@ -710,7 +680,7 @@ void ve1_free_frame_buffer(void *pCtx, unsigned long phys_addr)
  	}
  	ctx = (struct ve1_ctx *)pCtx;
  
@@ -4653,7 +4480,7 @@ index 58cc47284..8763cb18e 100644
  	do {
  		int i = 0;
  
-@@ -726,8 +697,6 @@ void ve1_free_frame_buffer(void *pCtx, unsigned long phys_addr)
+@@ -726,8 +696,6 @@ void ve1_free_frame_buffer(void *pCtx, unsigned long phys_addr)
  		}
  
  		if (ctx->dpb[i].reg_entry) {
@@ -4662,7 +4489,7 @@ index 58cc47284..8763cb18e 100644
  			ve1_mem_reg_remove(phys_addr);
  			kfree(ctx->dpb[i].reg_entry);
  		}
-@@ -739,11 +708,9 @@ void ve1_free_frame_buffer(void *pCtx, unsigned long phys_addr)
+@@ -739,11 +707,9 @@ void ve1_free_frame_buffer(void *pCtx, unsigned long phys_addr)
  			ctx->totIonAllocatedBytes -= ctx->dpb[i].size;
  		}
  
@@ -4675,7 +4502,7 @@ index 58cc47284..8763cb18e 100644
  }
  
  #ifdef VPU_GET_CC
-@@ -914,7 +881,6 @@ int VE1_DecInit(void *pCtx)
+@@ -914,7 +880,6 @@ int VE1_DecInit(void *pCtx)
  
  	return ret;
  }
@@ -4683,7 +4510,7 @@ index 58cc47284..8763cb18e 100644
  
  int VE1_DecOpen(void *pCtx, void *pParam)
  {
-@@ -960,6 +926,12 @@ int VE1_DecOpen(void *pCtx, void *pParam)
+@@ -960,6 +925,12 @@ int VE1_DecOpen(void *pCtx, void *pParam)
  	case V4L2_PIX_FMT_VP8:
  		codec_type = STD_VP8;
  		break;
@@ -4696,7 +4523,7 @@ index 58cc47284..8763cb18e 100644
  	case V4L2_PIX_FMT_H264:
  	default:
  		codec_type = STD_AVC;
-@@ -975,7 +947,6 @@ int VE1_DecOpen(void *pCtx, void *pParam)
+@@ -975,7 +946,6 @@ int VE1_DecOpen(void *pCtx, void *pParam)
  		 "bitstreamBuffer:0x%x.bitstreamBufferSize:%d\n",
  		 pDecOp->bitstreamBuffer, pDecOp->bitstreamBufferSize);
  	pDecOp->avcExtension = 0;
@@ -4704,7 +4531,7 @@ index 58cc47284..8763cb18e 100644
  	pDecOp->bitstreamMode = BS_MODE_PIC_END;
  
  	if (param->dst_fmt_fourcc == V4L2_PIX_FMT_NV21 ||
-@@ -990,8 +961,6 @@ int VE1_DecOpen(void *pCtx, void *pParam)
+@@ -990,8 +960,6 @@ int VE1_DecOpen(void *pCtx, void *pParam)
  		(char *)&param->src_fmt_fourcc, (char *)&param->dst_fmt_fourcc,
  		pDecOp->cbcrInterleave, pDecOp->nv21);
  
@@ -4713,7 +4540,7 @@ index 58cc47284..8763cb18e 100644
  	pDecOp->cbcrOrder = CBCR_ORDER_NORMAL;
  	pDecOp->frameEndian = VPU_FRAME_ENDIAN;
  	pDecOp->streamEndian = VPU_STREAM_ENDIAN;
-@@ -1107,7 +1076,6 @@ int VE1_DecOpen(void *pCtx, void *pParam)
+@@ -1107,7 +1075,6 @@ int VE1_DecOpen(void *pCtx, void *pParam)
  #endif
  	return ret;
  }
@@ -4721,7 +4548,7 @@ index 58cc47284..8763cb18e 100644
  
  int VE1_DecGetRdWrPtr(void *pCtx)
  {
-@@ -1131,14 +1099,10 @@ int VE1_DecGetRdWrPtr(void *pCtx)
+@@ -1131,14 +1098,10 @@ int VE1_DecGetRdWrPtr(void *pCtx)
  				(DecHandle)ctx->decHandle, &ctx->vpuRdPtr,
  				&ctx->vpuWrPtr, &ctx->vpuBsRingRoom);
  		}
@@ -4736,7 +4563,7 @@ index 58cc47284..8763cb18e 100644
  
  int VE1_SetStreamEnd(void *pCtx)
  {
-@@ -1159,18 +1123,15 @@ int VE1_SetStreamEnd(void *pCtx)
+@@ -1159,18 +1122,15 @@ int VE1_SetStreamEnd(void *pCtx)
  	ret = VPU_DecUpdateBitstreamBuffer((DecHandle)ctx->decHandle,
  					   STREAM_END_SIZE);
  	ve1_dbg(VPU_DBG_VE1_UP_BS, VE1_WRAPPER_TAG,
@@ -4757,7 +4584,7 @@ index 58cc47284..8763cb18e 100644
  	BOOL seqInitEscape = FALSE;
  	int int_reason;
  	int bSeqInited = 0;
-@@ -1192,7 +1153,6 @@ int VE1_DecSeqInit(void *pCtx)
+@@ -1192,7 +1152,6 @@ int VE1_DecSeqInit(void *pCtx)
  
  	VE1_DecGetRdWrPtr(ctx);
  	if (((DecOpenParam *)ctx->decOP)->bitstreamMode == BS_MODE_INTERRUPT) {
@@ -4765,7 +4592,7 @@ index 58cc47284..8763cb18e 100644
  		valid_data = ve1_ring_valid_data(ctx->bitstream.paddr,
  						 ctx->bitstream.paddr +
  							 ctx->bitstream.size,
-@@ -1296,7 +1256,6 @@ int VE1_DecSeqInit(void *pCtx)
+@@ -1296,7 +1255,6 @@ int VE1_DecSeqInit(void *pCtx)
  	waitSeqInitDone:
  		while (1) {
  			int_reason = VPU_WaitInterrupt(VE1_COREIDX, 10);
@@ -4773,7 +4600,7 @@ index 58cc47284..8763cb18e 100644
  			if (int_reason == -1) {
  				int_reason = 0;
  			}
-@@ -1373,7 +1332,6 @@ int VE1_DecSeqInit(void *pCtx)
+@@ -1373,7 +1331,6 @@ int VE1_DecSeqInit(void *pCtx)
  
  	return ret;
  }
@@ -4781,16 +4608,15 @@ index 58cc47284..8763cb18e 100644
  
  int VE1_DecAllocateFrameBuffers(void *pCtx)
  {
-@@ -1389,7 +1347,7 @@ int VE1_DecAllocateFrameBuffers(void *pCtx)
+@@ -1389,7 +1346,6 @@ int VE1_DecAllocateFrameBuffers(void *pCtx)
  	FrameBufferAllocInfo *fbAllocInfo;
  	FrameBuffer *fbUser;
  	int i;
 -//	bool bWtlEnable = true;
-+	bool bWtlEnable = true;
  	SecAxiUse *secAxiUse;
  	MaverickCacheConfig *decCacheConfig;
  
-@@ -1425,22 +1383,7 @@ int VE1_DecAllocateFrameBuffers(void *pCtx)
+@@ -1425,22 +1381,7 @@ int VE1_DecAllocateFrameBuffers(void *pCtx)
  	decOP = (DecOpenParam *)ctx->decOP;
  	initialInfo = (DecInitialInfo *)ctx->initialInfo;
  	fbAllocInfo = (FrameBufferAllocInfo *)ctx->fbAllocInfo;
@@ -4814,7 +4640,7 @@ index 58cc47284..8763cb18e 100644
  	fbFormat = FORMAT_420;
  	wtlFormat = FORMAT_420;
  
-@@ -1471,7 +1414,8 @@ int VE1_DecAllocateFrameBuffers(void *pCtx)
+@@ -1471,7 +1412,8 @@ int VE1_DecAllocateFrameBuffers(void *pCtx)
  		return -1;
  	}
  
@@ -4824,7 +4650,7 @@ index 58cc47284..8763cb18e 100644
  		ve1_err(VE1_WRAPPER_TAG,
  			"cap_qbuf count:%d < expected dpb count:%d\n",
  			ctx->cntCap2Dpb,
-@@ -1493,7 +1437,6 @@ int VE1_DecAllocateFrameBuffers(void *pCtx)
+@@ -1493,7 +1435,6 @@ int VE1_DecAllocateFrameBuffers(void *pCtx)
  
  	fbAllocInfo->format = fbFormat;
  	fbAllocInfo->cbcrInterleave = decOP->cbcrInterleave;
@@ -4832,7 +4658,7 @@ index 58cc47284..8763cb18e 100644
  	fbAllocInfo->mapType = mapType;
  	fbAllocInfo->stride = fbStride;
  	fbAllocInfo->height = fbHeight;
-@@ -1505,12 +1448,12 @@ int VE1_DecAllocateFrameBuffers(void *pCtx)
+@@ -1505,12 +1446,12 @@ int VE1_DecAllocateFrameBuffers(void *pCtx)
  
  	for (i = 0; i < ctx->regFbCount; i++) {
  		fbUser = ((FrameBuffer *)ctx->fbUser) + i;
@@ -4846,7 +4672,7 @@ index 58cc47284..8763cb18e 100644
  	}
  
  	ret = VPU_DecAllocateFrameBuffer((DecHandle)ctx->decHandle,
-@@ -1595,14 +1538,13 @@ int VE1_DecAllocateFrameBuffers(void *pCtx)
+@@ -1595,14 +1536,12 @@ int VE1_DecAllocateFrameBuffers(void *pCtx)
  
  	return ret;
  }
@@ -4858,11 +4684,10 @@ index 58cc47284..8763cb18e 100644
  	struct ve1_ctx *ctx;
  	unsigned long valid_data = 0;
 -//	bool queueRet = false;
-+	bool queueRet = false;
  
  	if (pCtx == NULL) {
  		ve1_err(VE1_WRAPPER_TAG, "pCtx == NULL\n");
-@@ -1627,33 +1569,34 @@ int VE1_DecStartDecode(void *pCtx)
+@@ -1627,33 +1566,34 @@ int VE1_DecStartDecode(void *pCtx)
  			       ctx->ve1DecState == VE1_STATE_DEC_PIC_DONE)) {
  		VE1_DecGetRdWrPtr(ctx);
  		if ((((DecOpenParam *)ctx->decOP)->bitstreamMode ==
@@ -4909,7 +4734,7 @@ index 58cc47284..8763cb18e 100644
  		if (ret != RETCODE_SUCCESS) {
  			ve1_err(VE1_WRAPPER_TAG,
  				"VPU_DecStartOneFrame fail.ret:%d\n", ret);
-@@ -1666,7 +1609,6 @@ int VE1_DecStartDecode(void *pCtx)
+@@ -1666,7 +1606,6 @@ int VE1_DecStartDecode(void *pCtx)
  
  	return ret;
  }
@@ -4917,7 +4742,7 @@ index 58cc47284..8763cb18e 100644
  
  int VE1_DecWaitPicDone(void *pCtx)
  {
-@@ -1682,7 +1624,6 @@ int VE1_DecWaitPicDone(void *pCtx)
+@@ -1682,7 +1621,6 @@ int VE1_DecWaitPicDone(void *pCtx)
  
  	while (1) {
  		ctx->int_reason = VPU_WaitInterrupt(VE1_COREIDX, 10);
@@ -4925,7 +4750,7 @@ index 58cc47284..8763cb18e 100644
  		if (ctx->int_reason == -1) {
  			ctx->int_reason = 0;
  			ctx->timeoutCount++;
-@@ -1719,9 +1660,8 @@ int VE1_DecWaitPicDone(void *pCtx)
+@@ -1719,9 +1657,8 @@ int VE1_DecWaitPicDone(void *pCtx)
  			if (ctx->int_reason & (1 << INT_BIT_PIC_RUN)) {
  				VPU_ClearInterrupt(VE1_COREIDX);
  				ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
@@ -4937,7 +4762,7 @@ index 58cc47284..8763cb18e 100644
  				ctx->int_reason = 0;
  				bPicDone = 1;
  			} else if (ctx->int_reason &
-@@ -1731,22 +1671,18 @@ int VE1_DecWaitPicDone(void *pCtx)
+@@ -1731,22 +1668,18 @@ int VE1_DecWaitPicDone(void *pCtx)
  				ctx->bufEmptyVpuWrPtr = ctx->vpuWrPtr;
  				ctx->bBufEmptyFlag = true;
  				ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
@@ -4966,7 +4791,7 @@ index 58cc47284..8763cb18e 100644
  			}
  			break;
  		}
-@@ -1754,7 +1690,6 @@ int VE1_DecWaitPicDone(void *pCtx)
+@@ -1754,7 +1687,6 @@ int VE1_DecWaitPicDone(void *pCtx)
  
  	return bPicDone;
  }
@@ -4974,7 +4799,7 @@ index 58cc47284..8763cb18e 100644
  
  void *rtkve1_find_dpb(void *pCtx, unsigned long dpb_paddr)
  {
-@@ -1768,7 +1703,6 @@ void *rtkve1_find_dpb(void *pCtx, unsigned long dpb_paddr)
+@@ -1768,7 +1700,6 @@ void *rtkve1_find_dpb(void *pCtx, unsigned long dpb_paddr)
  	ctx = (struct ve1_ctx *)pCtx;
  
  	for (i = 0; i < VE1_ION_STRUCT_NUM; i++) {
@@ -4982,7 +4807,7 @@ index 58cc47284..8763cb18e 100644
  		if (IS_RTKVE1_DPB_VALID(ctx->dpb[i].status) &&
  		    (ctx->dpb[i].phys_addr == dpb_paddr)) {
  			return (void *)&(ctx->dpb[i]);
-@@ -1809,6 +1743,7 @@ void VE1_UpdateDPBStatus(void *pCtx, unsigned int dpb_paddr,
+@@ -1809,6 +1740,7 @@ void VE1_UpdateDPBStatus(void *pCtx, unsigned int dpb_paddr,
  	}
  	dpb = (struct rtkve1_dpb_t *)tmp_dpb;
  
@@ -4990,7 +4815,7 @@ index 58cc47284..8763cb18e 100644
  	// recycle the frame buffer
  	if (IS_RTKVE1_DPB_VALID(status)) {
  		dpb->status &= ~RTKVE1_DPB_ST_DQ;
-@@ -1830,7 +1765,7 @@ void VE1_UpdateDPBStatus(void *pCtx, unsigned int dpb_paddr,
+@@ -1830,7 +1762,7 @@ void VE1_UpdateDPBStatus(void *pCtx, unsigned int dpb_paddr,
  					ctx->totIonAllocatedBytes);
  			} else {
  				// normal case, call VPU_DecClrDispFlag() to recyle the frame buffer
@@ -4999,7 +4824,7 @@ index 58cc47284..8763cb18e 100644
  				ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
  					"dpb_paddr:0x%x.set status:0x%x.seq(%d,%d).regIndex:%d\n",
  					dpb_paddr, dpb->status, sequenceNo,
-@@ -1858,6 +1793,7 @@ void VE1_UpdateDPBStatus(void *pCtx, unsigned int dpb_paddr,
+@@ -1858,6 +1790,7 @@ void VE1_UpdateDPBStatus(void *pCtx, unsigned int dpb_paddr,
  	} else {
  		ve1_err(VE1_WRAPPER_TAG, "invalid status:0x%x\n", status);
  	}
@@ -5007,7 +4832,7 @@ index 58cc47284..8763cb18e 100644
  }
  
  void ve1_seq_change_free_fb(struct ve1_ctx *ctx)
-@@ -1945,7 +1881,6 @@ int ve1_prepare_seq_change(void *pCtx)
+@@ -1945,7 +1878,6 @@ int ve1_prepare_seq_change(void *pCtx)
  	outputInfo = (DecOutputInfo *)ctx->outputInfo;
  
  	ctx->seqChangeRequest = 1;
@@ -5015,7 +4840,7 @@ index 58cc47284..8763cb18e 100644
  	seqChangedRdPtr = outputInfo->bytePosFrameEnd;
  	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
  		"use bytePosFrameEnd:0x%x instead of rdPtr:0x%x\n",
-@@ -1963,28 +1898,25 @@ int ve1_prepare_seq_change(void *pCtx)
+@@ -1963,28 +1895,25 @@ int ve1_prepare_seq_change(void *pCtx)
  	}
  	ret = VPU_DecUpdateBitstreamBuffer((DecHandle)ctx->decHandle, 1);
  	ve1_dbg(VPU_DBG_VE1_UP_BS, VE1_WRAPPER_TAG,
@@ -5050,7 +4875,7 @@ index 58cc47284..8763cb18e 100644
  			if (ret != RETCODE_SUCCESS) {
  				ve1_err(VE1_WRAPPER_TAG,
  					"VPU_DecStartOneFrame fail.ret:%d\n",
-@@ -1998,7 +1930,6 @@ int ve1_prepare_seq_change(void *pCtx)
+@@ -1998,7 +1927,6 @@ int ve1_prepare_seq_change(void *pCtx)
  			while (1) {
  				ctx->int_reason =
  					VPU_WaitInterrupt(VE1_COREIDX, 10);
@@ -5058,7 +4883,7 @@ index 58cc47284..8763cb18e 100644
  				if (ctx->int_reason == -1) {
  					ctx->int_reason = 0;
  				}
-@@ -2008,10 +1939,7 @@ int ve1_prepare_seq_change(void *pCtx)
+@@ -2008,10 +1936,7 @@ int ve1_prepare_seq_change(void *pCtx)
  					    (1 << INT_BIT_PIC_RUN)) {
  						ve1_dbg(VPU_DBG_NONE,
  							VE1_WRAPPER_TAG,
@@ -5070,7 +4895,7 @@ index 58cc47284..8763cb18e 100644
  						ctx->int_reason = 0;
  						bPicDone = 1;
  					} else if (ctx->int_reason &
-@@ -2022,10 +1950,7 @@ int ve1_prepare_seq_change(void *pCtx)
+@@ -2022,10 +1947,7 @@ int ve1_prepare_seq_change(void *pCtx)
  							ctx->vpuWrPtr;
  						ve1_dbg(VPU_DBG_NONE,
  							VE1_WRAPPER_TAG,
@@ -5082,7 +4907,7 @@ index 58cc47284..8763cb18e 100644
  							ctx->bufEmptyVpuWrPtr);
  					}
  					break;
-@@ -2062,10 +1987,9 @@ int ve1_prepare_seq_change(void *pCtx)
+@@ -2062,10 +1984,9 @@ int ve1_prepare_seq_change(void *pCtx)
  				}
  
  				ve1_dbg(VPU_DBG_VE1_DEC, VE1_WRAPPER_TAG,
@@ -5096,7 +4921,7 @@ index 58cc47284..8763cb18e 100644
  					ctx->decHandle, ctx->currSequenceNo,
  					outputInfo->indexFrameDecoded,
  					outputInfo->indexFrameDisplay,
-@@ -2105,14 +2029,6 @@ int ve1_prepare_seq_change(void *pCtx)
+@@ -2105,14 +2026,6 @@ int ve1_prepare_seq_change(void *pCtx)
  
  		msleep(5);
  	}
@@ -5111,7 +4936,7 @@ index 58cc47284..8763cb18e 100644
  
  	for (i = 0; i < ctx->regFbCount; i++) {
  		ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
-@@ -2144,16 +2060,14 @@ int ve1_prepare_seq_change(void *pCtx)
+@@ -2144,16 +2057,14 @@ int ve1_prepare_seq_change(void *pCtx)
  		ret = VPU_DecUpdateBitstreamBuffer((DecHandle)ctx->decHandle,
  						   STREAM_END_SET_FLAG);
  		ve1_dbg(VPU_DBG_VE1_UP_BS, VE1_WRAPPER_TAG,
@@ -5132,7 +4957,7 @@ index 58cc47284..8763cb18e 100644
  	}
  	VE1_DecGetRdWrPtr(pCtx);
  
-@@ -2162,9 +2076,8 @@ int ve1_prepare_seq_change(void *pCtx)
+@@ -2162,9 +2073,8 @@ int ve1_prepare_seq_change(void *pCtx)
  						   seqChangedWrPtr -
  							   seqChangedRdPtr);
  		ve1_dbg(VPU_DBG_VE1_UP_BS, VE1_WRAPPER_TAG,
@@ -5144,7 +4969,7 @@ index 58cc47284..8763cb18e 100644
  			ctx->accuBsFeedBytes);
  	} else {
  		ret = VPU_DecUpdateBitstreamBuffer(
-@@ -2175,8 +2088,8 @@ int ve1_prepare_seq_change(void *pCtx)
+@@ -2175,8 +2085,8 @@ int ve1_prepare_seq_change(void *pCtx)
  				(seqChangedWrPtr -
  				 ((DecOpenParam *)ctx->decOP)->bitstreamBuffer));
  		ve1_dbg(VPU_DBG_VE1_UP_BS, VE1_WRAPPER_TAG,
@@ -5155,7 +4980,7 @@ index 58cc47284..8763cb18e 100644
  			((((DecOpenParam *)ctx->decOP)->bitstreamBuffer +
  			  ((DecOpenParam *)ctx->decOP)->bitstreamBufferSize) -
  			 seqChangedRdPtr +
-@@ -2217,18 +2130,12 @@ int VE1_DecPicDone(void *pCtx)
+@@ -2217,18 +2127,12 @@ int VE1_DecPicDone(void *pCtx)
  	struct rtkve1_dpb_t *dpb = NULL;
  	struct vb2_v4l2_buffer *vb2_v4l2_buf = NULL;
  	struct vb2_buffer *vb2_buf = NULL;
@@ -5174,7 +4999,7 @@ index 58cc47284..8763cb18e 100644
  #endif
  
  	if (pCtx == NULL) {
-@@ -2265,8 +2172,6 @@ int VE1_DecPicDone(void *pCtx)
+@@ -2265,8 +2169,6 @@ int VE1_DecPicDone(void *pCtx)
  	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG, "set ve1DecState:%d\n",
  		ctx->ve1DecState);
  
@@ -5183,7 +5008,7 @@ index 58cc47284..8763cb18e 100644
  	if (outputInfo->indexFrameDecoded >= 0) {
  		ctx->decodedFrmNum++;
  	}
-@@ -2274,38 +2179,44 @@ int VE1_DecPicDone(void *pCtx)
+@@ -2274,38 +2176,44 @@ int VE1_DecPicDone(void *pCtx)
  		ctx->displayFrmNum++;
  	}
  
@@ -5241,7 +5066,7 @@ index 58cc47284..8763cb18e 100644
  			ve1_dbg(VPU_DBG_VE1_DEC, VE1_WRAPPER_TAG,
  				"dec:%d.AVC missing field\n",
  				outputInfo->indexFrameDecoded);
-@@ -2341,75 +2252,13 @@ int VE1_DecPicDone(void *pCtx)
+@@ -2341,75 +2249,13 @@ int VE1_DecPicDone(void *pCtx)
  
  #if defined(VE1_CHECK_DFB_MD5_EN)
  	fbIndex = outputInfo->indexFrameDecoded;
@@ -5317,7 +5142,7 @@ index 58cc47284..8763cb18e 100644
  		ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
  			"mmap virt_addr:0x%px.phys_addr:0x%x\n", fb_virt_addr,
  			outputInfo->dispFrame.bufY);
-@@ -2427,11 +2276,6 @@ int VE1_DecPicDone(void *pCtx)
+@@ -2427,11 +2273,6 @@ int VE1_DecPicDone(void *pCtx)
  			if (IS_ERR((struct file *)ctx->yuvDumpFile)) {
  				kfree(pYuv);
  				pYuv = NULL;
@@ -5329,7 +5154,7 @@ index 58cc47284..8763cb18e 100644
  				fb_virt_addr = NULL;
  				ve1_err(VE1_WRAPPER_TAG, "filp_open %s fail\n",
  					VE1_TEST_DUMP_YUV_FILENAME);
-@@ -2457,17 +2301,7 @@ int VE1_DecPicDone(void *pCtx)
+@@ -2457,17 +2298,7 @@ int VE1_DecPicDone(void *pCtx)
  				ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
  					"vfs_write bytes:%d.pos:%lld\n", bytes,
  					pos);
@@ -5348,7 +5173,7 @@ index 58cc47284..8763cb18e 100644
  				set_fs(old_fs);
  				filp_close(ctx->yuvDumpFile, NULL);
  				ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
-@@ -2476,11 +2310,6 @@ int VE1_DecPicDone(void *pCtx)
+@@ -2476,11 +2307,6 @@ int VE1_DecPicDone(void *pCtx)
  				ctx->yuvDumpFile = NULL;
  				kfree(pYuv);
  				pYuv = NULL;
@@ -5360,7 +5185,7 @@ index 58cc47284..8763cb18e 100644
  				fb_virt_addr = NULL;
  			}
  		}
-@@ -2489,11 +2318,6 @@ int VE1_DecPicDone(void *pCtx)
+@@ -2489,11 +2315,6 @@ int VE1_DecPicDone(void *pCtx)
  			pYuv = NULL;
  		}
  		if (fb_virt_addr) {
@@ -5372,7 +5197,7 @@ index 58cc47284..8763cb18e 100644
  			fb_virt_addr = NULL;
  		}
  	}
-@@ -2511,7 +2335,6 @@ int VE1_DecPicDone(void *pCtx)
+@@ -2511,7 +2332,6 @@ int VE1_DecPicDone(void *pCtx)
  
  	return VE1_DEC_RETURN_OK;
  }
@@ -5380,7 +5205,7 @@ index 58cc47284..8763cb18e 100644
  
  int VE1_DecCheckComplete(void *pCtx)
  {
-@@ -2536,9 +2359,8 @@ int VE1_DecCheckComplete(void *pCtx)
+@@ -2536,9 +2356,8 @@ int VE1_DecCheckComplete(void *pCtx)
  		ret = VPU_DecUpdateBitstreamBuffer((DecHandle)ctx->decHandle,
  						   STREAM_END_SET_FLAG);
  		ve1_dbg(VPU_DBG_VE1_UP_BS, VE1_WRAPPER_TAG,
@@ -5392,7 +5217,7 @@ index 58cc47284..8763cb18e 100644
  		VE1_DecGetRdWrPtr(ctx);
  
  		int_reason = 1 << INT_BIT_BIT_BUF_EMPTY;
-@@ -2562,9 +2384,8 @@ int VE1_DecCheckComplete(void *pCtx)
+@@ -2562,9 +2381,8 @@ int VE1_DecCheckComplete(void *pCtx)
  		ret = VPU_DecUpdateBitstreamBuffer((DecHandle)ctx->decHandle,
  						   STREAM_END_CLEAR_FLAG);
  		ve1_dbg(VPU_DBG_VE1_UP_BS, VE1_WRAPPER_TAG,
@@ -5404,7 +5229,7 @@ index 58cc47284..8763cb18e 100644
  		VE1_DecGetRdWrPtr(ctx);
  		ctx->ve1DecState = VE1_STATE_DEC_PIC_DONE;
  	}
-@@ -2573,35 +2394,6 @@ int VE1_DecCheckComplete(void *pCtx)
+@@ -2573,35 +2391,6 @@ int VE1_DecCheckComplete(void *pCtx)
  }
  //EXPORT_SYMBOL(VE1_DecCheckComplete);
  
@@ -5440,7 +5265,7 @@ index 58cc47284..8763cb18e 100644
  int VE1_DecClose(void *pCtx)
  {
  	RetCode ret = RETCODE_SUCCESS;
-@@ -2634,12 +2426,17 @@ int VE1_DecClose(void *pCtx)
+@@ -2634,12 +2423,17 @@ int VE1_DecClose(void *pCtx)
  	 * EnterLock and doesn't LeaveLock, during this moment the system stops streaming.
  	 * The next start will be deadlock at EnterLock().
  	 */
@@ -5464,7 +5289,7 @@ index 58cc47284..8763cb18e 100644
  		ve1_info(VE1_WRAPPER_TAG, "%s: VPU_SWReset done\n", __func__);
  	}
  
-@@ -2719,7 +2516,6 @@ int VE1_DecClose(void *pCtx)
+@@ -2719,7 +2513,6 @@ int VE1_DecClose(void *pCtx)
  
  	return ret;
  }
@@ -5472,7 +5297,7 @@ index 58cc47284..8763cb18e 100644
  
  int VE1_DecDeInit(void *pCtx)
  {
-@@ -2747,7 +2543,6 @@ int VE1_DecDeInit(void *pCtx)
+@@ -2747,7 +2540,6 @@ int VE1_DecDeInit(void *pCtx)
  
  	return ret;
  }
@@ -5480,7 +5305,7 @@ index 58cc47284..8763cb18e 100644
  
  void VE1_GetParsedInfo(void *pCtx, void *pInfo)
  {
-@@ -2777,9 +2572,9 @@ void VE1_GetParsedInfo(void *pCtx, void *pInfo)
+@@ -2777,9 +2569,9 @@ void VE1_GetParsedInfo(void *pCtx, void *pInfo)
  		initialInfo->picCropRect.right - initialInfo->picCropRect.left;
  	info->visible_rect_h =
  		initialInfo->picCropRect.bottom - initialInfo->picCropRect.top;
@@ -5492,7 +5317,7 @@ index 58cc47284..8763cb18e 100644
  
  void VE1_GetDisplayFrameInfo(void *pCtx, void *displayFrameInfo)
  {
-@@ -2849,14 +2644,13 @@ void VE1_GetDisplayFrameInfo(void *pCtx, void *displayFrameInfo)
+@@ -2849,14 +2641,12 @@ void VE1_GetDisplayFrameInfo(void *pCtx, void *displayFrameInfo)
  		frame->mode, frame->timeTick, frame->video_full_range_flag,
  		frame->transfer_characteristics, frame->matrix_coefficients);
  }
@@ -5504,11 +5329,10 @@ index 58cc47284..8763cb18e 100644
  {
  	int ret = 0;
 -//	unsigned int mem_type = 0;
-+	unsigned int mem_type = 0;
  	unsigned int flags = 0;
  	dma_addr_t dma_phys_addr = 0;
  	void *dma_virt_addr = NULL;
-@@ -2876,12 +2670,15 @@ int VE1_AllocateBitstreamBuffer(struct device *dev, unsigned long *phys_addr,
+@@ -2876,7 +2666,10 @@ int VE1_AllocateBitstreamBuffer(struct device *dev, unsigned long *phys_addr,
  			RTK_FLAG_SCPUACC;
  	}
  
@@ -5520,19 +5344,7 @@ index 58cc47284..8763cb18e 100644
  	dma_virt_addr = dma_alloc_coherent(
  		dev, PAGE_ALIGN(size), &dma_phys_addr, (GFP_DMA | GFP_KERNEL));
  	if (dma_virt_addr == NULL) {
- 		ve1_err(VE1_WRAPPER_TAG,
--			"dma_alloc_coherent() fail.size:%lu(%ld).flags:0x%x\n",
-+			"dma_alloc_coherent() fail.size:%d(%ld).flags:0x%x\n",
- 			PAGE_ALIGN(size), size, flags);
- 		ret = -ENOMEM;
- 		return ret;
-@@ -2889,12 +2686,11 @@ int VE1_AllocateBitstreamBuffer(struct device *dev, unsigned long *phys_addr,
- 	*phys_addr = (unsigned long)dma_phys_addr;
- 	*virt_addr = (unsigned long)dma_virt_addr;
- 	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
--		"dma_alloc_coherent() ok.phys_addr:0x%lx.virt_addr:0x%lx.size:%lu(%ld).flags:0x%x\n",
-+		"dma_alloc_coherent() ok.phys_addr:0x%lx.virt_addr:0x%lx.size:%d(%ld).flags:0x%x\n",
- 		*phys_addr, *virt_addr, PAGE_ALIGN(size), size, flags);
+@@ -2894,7 +2687,6 @@ int VE1_AllocateBitstreamBuffer(struct device *dev, unsigned long *phys_addr,
  
  	return ret;
  }
@@ -5540,7 +5352,7 @@ index 58cc47284..8763cb18e 100644
  
  int VE1_FreeBitstreamBuffer(struct device *dev, unsigned long virt_addr,
  			    unsigned long phys_addr, unsigned int size)
-@@ -2917,7 +2713,6 @@ int VE1_FreeBitstreamBuffer(struct device *dev, unsigned long virt_addr,
+@@ -2917,7 +2709,6 @@ int VE1_FreeBitstreamBuffer(struct device *dev, unsigned long virt_addr,
  
  	return ret;
  }
@@ -5548,7 +5360,7 @@ index 58cc47284..8763cb18e 100644
  
  static VE1_PICTURE_MODE ve1_get_picture_mode(struct ve1_ctx *ctx)
  {
-@@ -2943,7 +2738,6 @@ static VE1_PICTURE_MODE ve1_get_picture_mode(struct ve1_ctx *ctx)
+@@ -2943,7 +2734,6 @@ static VE1_PICTURE_MODE ve1_get_picture_mode(struct ve1_ctx *ctx)
  			// ref 1185 MpegDec_SetupLinks()
  			is_prog =
  				(info->progressiveSequence /* progressive sequence */
@@ -5556,7 +5368,7 @@ index 58cc47284..8763cb18e 100644
  				 ||
  				 frame->stillVOBU); /* progressive I-picture in a DVD still-VOBU */
  
-@@ -2999,20 +2793,7 @@ static VE1_PICTURE_MODE ve1_get_picture_mode(struct ve1_ctx *ctx)
+@@ -2999,20 +2789,7 @@ static VE1_PICTURE_MODE ve1_get_picture_mode(struct ve1_ctx *ctx)
  					} else {
  						mode = INTERLEAVED_TOP_FIELD;
  					}
@@ -5578,7 +5390,7 @@ index 58cc47284..8763cb18e 100644
  					mode = CONSECUTIVE_FRAME;
  				}
  			} else if (info->picStrPresent == 1) {
-@@ -3232,7 +3013,6 @@ void rtkve1_copy_to_bitstream_buffer(struct ve1_ctx *ctx, uint8_t *buf,
+@@ -3232,7 +3009,6 @@ void rtkve1_copy_to_bitstream_buffer(struct ve1_ctx *ctx, uint8_t *buf,
  						ctx->bsWrPtr, buf, size0);
  					return -1;
  				}
@@ -5586,7 +5398,7 @@ index 58cc47284..8763cb18e 100644
  
  				ret = ta_TEEapi_memcpy_a7(
  					(struct tee_context *)
-@@ -3247,7 +3027,6 @@ void rtkve1_copy_to_bitstream_buffer(struct ve1_ctx *ctx, uint8_t *buf,
+@@ -3247,7 +3023,6 @@ void rtkve1_copy_to_bitstream_buffer(struct ve1_ctx *ctx, uint8_t *buf,
  						buf + size0, size1);
  					return -1;
  				}
@@ -5594,7 +5406,7 @@ index 58cc47284..8763cb18e 100644
  			} else if (ctx->out_vb2_q_memory ==
  				   V4L2_MEMORY_DMABUF) {
  				ret = ta_TEEapi_memcpy(
-@@ -3261,7 +3040,6 @@ void rtkve1_copy_to_bitstream_buffer(struct ve1_ctx *ctx, uint8_t *buf,
+@@ -3261,7 +3036,6 @@ void rtkve1_copy_to_bitstream_buffer(struct ve1_ctx *ctx, uint8_t *buf,
  						ctx->bsWrPtr, buf, size0);
  					return -1;
  				}
@@ -5602,7 +5414,7 @@ index 58cc47284..8763cb18e 100644
  
  				ret = ta_TEEapi_memcpy(
  					(struct tee_context *)
-@@ -3276,15 +3054,12 @@ void rtkve1_copy_to_bitstream_buffer(struct ve1_ctx *ctx, uint8_t *buf,
+@@ -3276,15 +3050,12 @@ void rtkve1_copy_to_bitstream_buffer(struct ve1_ctx *ctx, uint8_t *buf,
  						buf + size0, size1);
  					return -1;
  				}
@@ -5618,7 +5430,7 @@ index 58cc47284..8763cb18e 100644
  		}
  		ctx->bsWrPtr = ctx->bitstream.paddr + size1;
  	} else {
-@@ -3302,7 +3077,6 @@ void rtkve1_copy_to_bitstream_buffer(struct ve1_ctx *ctx, uint8_t *buf,
+@@ -3302,7 +3073,6 @@ void rtkve1_copy_to_bitstream_buffer(struct ve1_ctx *ctx, uint8_t *buf,
  						ctx->bsWrPtr, buf, size);
  					return -1;
  				}
@@ -5626,7 +5438,7 @@ index 58cc47284..8763cb18e 100644
  			} else if (ctx->out_vb2_q_memory ==
  				   V4L2_MEMORY_DMABUF) {
  				ret = ta_TEEapi_memcpy(
-@@ -3316,12 +3090,10 @@ void rtkve1_copy_to_bitstream_buffer(struct ve1_ctx *ctx, uint8_t *buf,
+@@ -3316,12 +3086,10 @@ void rtkve1_copy_to_bitstream_buffer(struct ve1_ctx *ctx, uint8_t *buf,
  						ctx->bsWrPtr, buf, size);
  					return -1;
  				}
@@ -5639,62 +5451,29 @@ index 58cc47284..8763cb18e 100644
  		}
  		ctx->bsWrPtr = newBsWrPtr;
  	}
-@@ -3335,17 +3107,6 @@ int32_t BuildSeqHeader(void *pCtx, uint8_t *buf, uint32_t buf_size)
+@@ -3335,8 +3103,8 @@ int32_t BuildSeqHeader(void *pCtx, uint8_t *buf, uint32_t buf_size)
  	uint8_t *p = pbMetaData;
  	int32_t size = 0; // metadata header size
  	uint32_t codingType = 0;
 -  uint32_t nFrameWidth, nFrameHeight, picWidth, picHeight;
 -  uint32_t width_in_pixels, height_in_pixels;
--	uint32_t signature = MAKE_FOURCC('D', 'K', 'I', 'F');
--	uint32_t version = 0x00;
--	uint32_t length_of_header_in_bytes = 0x20;
--	uint32_t codec_FourCC = MAKE_FOURCC('V', 'P', '8', '0');
--	uint32_t time_base_denominator = 30;
--//	uint32_t time_base_numerator = -1;
--	uint32_t number_of_frames_in_file = 0;
--	uint32_t unused = 0;
--
- 
- 	if (buf == NULL || buf_size <= 0) {
- 		ve1_err(VE1_WRAPPER_TAG, "buf == NULL || size <= 0\n");
-@@ -3368,21 +3129,30 @@ int32_t BuildSeqHeader(void *pCtx, uint8_t *buf, uint32_t buf_size)
- 
- 	if (codingType == STD_VP8) {
- 		if (ctx->seqHeaderSize == 0) {
--			nFrameWidth = decOP->frameWidth;
--			nFrameHeight = decOP->frameHeight;
-+			uint32_t nFrameWidth = decOP->frameWidth;
-+			uint32_t nFrameHeight = decOP->frameHeight;
- 			//20160926, workaround for invalid resolution
- 			if (buf_size >= 10) {
--				picWidth =
-+				uint32_t picWidth =
- 					(uint32_t)(p[7] << 8 | p[6]);
--				picHeight =
-+				uint32_t picHeight =
- 					(uint32_t)(p[9] << 8 | p[8]);
- 				if (picWidth <= 1920 && picHeight <= 1088) {
- 					nFrameWidth = picWidth;
++	uint32_t nFrameWidth, nFrameHeight, picWidth, picHeight;
++	uint32_t width_in_pixels, height_in_pixels;
+ 	uint32_t signature = MAKE_FOURCC('D', 'K', 'I', 'F');
+ 	uint32_t version = 0x00;
+ 	uint32_t length_of_header_in_bytes = 0x20;
+@@ -3381,8 +3149,8 @@ int32_t BuildSeqHeader(void *pCtx, uint8_t *buf, uint32_t buf_size)
  					nFrameHeight = picHeight;
  				}
  			}
 -      width_in_pixels = nFrameWidth;
 -      height_in_pixels = nFrameHeight;
-+
-+			uint32_t signature = MAKE_FOURCC('D', 'K', 'I', 'F');
-+			uint32_t version = 0x00;
-+			uint32_t length_of_header_in_bytes = 0x20;
-+			uint32_t codec_FourCC = MAKE_FOURCC('V', 'P', '8', '0');
-+			uint32_t width_in_pixels = nFrameWidth;
-+			uint32_t height_in_pixels = nFrameHeight;
-+			uint32_t time_base_denominator = 30;
-+			uint32_t time_base_numerator = -1;
-+			uint32_t number_of_frames_in_file = 0;
-+			uint32_t unused;
++			width_in_pixels = nFrameWidth;
++			height_in_pixels = nFrameHeight;
  
  			//signature 'DKIF'
  			ctx->seqHeader[0] = (unsigned char)(signature >> 0);
-@@ -3539,8 +3309,6 @@ int VE1_DecUpdateBS(void *pCtx, uint8_t *buf, uint32_t size)
+@@ -3539,8 +3307,6 @@ int VE1_DecUpdateBS(void *pCtx, uint8_t *buf, uint32_t size)
  	}
  	decOP = (DecOpenParam *)ctx->decOP;
  
@@ -5703,7 +5482,7 @@ index 58cc47284..8763cb18e 100644
  	if (decOP->bitstreamFormat == STD_VP8) {
  		seqHdrSize = BuildSeqHeader((void *)ctx, buf, size);
  		if (seqHdrSize > 0) {
-@@ -3554,7 +3322,6 @@ int VE1_DecUpdateBS(void *pCtx, uint8_t *buf, uint32_t size)
+@@ -3554,7 +3320,6 @@ int VE1_DecUpdateBS(void *pCtx, uint8_t *buf, uint32_t size)
  					  (ctx->picHeader[1] << 8) |
  					  (ctx->picHeader[2] << 16) |
  					  (ctx->picHeader[3] << 24);
@@ -5711,7 +5490,7 @@ index 58cc47284..8763cb18e 100644
  			rtkve1_copy_to_bitstream_buffer(ctx, ctx->picHeader,
  							picHdrSize);
  			totalUpBsSize += picHdrSize;
-@@ -3571,14 +3338,16 @@ int VE1_DecUpdateBS(void *pCtx, uint8_t *buf, uint32_t size)
+@@ -3571,14 +3336,16 @@ int VE1_DecUpdateBS(void *pCtx, uint8_t *buf, uint32_t size)
  			ret, totalUpBsSize);
  		return -1;
  	} else {
@@ -5990,7 +5769,7 @@ index 7d8e9c312..fc7af1a0e 100644
  	unsigned int nDisplayPrimaries_X[3];
  	unsigned int nDisplayPrimaries_Y[3];
 diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.c b/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.c
-index c39d2f08a..cae9d4bb8 100644
+index c39d2f08a..1aefa7ea9 100644
 --- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.c
 +++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.c
 @@ -28,9 +28,6 @@
@@ -6016,7 +5795,7 @@ index c39d2f08a..cae9d4bb8 100644
  }
  
  static void __maybe_unused _dump_ringbuf(struct ve2rpc_ringbuf_t *prb)
-@@ -258,9 +249,10 @@ static struct ve2rpc_ion_object *_ve2rpc_ion_create(struct ve2rpc *hndl,
+@@ -258,11 +249,10 @@ static struct ve2rpc_ion_object *_ve2rpc_ion_create(struct ve2rpc *hndl,
  						    unsigned int flags)
  {
  	struct ve2rpc_ion_object *ion_obj;
@@ -6025,15 +5804,22 @@ index c39d2f08a..cae9d4bb8 100644
 +	struct dma_buf_attachment *attachment __maybe_unused;
 +	struct sg_table *sgt __maybe_unused;
  	dma_addr_t dma_addr;
+-
+-	int ret = 0;
 +	void *vaddr;
  
- 	int ret = 0;
- 
-@@ -276,10 +268,21 @@ static struct ve2rpc_ion_object *_ve2rpc_ion_create(struct ve2rpc *hndl,
+ 	if (!hndl) {
+ 		vpu_err("allocate ion_obj fail, No initital\n");
+@@ -275,77 +265,27 @@ static struct ve2rpc_ion_object *_ve2rpc_ion_create(struct ve2rpc *hndl,
+ 		return ERR_PTR(-ENOMEM);
  	}
  
- #if LINUX_VERSION_CODE > KERNEL_VERSION(5, 10, 116)
+-#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 10, 116)
 -	ion_obj->dmabuf = rheap_alloc(name, size, flags);
+-#else
+-	ion_obj->dmabuf = ion_alloc(size, mask, flags);
+-#endif
+-	if (IS_ERR(ion_obj->dmabuf)) {
 +	/* We can't limit the address from dma_alloc_coherent when size <= 4096 */
 +	if (size < SZ_8K)
 +		size = SZ_8K;
@@ -6041,28 +5827,69 @@ index c39d2f08a..cae9d4bb8 100644
 +	vaddr = dma_alloc_coherent(hndl->dev, size, &dma_addr, GFP_KERNEL);
 +	if (!vaddr) {
 +		vpu_err("%s dma_alloc fail \n", __func__);
-+		kfree(ion_obj);
-+		return ERR_PTR(-ENOMEM);
-+	}
-+	ion_obj->vaddr = vaddr;
-+	ion_obj->paddr = dma_addr;
- #else
- 	ion_obj->dmabuf = ion_alloc(size, mask, flags);
--#endif
-+
- 	if (IS_ERR(ion_obj->dmabuf)) {
  		kfree(ion_obj);
- 		vpu_err("%s ion_alloc fail, No Memory\n", __func__);
-@@ -325,6 +328,7 @@ static struct ve2rpc_ion_object *_ve2rpc_ion_create(struct ve2rpc *hndl,
- 		}
- 		memset(ion_obj->vaddr, 0, size);
+-		vpu_err("%s ion_alloc fail, No Memory\n", __func__);
+ 		return ERR_PTR(-ENOMEM);
  	}
-+#endif
+-
+-	attachment = dma_buf_attach(ion_obj->dmabuf, hndl->dev);
+-	if (IS_ERR(attachment)) {
+-		ret = PTR_ERR(attachment);
+-		goto put_dma_buf;
+-	}
+-	ion_obj->attach = attachment;
+-
+-	sgt = dma_buf_map_attachment(attachment, DMA_BIDIRECTIONAL);
+-	if (IS_ERR(sgt)) {
+-		ret = PTR_ERR(sgt);
+-		goto detach_dma_buf;
+-	}
+-	ion_obj->sgt = sgt;
+-
+-	if (sgt->nents != 1) {
+-		ret = -EINVAL;
+-		goto unmap_attachment;
+-	}
+-
+-	dma_addr = sg_dma_address(sgt->sgl);
+-	if (!dma_addr) {
+-		ret = -ENOMEM;
+-		goto unmap_attachment;
+-	}
++	ion_obj->vaddr = vaddr;
+ 	ion_obj->paddr = dma_addr;
+-
+-	if (flags & (RTK_FLAG_PROTECTED_MASK | RTK_FLAG_PROTECTED_EXT_MASK)) {
+-		ion_obj->vaddr = 0;
+-	} else {
+-		dma_buf_begin_cpu_access(ion_obj->dmabuf, DMA_BIDIRECTIONAL);
+-
+-		ret = dma_buf_vmap(ion_obj->dmabuf, &ion_obj->map);
+-		ion_obj->vaddr = ion_obj->map.vaddr;
+-		if (!ion_obj->vaddr) {
+-			ret = -ENOMEM;
+-			goto end_cpu_access;
+-		}
+-		memset(ion_obj->vaddr, 0, size);
+-	}
  	ion_obj->size = size;
  
  	memset(ion_obj->vaddr, 0, size);
-@@ -345,7 +349,8 @@ put_dma_buf:
- 	return ERR_PTR(ret);
+ 
+ 	return ion_obj;
+-
+-end_cpu_access:
+-	dma_buf_end_cpu_access(ion_obj->dmabuf, DMA_BIDIRECTIONAL);
+-unmap_attachment:
+-	dma_buf_unmap_attachment(attachment, sgt, DMA_TO_DEVICE);
+-detach_dma_buf:
+-	dma_buf_detach(ion_obj->dmabuf, attachment);
+-put_dma_buf:
+-	dma_buf_put(ion_obj->dmabuf);
+-
+-	kfree(ion_obj);
+-
+-	return ERR_PTR(ret);
  }
  
 -static void _ve2rpc_ion_free(struct ve2rpc_ion_object *ion_obj)
@@ -6071,7 +5898,7 @@ index c39d2f08a..cae9d4bb8 100644
  {
  	if (!ion_obj) {
  		vpu_err("_ve2rpc_ion_free ion_obj is NULL\n");
-@@ -360,6 +365,12 @@ static void _ve2rpc_ion_free(struct ve2rpc_ion_object *ion_obj)
+@@ -360,6 +300,12 @@ static void _ve2rpc_ion_free(struct ve2rpc_ion_object *ion_obj)
  		dma_buf_detach(ion_obj->dmabuf, ion_obj->attach);
  		dma_buf_put(ion_obj->dmabuf);
  	}
@@ -6084,7 +5911,7 @@ index c39d2f08a..cae9d4bb8 100644
  
  	kfree(ion_obj);
  }
-@@ -472,9 +483,11 @@ static int handle_rpc_command(struct rtk_krpc_ept_info *krpc_ept_info,
+@@ -472,9 +418,11 @@ static int handle_rpc_command(struct rtk_krpc_ept_info *krpc_ept_info,
  	int cmd;
  	char *event;
  	HRESULT retval = S_OK;
@@ -6097,7 +5924,7 @@ index c39d2f08a..cae9d4bb8 100644
  
  	vpu_input_dbg("rpc_kern_ve2_read, cmd %d, count %lu, size %d\n",
  		      rpc_head->procedureID, sizeof(rpc_head),
-@@ -497,7 +510,8 @@ static int handle_rpc_command(struct rtk_krpc_ept_info *krpc_ept_info,
+@@ -497,7 +445,8 @@ static int handle_rpc_command(struct rtk_krpc_ept_info *krpc_ept_info,
  		}
  		memcpy(event, buf + sizeof(struct rpc_struct),
  		       rpc_head->parameterSize);
@@ -6107,7 +5934,7 @@ index c39d2f08a..cae9d4bb8 100644
  		kfree(event);
  		break;
  	case VIDEO_RPC_DEC_ToSystem_Deliver_MediaInfo:
-@@ -548,12 +562,18 @@ static int handle_rpc_command(struct rtk_krpc_ept_info *krpc_ept_info,
+@@ -548,12 +497,18 @@ static int handle_rpc_command(struct rtk_krpc_ept_info *krpc_ept_info,
  			htonl(((struct VIDEO_RPC_VOUT_MESSAGE *)event)
  				      ->reserved4));
  
@@ -6132,7 +5959,7 @@ index c39d2f08a..cae9d4bb8 100644
  		vpu_notify_event_resolution_change(fh);
  		kfree(event);
  		break;
-@@ -688,14 +708,10 @@ static int _ve2rpc_shuttle(struct ve2rpc *hndl, int cmd, void *data, int size,
+@@ -688,14 +643,10 @@ static int _ve2rpc_shuttle(struct ve2rpc *hndl, int cmd, void *data, int size,
  	dsb(sy);
  	offset = get_rpc_alignment_offset(size);
  	dat = ion_obj->paddr;
@@ -6149,7 +5976,7 @@ index c39d2f08a..cae9d4bb8 100644
  		vpu_err("ve2rpc fail, cmd %d\n", cmd);
  		return -EPERM;
  	} else {
-@@ -703,11 +719,10 @@ static int _ve2rpc_shuttle(struct ve2rpc *hndl, int cmd, void *data, int size,
+@@ -703,11 +654,10 @@ static int _ve2rpc_shuttle(struct ve2rpc *hndl, int cmd, void *data, int size,
  			if (rpc_ret)
  				memcpy_toio(rpc_ret, ion_obj->vaddr + offset,
  					    rpc_ret_size);
@@ -6163,7 +5990,7 @@ index c39d2f08a..cae9d4bb8 100644
  			vpu_err("ve2rpc return fail, cmd %d\n", cmd);
  			return -EPERM;
  		}
-@@ -725,14 +740,14 @@ static int _ve2rpc_ringbuf_release(struct ve2rpc *hndl,
+@@ -725,14 +675,14 @@ static int _ve2rpc_ringbuf_release(struct ve2rpc *hndl,
  
  	if (ringbuf->rbinfo.hdr_hdl) {
  		mutex_lock(&ringbuf->lock);
@@ -6180,7 +6007,7 @@ index c39d2f08a..cae9d4bb8 100644
  		ringbuf->rbinfo.buf_hdl = NULL;
  		mutex_unlock(&ringbuf->lock);
  	}
-@@ -766,7 +781,7 @@ int ve2rpc_SetRingBuffer(struct ve2rpc *hndl, struct ve2rpc_ringbuf_t *prb,
+@@ -766,7 +716,7 @@ int ve2rpc_SetRingBuffer(struct ve2rpc *hndl, struct ve2rpc_ringbuf_t *prb,
  	head = _ve2rpc_media_ion_create(hndl,
  					sizeof(struct _tagRingBufferHeader));
  	if (IS_ERR(head)) {
@@ -6189,7 +6016,7 @@ index c39d2f08a..cae9d4bb8 100644
  		vpu_err("allocate head fail, No Memory\n");
  		return -ENOMEM;
  	}
-@@ -838,89 +853,15 @@ int ve2rpc_SetRingBuffer(struct ve2rpc *hndl, struct ve2rpc_ringbuf_t *prb,
+@@ -838,89 +788,15 @@ int ve2rpc_SetRingBuffer(struct ve2rpc *hndl, struct ve2rpc_ringbuf_t *prb,
  	return 0;
  }
  
@@ -6279,7 +6106,7 @@ index c39d2f08a..cae9d4bb8 100644
  
  	instance.type = htonl(type);
  	ret = _ve2rpc_shuttle(hndl, VIDEO_RPC_COMMON_ToAgent_Create, &instance,
-@@ -968,11 +909,8 @@ int ve2rpc_close(struct ve2rpc *hndl)
+@@ -968,11 +844,8 @@ int ve2rpc_close(struct ve2rpc *hndl)
  		}
  	}
  
@@ -6292,7 +6119,7 @@ index c39d2f08a..cae9d4bb8 100644
  
  	hndl->instanceType = -1;
  	hndl->instanceID = -1;
-@@ -1080,7 +1018,8 @@ int ve2rpc_set_cmprs(struct ve2rpc *hndl, uint8_t enable)
+@@ -1080,7 +953,8 @@ int ve2rpc_set_cmprs(struct ve2rpc *hndl, uint8_t enable)
  
  int ve2rpc_get_bs_info(struct device *dev, void *fh, uint32_t codec,
  		       uint32_t size, void *buf, uint32_t *width,
@@ -6302,7 +6129,7 @@ index c39d2f08a..cae9d4bb8 100644
  		       uint32_t *bit_depth)
  {
  	struct ve2rpc *hndl;
-@@ -1125,13 +1064,16 @@ int ve2rpc_get_bs_info(struct device *dev, void *fh, uint32_t codec,
+@@ -1125,13 +999,16 @@ int ve2rpc_get_bs_info(struct device *dev, void *fh, uint32_t codec,
  			VIDEO_RPC_DEC_ToAgent_BitstreamValidation);
  	}
  
@@ -6322,7 +6149,7 @@ index c39d2f08a..cae9d4bb8 100644
  	kfree(hndl);
  
  	return ret;
-@@ -1624,42 +1566,6 @@ int ve2rpc_write_bs(struct ve2rpc *hndl, uint8_t *buf, uint32_t len,
+@@ -1624,42 +1501,6 @@ int ve2rpc_write_bs(struct ve2rpc *hndl, uint8_t *buf, uint32_t len,
  		vpu_input_dbg("command buffer is too small %d\n", space);
  		return -ENOSPC;
  	}
@@ -6365,7 +6192,7 @@ index c39d2f08a..cae9d4bb8 100644
  
  	writePtrforPTS = htonl(hndl->main_rb.pRBH->writePtr);
  	ret = ve2rpc_inband_pts2(&hndl->sub_rb, writePtrforPTS,
-@@ -1811,9 +1717,9 @@ int ve2rpc_add_capbuf_to_dpb(struct ve2rpc *out_hndl, struct ve2rpc *cap_hndl,
+@@ -1811,9 +1652,9 @@ int ve2rpc_add_capbuf_to_dpb(struct ve2rpc *out_hndl, struct ve2rpc *cap_hndl,
  
  	if (i == VE2_MAX_DPB_NUM) {
  		if (cmprs)
@@ -6377,7 +6204,7 @@ index c39d2f08a..cae9d4bb8 100644
  		ret = -ENOMEM;
  		goto exit;
  	}
-@@ -1827,7 +1733,6 @@ int ve2rpc_add_capbuf_to_dpb(struct ve2rpc *out_hndl, struct ve2rpc *cap_hndl,
+@@ -1827,7 +1668,6 @@ int ve2rpc_add_capbuf_to_dpb(struct ve2rpc *out_hndl, struct ve2rpc *cap_hndl,
  	cap_hndl->dpb[i].buflock_phy_addr = cap_hndl->buflockPhy[i];
  	cap_hndl->dpb[i].idx = idx;
  	cap_hndl->dpb_cnt++;
@@ -6385,7 +6212,7 @@ index c39d2f08a..cae9d4bb8 100644
  	mutex_unlock(&cap_hndl->dpb_mutex);
  
  	ret = ve2rpc_inband_add_buf(&out_hndl->dpb_rb, width, height,
-@@ -1857,7 +1762,7 @@ int ve2rpc_del_capbuf_from_dpb(struct ve2rpc *out_hndl, struct ve2rpc *cap_hndl)
+@@ -1857,7 +1697,7 @@ int ve2rpc_del_capbuf_from_dpb(struct ve2rpc *out_hndl, struct ve2rpc *cap_hndl)
  			ret = ve2rpc_inband_del_buf(
  				&out_hndl->dpb_rb, cap_hndl->dpb[i].y_phy_addr);
  			if (cap_hndl->dpb[i].cmprs != 0)
@@ -6394,7 +6221,7 @@ index c39d2f08a..cae9d4bb8 100644
  			cap_hndl->dpb[i].y_phy_addr = 0;
  			cap_hndl->dpb[i].status = RTKVE2_DPB_ST_EMPTY;
  		}
-@@ -1948,7 +1853,6 @@ int ve2rpc_qframe(struct ve2rpc *cap_hndl, dma_addr_t phy_addr,
+@@ -1948,7 +1788,6 @@ int ve2rpc_qframe(struct ve2rpc *cap_hndl, dma_addr_t phy_addr,
  
  	frame = (volatile ve2rpc_flash_frame_info_t *)cap_hndl->frame[frm_idx];
  
@@ -6402,7 +6229,7 @@ index c39d2f08a..cae9d4bb8 100644
  	if (isInitial) {
  		mutex_lock(&prb->lock);
  		memset_volatile(frame, 0, sizeof(ve2rpc_flash_frame_info_t));
-@@ -1992,10 +1896,8 @@ int ve2rpc_qframe(struct ve2rpc *cap_hndl, dma_addr_t phy_addr,
+@@ -1992,10 +1831,8 @@ int ve2rpc_qframe(struct ve2rpc *cap_hndl, dma_addr_t phy_addr,
  
  		queue_delayed_work(cap_hndl->qframe.wq, &cap_hndl->qframe.work,
  				   delay);
@@ -6413,7 +6240,7 @@ index c39d2f08a..cae9d4bb8 100644
  	return 0;
  }
  
-@@ -2091,7 +1993,6 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
+@@ -2091,7 +1928,6 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
  	volatile ve2rpc_flash_frame_info_t *frame;
  	struct ve2rpc_ion_object *buflock;
  	volatile uint8_t *buflock_va;
@@ -6421,7 +6248,7 @@ index c39d2f08a..cae9d4bb8 100644
  	uint32_t flags;
  	struct traveling_frame_st *tframe;
  
-@@ -2105,14 +2006,14 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
+@@ -2105,14 +1941,14 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
  
  	uint64_t estPTS = ULLONG_MAX;
  	uint32_t estIdx = UINT_MAX;
@@ -6442,7 +6269,7 @@ index c39d2f08a..cae9d4bb8 100644
  
  	frame = (volatile ve2rpc_flash_frame_info_t *)cap_hndl->frame[frm_idx];
  
-@@ -2120,6 +2021,7 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
+@@ -2120,6 +1956,7 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
  	dsb(sy);
  	y_phy_addr = htonl(frame->nPicPhysicalAddr);
  	c_phy_addr = htonl(frame->nPicCPhysicalAddr);
@@ -6450,14 +6277,14 @@ index c39d2f08a..cae9d4bb8 100644
  
  	ptsLow = htonl(frame->nPtsLow);
  	ptsHigh = htonl(frame->nPtsHigh);
-@@ -2132,6 +2034,18 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
+@@ -2132,6 +1969,18 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
  
  	dsb(sy);
  
 +	mutex_lock(&cap_hndl->travel_mutex);
 +	list_for_each_entry_safe (tentry, tmp_tentry, &cap_hndl->qframe.tlist,
 +		list) {
-+		if ((tentry->phy_addr == y_phy_addr)) {
++		if (tentry->phy_addr == y_phy_addr) {
 +			vpu_output_dbg("Show existing frame!!!!");
 +			ret = -EBUSY;
 +			mutex_unlock(&cap_hndl->travel_mutex);
@@ -6469,7 +6296,7 @@ index c39d2f08a..cae9d4bb8 100644
  	mutex_lock(&cap_hndl->pts_mutex);
  	//find the smallest pts
  	if (cap_hndl->pts_queue) {
-@@ -2158,7 +2072,7 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
+@@ -2158,7 +2007,7 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
  
  	frmPTS = estPTS;
  	if (ptsHigh != estIdx)
@@ -6478,7 +6305,7 @@ index c39d2f08a..cae9d4bb8 100644
  
  	if (cap_hndl->pre_pts > frmPTS)
  		vpu_warn("PTS roll back %lld => %lld\n", cap_hndl->pre_pts,
-@@ -2177,7 +2091,7 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
+@@ -2177,7 +2026,7 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
  	}
  
  	if (pts)
@@ -6487,7 +6314,7 @@ index c39d2f08a..cae9d4bb8 100644
  
  
  	*eos = false;
-@@ -2198,10 +2112,10 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
+@@ -2198,10 +2047,10 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
  	mutex_lock(&cap_hndl->buflock_mutex);
  	buflock = (struct ve2rpc_ion_object *)cap_hndl->buflock;
  	buflock_va =
@@ -6500,7 +6327,7 @@ index c39d2f08a..cae9d4bb8 100644
  
  	if (*buflock_va == E_BUFLOCK_ST_TOUCH) {
  		*buflock_va = E_BUFLOCK_ST_LOCK;
-@@ -2214,15 +2128,14 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
+@@ -2214,15 +2063,14 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
  		for (i = 0; i < VE2_MAX_DPB_NUM; i++) {
  			if (cap_hndl->dpb[i].y_phy_addr == y_phy_addr) {
  				*disp_buf = cap_hndl->dpb[i].vb2_v4l2_buf;
@@ -6518,7 +6345,7 @@ index c39d2f08a..cae9d4bb8 100644
  				y_phy_addr);
  			mutex_unlock(&cap_hndl->dpb_mutex);
  			return -ENODATA;
-@@ -2232,8 +2145,7 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
+@@ -2232,8 +2080,7 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
  			if (cap_hndl->dpb[i].status != RTKVE2_DPB_ST_EMPTY &&
  				cap_hndl->dpb[i].buflock_phy_addr == 0) {
  				*disp_buf = cap_hndl->dpb[i].vb2_v4l2_buf;
@@ -6528,7 +6355,7 @@ index c39d2f08a..cae9d4bb8 100644
  				idx = cap_hndl->dpb[i].idx;
  				break;
  			}
-@@ -2259,7 +2171,7 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
+@@ -2259,7 +2106,7 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
  	mutex_lock(&cap_hndl->travel_mutex);
  	list_add_tail(&tframe->list, &cap_hndl->qframe.tlist);
  	mutex_unlock(&cap_hndl->travel_mutex);
@@ -6537,7 +6364,7 @@ index c39d2f08a..cae9d4bb8 100644
  }
  
  int ve2rpc_dqframe(struct ve2rpc *cap_hndl, void *disp_buf, uint64_t *pts,
-@@ -2292,14 +2204,14 @@ int ve2rpc_dqframe(struct ve2rpc *cap_hndl, void *disp_buf, uint64_t *pts,
+@@ -2292,14 +2139,14 @@ int ve2rpc_dqframe(struct ve2rpc *cap_hndl, void *disp_buf, uint64_t *pts,
  			next_rp = htonl(prb->pRBH->beginAddr) +
  				  ((rp_idx + 1) % VE2_MAX_DPB_NUM) *
  					  sizeof(ve2rpc_flash_frame_info_t);
@@ -6555,7 +6382,7 @@ index c39d2f08a..cae9d4bb8 100644
  				return -EAGAIN;
  			}
  			prb->pRBH->readPtr[0] = htonl(next_rp);
-@@ -2309,9 +2221,6 @@ int ve2rpc_dqframe(struct ve2rpc *cap_hndl, void *disp_buf, uint64_t *pts,
+@@ -2309,9 +2156,6 @@ int ve2rpc_dqframe(struct ve2rpc *cap_hndl, void *disp_buf, uint64_t *pts,
  		vpu_err("wrong ringbuffer header\n");
  	}
  	mutex_unlock(&prb->lock);
@@ -6565,7 +6392,7 @@ index c39d2f08a..cae9d4bb8 100644
  
  	return ret;
  }
-@@ -2351,8 +2260,7 @@ int ve2rpc_free_travel_frame(struct ve2rpc *cap_hndl)
+@@ -2351,8 +2195,7 @@ int ve2rpc_free_travel_frame(struct ve2rpc *cap_hndl)
  	list_for_each_entry_safe (tentry, tmp_tentry, &cap_hndl->qframe.tlist,
  				  list) {
  		if (tentry) {
@@ -6575,7 +6402,7 @@ index c39d2f08a..cae9d4bb8 100644
  				int ret;
  				vpu_output_dbg(
  					"free the traveling frame tentry = %p, work_idx = %d\n",
-@@ -2595,7 +2503,7 @@ int ve2rpc_uninit_handle(struct ve2rpc *hndl)
+@@ -2595,7 +2438,7 @@ int ve2rpc_uninit_handle(struct ve2rpc *hndl)
  	}
  
  	if (hndl->buflock) {
@@ -6584,7 +6411,7 @@ index c39d2f08a..cae9d4bb8 100644
  		hndl->buflock = NULL;
  		mutex_destroy(&hndl->buflock_mutex);
  	}
-@@ -2625,8 +2533,6 @@ int ve2rpc_setDecoderCCBypass(struct ve2rpc *hndl, int mode)
+@@ -2625,8 +2468,6 @@ int ve2rpc_setDecoderCCBypass(struct ve2rpc *hndl, int mode)
  
  	info.instanceID = htonl(hndl->instanceID);
  	info.cc_mode = htonl(mode);
@@ -6593,7 +6420,7 @@ index c39d2f08a..cae9d4bb8 100644
  
  	ret = _ve2rpc_shuttle(hndl, VIDEO_RPC_DEC_ToAgent_SetDecoderCCBypass,
  			      &info, sizeof(info), NULL, 0);
-@@ -2665,8 +2571,6 @@ int ve2rpc_readCcRingBuf(struct ve2rpc_ringbuf_t *prb, uint32_t length,
+@@ -2665,8 +2506,6 @@ int ve2rpc_readCcRingBuf(struct ve2rpc_ringbuf_t *prb, uint32_t length,
  				pcDst);
  			break;
  		}
@@ -6602,7 +6429,7 @@ index c39d2f08a..cae9d4bb8 100644
  
  		rp_offset = rp - base;
  		if (wp >= rp) {
-@@ -2674,20 +2578,17 @@ int ve2rpc_readCcRingBuf(struct ve2rpc_ringbuf_t *prb, uint32_t length,
+@@ -2674,20 +2513,17 @@ int ve2rpc_readCcRingBuf(struct ve2rpc_ringbuf_t *prb, uint32_t length,
  				read_len = length;
  			else
  				read_len = wp - rp;
@@ -6623,7 +6450,7 @@ index c39d2f08a..cae9d4bb8 100644
  				memcpy(pcDst, pcSrc + rp_offset, top_space);
  				data_bytes_in_buff -= read_len;
  				rp_offset += read_len;
-@@ -2697,7 +2598,6 @@ int ve2rpc_readCcRingBuf(struct ve2rpc_ringbuf_t *prb, uint32_t length,
+@@ -2697,7 +2533,6 @@ int ve2rpc_readCcRingBuf(struct ve2rpc_ringbuf_t *prb, uint32_t length,
  					remind_len = data_bytes_in_buff;
  				}
  				read_len += remind_len;
@@ -6632,7 +6459,7 @@ index c39d2f08a..cae9d4bb8 100644
  				       remind_len);
  			}
 diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.h b/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.h
-index 06cb7a160..1e3d158e6 100644
+index 06cb7a160..41e8a46a3 100644
 --- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.h
 +++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.h
 @@ -16,7 +16,6 @@
@@ -6643,15 +6470,6 @@ index 06cb7a160..1e3d158e6 100644
  #include <soc/realtek/rtk-krpc-agent.h>
  #include "ve2rpc_cmd.h"
  
-@@ -63,7 +62,7 @@ struct ve2rpc_ion_object {
- 	struct dma_buf *dmabuf;
- 	struct dma_buf_attachment *attach;
- 	struct sg_table *sgt;
--	struct iosys_map map;
-+	struct dma_buf_map map;
- 	dma_addr_t paddr;
- 	void *vaddr;
- 	size_t size;
 @@ -174,7 +173,6 @@ struct ve2rpc {
  	void *buflock;
  	uintptr_t *frame;
@@ -7172,3 +6990,6 @@ index 091751b23..d7a884794 100644
  };
  
  /**
+-- 
+2.45.2
+
