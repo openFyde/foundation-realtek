@@ -1,7 +1,7 @@
-From 595f697ba97a333236c8d27735a82a20d2aaa7f0 Mon Sep 17 00:00:00 2001
+From 2f4ac332802970d57c5327e30026bdcfef196c23 Mon Sep 17 00:00:00 2001
 From: Edward Wu <edwardwu@realtek.com>
 Date: Fri, 19 Jan 2024 16:03:34 +0800
-Subject: [PATCH 59/69] gpu: drm: realtek: select neccessary DRM_KMS_HELPER
+Subject: [PATCH 59/80] gpu: drm: realtek: select neccessary DRM_KMS_HELPER
  config
 
 Change-Id: Ic06b00798703c873610309f4b1b01a4e3b0d2a00
@@ -10,7 +10,7 @@ Change-Id: Ic06b00798703c873610309f4b1b01a4e3b0d2a00
  1 file changed, 5 insertions(+)
 
 diff --git a/drivers/gpu/drm/realtek/Kconfig b/drivers/gpu/drm/realtek/Kconfig
-index bf1713e39..aeb9964b7 100644
+index bf1713e39133..aeb9964b72d5 100644
 --- a/drivers/gpu/drm/realtek/Kconfig
 +++ b/drivers/gpu/drm/realtek/Kconfig
 @@ -2,6 +2,11 @@ config DRM_RTK
@@ -26,5 +26,5 @@ index bf1713e39..aeb9964b7 100644
  	  Choose this option if you have a Realtek SoCs.
  	  The module will be called realtek-drm
 -- 
-2.42.0
+2.45.2
 

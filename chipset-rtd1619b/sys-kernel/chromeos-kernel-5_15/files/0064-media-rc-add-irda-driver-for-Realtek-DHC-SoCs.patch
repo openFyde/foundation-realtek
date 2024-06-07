@@ -1,7 +1,7 @@
-From 9c513124bbf209a745522588d83aa50853262926 Mon Sep 17 00:00:00 2001
+From 08f91be6ae3cd3a099151222a671fe9a71d7009d Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 10 Nov 2022 17:33:39 +0800
-Subject: [PATCH 64/69] media: rc: add irda driver for Realtek DHC SoCs
+Subject: [PATCH 64/80] media: rc: add irda driver for Realtek DHC SoCs
 
 Change-Id: I2ff4afd075cb340785c9680bff5bc651f96db8a8
 ---
@@ -10,7 +10,7 @@ Change-Id: I2ff4afd075cb340785c9680bff5bc651f96db8a8
  2 files changed, 3 insertions(+)
 
 diff --git a/drivers/media/rc/Kconfig b/drivers/media/rc/Kconfig
-index fd5a7a058..fcbdd6886 100644
+index fd5a7a058714..fcbdd68861c3 100644
 --- a/drivers/media/rc/Kconfig
 +++ b/drivers/media/rc/Kconfig
 @@ -375,6 +375,8 @@ config IR_RX51
@@ -23,7 +23,7 @@ index fd5a7a058..fcbdd6886 100644
  	tristate "Remote Control Loopback Driver"
  	help
 diff --git a/drivers/media/rc/Makefile b/drivers/media/rc/Makefile
-index 0db51fad2..f235abd03 100644
+index 0db51fad27d6..f235abd03e38 100644
 --- a/drivers/media/rc/Makefile
 +++ b/drivers/media/rc/Makefile
 @@ -51,3 +51,4 @@ obj-$(CONFIG_IR_SIR) += sir_ir.o
@@ -32,5 +32,5 @@ index 0db51fad2..f235abd03 100644
  obj-$(CONFIG_IR_TOY) += ir_toy.o
 +obj-$(CONFIG_IR_RTK) += rtk-ir/
 -- 
-2.42.0
+2.45.2
 

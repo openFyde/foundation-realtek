@@ -1,7 +1,7 @@
-From 2af366c6aa858afd898668c5882ac8811baf0d13 Mon Sep 17 00:00:00 2001
+From 3eec41812c0ebf0d39f60f14a6c93a25198cb386 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 10 Nov 2022 17:26:55 +0800
-Subject: [PATCH 07/69] clk: realtek: add Realtek DHC SoCs clock drivers
+Subject: [PATCH 07/80] clk: realtek: add Realtek DHC SoCs clock drivers
 
 Change-Id: Ibd0aa4294539ec1c81a90f2855715686b349d848
 ---
@@ -10,7 +10,7 @@ Change-Id: Ibd0aa4294539ec1c81a90f2855715686b349d848
  2 files changed, 2 insertions(+)
 
 diff --git a/drivers/clk/Kconfig b/drivers/clk/Kconfig
-index d12465c22..ddba18103 100644
+index d12465c22751..ddba1810320c 100644
 --- a/drivers/clk/Kconfig
 +++ b/drivers/clk/Kconfig
 @@ -407,6 +407,7 @@ source "drivers/clk/mvebu/Kconfig"
@@ -22,7 +22,7 @@ index d12465c22..ddba18103 100644
  source "drivers/clk/rockchip/Kconfig"
  source "drivers/clk/samsung/Kconfig"
 diff --git a/drivers/clk/Makefile b/drivers/clk/Makefile
-index e42312121..46e727ca1 100644
+index e42312121e51..46e727ca1092 100644
 --- a/drivers/clk/Makefile
 +++ b/drivers/clk/Makefile
 @@ -101,6 +101,7 @@ obj-$(CONFIG_COMMON_CLK_PISTACHIO)	+= pistachio/
@@ -34,5 +34,5 @@ index e42312121..46e727ca1 100644
  obj-$(CONFIG_ARCH_ROCKCHIP)		+= rockchip/
  obj-$(CONFIG_COMMON_CLK_SAMSUNG)	+= samsung/
 -- 
-2.42.0
+2.45.2
 

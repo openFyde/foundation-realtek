@@ -1,7 +1,7 @@
-From 328af616539b1def4af582cb360c0867975802d9 Mon Sep 17 00:00:00 2001
+From 0c7783d72eb9d83f3e73678a543a3f624c601b32 Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Wed, 7 Jun 2023 16:56:19 +0800
-Subject: [PATCH 43/69] usb: core: add an usb port run test mode driver
+Subject: [PATCH 43/80] usb: core: add an usb port run test mode driver
 
 [Information]
 Implement an usb port run test mode driver to run usb 2.0 host CTS
@@ -16,7 +16,7 @@ Signed-off-by: Stanley Chang <stanley_chang@realtek.com>
  create mode 100644 drivers/usb/core/test-usbport.c
 
 diff --git a/drivers/usb/core/Kconfig b/drivers/usb/core/Kconfig
-index f690283dc..7ca962055 100644
+index f690283dc8b3..7ca96205582d 100644
 --- a/drivers/usb/core/Kconfig
 +++ b/drivers/usb/core/Kconfig
 @@ -123,6 +123,12 @@ config USB_AUTOSUSPEND_DELAY
@@ -33,7 +33,7 @@ index f690283dc..7ca962055 100644
  	bool "Enables uevent based error reporting from the hub driver"
  	default n
 diff --git a/drivers/usb/core/Makefile b/drivers/usb/core/Makefile
-index ca758f04f..fd98c034c 100644
+index ca758f04f9bd..fd98c034c916 100644
 --- a/drivers/usb/core/Makefile
 +++ b/drivers/usb/core/Makefile
 @@ -20,3 +20,4 @@ obj-$(CONFIG_USB)		+= usbcore.o
@@ -43,7 +43,7 @@ index ca758f04f..fd98c034c 100644
 +obj-$(CONFIG_USB_HOST_TEST_MODE)	+= test-usbport.o
 diff --git a/drivers/usb/core/test-usbport.c b/drivers/usb/core/test-usbport.c
 new file mode 100644
-index 000000000..375c52d4e
+index 000000000000..375c52d4e3dd
 --- /dev/null
 +++ b/drivers/usb/core/test-usbport.c
 @@ -0,0 +1,621 @@
@@ -669,5 +669,5 @@ index 000000000..375c52d4e
 +MODULE_DESCRIPTION("USB port test");
 +MODULE_LICENSE("GPL v2");
 -- 
-2.42.0
+2.45.2
 

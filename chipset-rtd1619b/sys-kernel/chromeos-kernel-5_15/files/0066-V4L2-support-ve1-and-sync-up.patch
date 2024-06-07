@@ -1,7 +1,7 @@
-From 292599bc0a7f393d900a526c9742359bec0740c4 Mon Sep 17 00:00:00 2001
+From 937f28e313d26753662764e0e49a71c1a576c16f Mon Sep 17 00:00:00 2001
 From: bacon_sun <bacon_sun@realtek.com>
 Date: Fri, 10 Mar 2023 11:27:48 +0000
-Subject: [PATCH 66/69] V4L2: support ve1 and sync up
+Subject: [PATCH 66/80] V4L2: support ve1 and sync up
 
 - reserve interface only, move codec to other repository
 - move rpc and drm to other commit
@@ -14,7 +14,7 @@ Change-Id: I75d1cb7a9457b1a7bbb9eb5f0e18e635580330bc
  3 files changed, 5 insertions(+)
 
 diff --git a/drivers/media/v4l2-core/v4l2-ioctl.c b/drivers/media/v4l2-core/v4l2-ioctl.c
-index 1aba5517f..807c505b1 100644
+index 1aba5517fa53..807c505b116c 100644
 --- a/drivers/media/v4l2-core/v4l2-ioctl.c
 +++ b/drivers/media/v4l2-core/v4l2-ioctl.c
 @@ -1422,6 +1422,7 @@ static void v4l_fill_fmtdesc(struct v4l2_fmtdesc *fmt)
@@ -26,7 +26,7 @@ index 1aba5517f..807c505b1 100644
  		case V4L2_PIX_FMT_HEVC_SLICE:	descr = "HEVC Parsed Slice Data"; break;
  		case V4L2_PIX_FMT_FWHT:		descr = "FWHT"; break; /* used in vicodec */
 diff --git a/include/uapi/linux/v4l2-controls.h b/include/uapi/linux/v4l2-controls.h
-index a8c50c29a..0f8cbdb42 100644
+index a8c50c29a123..0f8cbdb421b2 100644
 --- a/include/uapi/linux/v4l2-controls.h
 +++ b/include/uapi/linux/v4l2-controls.h
 @@ -201,6 +201,9 @@ enum v4l2_colorfx {
@@ -40,7 +40,7 @@ index a8c50c29a..0f8cbdb42 100644
   * The base for the CODA driver controls.
   * We reserve 16 controls for this driver.
 diff --git a/include/uapi/linux/videodev2.h b/include/uapi/linux/videodev2.h
-index b30973503..4b31e2292 100644
+index b309735036bd..4b31e2292ab9 100644
 --- a/include/uapi/linux/videodev2.h
 +++ b/include/uapi/linux/videodev2.h
 @@ -708,6 +708,7 @@ struct v4l2_pix_format {
@@ -52,5 +52,5 @@ index b30973503..4b31e2292 100644
  #define V4L2_PIX_FMT_FWHT     v4l2_fourcc('F', 'W', 'H', 'T') /* Fast Walsh Hadamard Transform (vicodec) */
  #define V4L2_PIX_FMT_FWHT_STATELESS     v4l2_fourcc('S', 'F', 'W', 'H') /* Stateless FWHT (vicodec) */
 -- 
-2.42.0
+2.45.2
 

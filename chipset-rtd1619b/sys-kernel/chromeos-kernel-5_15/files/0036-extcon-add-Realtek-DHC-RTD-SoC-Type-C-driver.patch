@@ -1,7 +1,7 @@
-From f6a57e374b32425297be848e9a764eff616d5b46 Mon Sep 17 00:00:00 2001
+From b80a1f069e95995b0b9f0c03a09762ef942235ff Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Mon, 4 Sep 2023 13:12:47 +0800
-Subject: [PATCH 36/69] extcon: add Realtek DHC RTD SoC Type-C driver
+Subject: [PATCH 36/80] extcon: add Realtek DHC RTD SoC Type-C driver
 
 [ upstream commit 8a590d7371f02ba37d073bed9f988f529f95a03c ]
 
@@ -20,7 +20,7 @@ Change-Id: Ieaa69865beccc2f754be25f64aba38d2f273fff3
  2 files changed, 12 insertions(+)
 
 diff --git a/drivers/extcon/Kconfig b/drivers/extcon/Kconfig
-index 7684b3afa..db803be19 100644
+index 7684b3afa630..db803be190c3 100644
 --- a/drivers/extcon/Kconfig
 +++ b/drivers/extcon/Kconfig
 @@ -186,4 +186,15 @@ config EXTCON_USBC_TUSB320
@@ -40,7 +40,7 @@ index 7684b3afa..db803be19 100644
 +
  endif
 diff --git a/drivers/extcon/Makefile b/drivers/extcon/Makefile
-index 1b390d934..f779adb5e 100644
+index 1b390d934ca9..f779adb5e4c7 100644
 --- a/drivers/extcon/Makefile
 +++ b/drivers/extcon/Makefile
 @@ -25,3 +25,4 @@ obj-$(CONFIG_EXTCON_SM5502)	+= extcon-sm5502.o
@@ -49,5 +49,5 @@ index 1b390d934..f779adb5e 100644
  obj-$(CONFIG_EXTCON_USBC_TUSB320) += extcon-usbc-tusb320.o
 +obj-$(CONFIG_EXTCON_RTK_TYPE_C) += extcon-rtk-type-c.o
 -- 
-2.42.0
+2.45.2
 

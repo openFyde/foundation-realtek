@@ -1,7 +1,7 @@
-From 71290b231623fdeace700ce89448fa8209686035 Mon Sep 17 00:00:00 2001
+From 52e4afc440dbeb821b058b9e024402e0e1b154ec Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 10 Nov 2022 17:36:35 +0800
-Subject: [PATCH 16/69] mmc: host: add emmc driver for Realtek DHC SoCs
+Subject: [PATCH 16/80] mmc: host: add emmc driver for Realtek DHC SoCs
 
 Change-Id: I35d4358f944dacaa9f9cad927d5f29842c48dff1
 ---
@@ -12,7 +12,7 @@ Change-Id: I35d4358f944dacaa9f9cad927d5f29842c48dff1
  4 files changed, 54 insertions(+)
 
 diff --git a/drivers/mmc/host/Kconfig b/drivers/mmc/host/Kconfig
-index a281df78d..8253b44b0 100644
+index a281df78d168..8253b44b0aef 100644
 --- a/drivers/mmc/host/Kconfig
 +++ b/drivers/mmc/host/Kconfig
 @@ -811,6 +811,29 @@ config MMC_DW_PLTFM
@@ -72,7 +72,7 @@ index a281df78d..8253b44b0 100644
  config MMC_SDHCI_EXTERNAL_DMA
  	bool
 diff --git a/drivers/mmc/host/Makefile b/drivers/mmc/host/Makefile
-index 14004cc09..8b16677af 100644
+index 14004cc09aaa..8b16677afeb8 100644
 --- a/drivers/mmc/host/Makefile
 +++ b/drivers/mmc/host/Makefile
 @@ -102,6 +102,10 @@ obj-$(CONFIG_MMC_CQHCI)			+= cqhci.o
@@ -87,7 +87,7 @@ index 14004cc09..8b16677af 100644
  ifeq ($(CONFIG_CB710_DEBUG),y)
  	CFLAGS-cb710-mmc	+= -DDEBUG
 diff --git a/drivers/mmc/host/cqhci-core.c b/drivers/mmc/host/cqhci-core.c
-index 7f25cca86..a7ba6dcb8 100644
+index 7f25cca86ab8..a7ba6dcb8675 100644
 --- a/drivers/mmc/host/cqhci-core.c
 +++ b/drivers/mmc/host/cqhci-core.c
 @@ -516,6 +516,11 @@ static int cqhci_prep_tran_desc(struct mmc_request *mrq,
@@ -103,7 +103,7 @@ index 7f25cca86..a7ba6dcb8 100644
  		addr = sg_dma_address(sg);
  		len = sg_dma_len(sg);
 diff --git a/drivers/mmc/host/cqhci.h b/drivers/mmc/host/cqhci.h
-index ba9387ed9..ce497351b 100644
+index ba9387ed90eb..ce497351bf7b 100644
 --- a/drivers/mmc/host/cqhci.h
 +++ b/drivers/mmc/host/cqhci.h
 @@ -286,6 +286,8 @@ struct cqhci_host_ops {
@@ -116,5 +116,5 @@ index ba9387ed9..ce497351b 100644
  	int (*program_key)(struct cqhci_host *cq_host,
  			   const union cqhci_crypto_cfg_entry *cfg, int slot);
 -- 
-2.42.0
+2.45.2
 

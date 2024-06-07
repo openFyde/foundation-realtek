@@ -1,7 +1,7 @@
-From 0ae19f8d20f19d991c432b3edfe7d4c4122a69ef Mon Sep 17 00:00:00 2001
+From a21a02861232f261f0f6ecebcccf98cef0379019 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Fri, 17 Feb 2023 16:15:24 +0800
-Subject: [PATCH 65/69] media: rc: fix ir key map for Realtek DHC platform
+Subject: [PATCH 65/80] media: rc: fix ir key map for Realtek DHC platform
 
 Change-Id: Ib69ab6887067bf631d0d8c3ce3f44ee6bbd1e2a1
 ---
@@ -10,7 +10,7 @@ Change-Id: Ib69ab6887067bf631d0d8c3ce3f44ee6bbd1e2a1
  2 files changed, 4 insertions(+)
 
 diff --git a/drivers/media/rc/keymaps/Makefile b/drivers/media/rc/keymaps/Makefile
-index 5fe5c9e1a..58a5e13da 100644
+index 5fe5c9e1a46d..58a5e13daae5 100644
 --- a/drivers/media/rc/keymaps/Makefile
 +++ b/drivers/media/rc/keymaps/Makefile
 @@ -98,6 +98,8 @@ obj-$(CONFIG_RC_MAP) += rc-adstech-dvb-t-pci.o \
@@ -23,7 +23,7 @@ index 5fe5c9e1a..58a5e13da 100644
  			rc-snapstream-firefly.o \
  			rc-streamzap.o \
 diff --git a/include/media/rc-map.h b/include/media/rc-map.h
-index 793b54342..07905b80f 100644
+index 793b54342dff..07905b80feac 100644
 --- a/include/media/rc-map.h
 +++ b/include/media/rc-map.h
 @@ -309,6 +309,8 @@ struct rc_map *rc_map_get(const char *name);
@@ -36,5 +36,5 @@ index 793b54342..07905b80f 100644
  #define RC_MAP_SNAPSTREAM_FIREFLY        "rc-snapstream-firefly"
  #define RC_MAP_STREAMZAP                 "rc-streamzap"
 -- 
-2.42.0
+2.45.2
 

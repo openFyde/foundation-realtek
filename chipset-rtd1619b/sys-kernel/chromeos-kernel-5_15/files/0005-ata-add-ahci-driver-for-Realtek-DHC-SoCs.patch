@@ -1,7 +1,7 @@
-From 2c85845311bb504a5fb0a51149fe1cf6c0d1d282 Mon Sep 17 00:00:00 2001
+From 0674adb93a3baf40673b94e6715ed3ee77bb0779 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 17 Nov 2022 16:22:49 +0800
-Subject: [PATCH 05/69] ata: add ahci driver for Realtek DHC SoCs
+Subject: [PATCH 05/80] ata: add ahci driver for Realtek DHC SoCs
 
 Change-Id: I8911e0b1e6a3f4a71ecb8fcb9fea30a9e96cbb45
 ---
@@ -10,7 +10,7 @@ Change-Id: I8911e0b1e6a3f4a71ecb8fcb9fea30a9e96cbb45
  2 files changed, 11 insertions(+)
 
 diff --git a/drivers/ata/Kconfig b/drivers/ata/Kconfig
-index a7da8ea7b..cdd51326d 100644
+index a7da8ea7b3ed..cdd51326d978 100644
 --- a/drivers/ata/Kconfig
 +++ b/drivers/ata/Kconfig
 @@ -271,6 +271,16 @@ config AHCI_QORIQ
@@ -31,7 +31,7 @@ index a7da8ea7b..cdd51326d 100644
  	tristate "Freescale 3.0Gbps SATA support"
  	depends on FSL_SOC
 diff --git a/drivers/ata/Makefile b/drivers/ata/Makefile
-index b8aebfb14..9a8675878 100644
+index b8aebfb14e82..9a867587821a 100644
 --- a/drivers/ata/Makefile
 +++ b/drivers/ata/Makefile
 @@ -26,6 +26,7 @@ obj-$(CONFIG_AHCI_ST)		+= ahci_st.o libahci.o libahci_platform.o
@@ -43,5 +43,5 @@ index b8aebfb14..9a8675878 100644
  # SFF w/ custom DMA
  obj-$(CONFIG_PDC_ADMA)		+= pdc_adma.o
 -- 
-2.42.0
+2.45.2
 

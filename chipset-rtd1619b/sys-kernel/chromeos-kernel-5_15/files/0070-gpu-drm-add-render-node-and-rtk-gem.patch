@@ -1,10 +1,9 @@
-From 2a054d06efa8bd184f9783ca996de34c78e937da Mon Sep 17 00:00:00 2001
-From: simon_hsu <simon_hsu@realtek.com>
-Date: Mon, 20 May 2024 00:22:00 +0800
-Subject: [PATCH] gpu: drm: realtek: add feature DRIVER_RENDER and two ioctl
- RTK_GEM_CREATE & RTK_GEM_MAP_OFFSET in drm driver
+From aeee23c036c92f5649137f704c36ffe525ead47d Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Fri, 7 Jun 2024 08:18:29 +0800
+Subject: [PATCH 70/80] gpu drm add render node and rtk gem
 
-Change-Id: I1df00ed85c5016dcac5929f5ffc46f18d2f6a796
+Change-Id: I06e0226273cdc4679be9f0a4d56cde657192075a
 ---
  drivers/gpu/drm/realtek/rtk_drm_drv.c   |  8 ++--
  drivers/gpu/drm/realtek/rtk_drm_drv.h   |  4 +-
@@ -64,12 +63,12 @@ index b8e8d8d236a2..4f6126f55b94 100644
  #define RTK_SET_PAUSE   0x3
  #define RTK_GET_PLANE_ID   0x4
 diff --git a/drivers/gpu/drm/realtek/rtk_drm_gem.c b/drivers/gpu/drm/realtek/rtk_drm_gem.c
-index 49cf17f50123..edb242ba5718 100644
+index 8e6f2fae99ae..f027155e1b76 100644
 --- a/drivers/gpu/drm/realtek/rtk_drm_gem.c
 +++ b/drivers/gpu/drm/realtek/rtk_drm_gem.c
 @@ -20,6 +20,8 @@
  #include <drm/drm_file.h>
- #include <drm/drm_gem_cma_helper.h>
+ #include <drm/drm_gem_dma_helper.h>
  
 +#include <drm/realtek_drm.h>
 +
@@ -128,10 +127,10 @@ index 4f179c3115c6..46749ef9521b 100644
 +
  #endif  /* _RTK_DRM_GEM_H_ */
 diff --git a/drivers/gpu/drm/realtek/rtk_drm_plane.c b/drivers/gpu/drm/realtek/rtk_drm_plane.c
-index c354310bcaf8..6a8f26e39dc4 100644
+index 7d70985ac61a..5c0feea70048 100644
 --- a/drivers/gpu/drm/realtek/rtk_drm_plane.c
 +++ b/drivers/gpu/drm/realtek/rtk_drm_plane.c
-@@ -38,6 +38,7 @@ static const unsigned int osd_formats[] = {
+@@ -40,6 +40,7 @@ static const unsigned int osd_formats[] = {
  	DRM_FORMAT_XRGB8888,
  	DRM_FORMAT_ARGB8888,
  	DRM_FORMAT_BGRA8888,
@@ -139,7 +138,7 @@ index c354310bcaf8..6a8f26e39dc4 100644
  	DRM_FORMAT_RGB565,
  	DRM_FORMAT_RGB888,
  	DRM_FORMAT_BGR888,
-@@ -424,11 +425,17 @@ static int queue_ring_buffer(struct drm_plane *plane)
+@@ -426,11 +427,17 @@ static int queue_ring_buffer(struct drm_plane *plane)
  		if (fb->format->format == DRM_FORMAT_XRGB8888) {
  			flags |= eBuffer_USE_GLOBAL_ALPHA;
  			obj->alpha = 0x3ff;
@@ -225,5 +224,5 @@ index 000000000000..e7a357454b88
 +
 +#endif /* _UAPI_REALTEK_DRM_H */
 -- 
-2.34.1
+2.45.2
 

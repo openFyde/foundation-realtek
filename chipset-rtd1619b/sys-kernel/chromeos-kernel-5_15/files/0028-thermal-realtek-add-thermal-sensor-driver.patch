@@ -1,7 +1,7 @@
-From f7f86e5bb2b77f2a621dd5e295ad016f90e15bac Mon Sep 17 00:00:00 2001
+From 5e8e1ab2192d64371a45b0af380b59c44dc9423c Mon Sep 17 00:00:00 2001
 From: Cheng-Yu Lee <cylee12@realtek.com>
 Date: Tue, 13 Oct 2020 15:45:51 +0800
-Subject: [PATCH 28/69] thermal: realtek: add thermal sensor driver
+Subject: [PATCH 28/80] thermal: realtek: add thermal sensor driver
 
 Change-Id: I248a66f1a822b7ef3ec07ca9f217ec47c9d14cd3
 ---
@@ -10,7 +10,7 @@ Change-Id: I248a66f1a822b7ef3ec07ca9f217ec47c9d14cd3
  2 files changed, 3 insertions(+)
 
 diff --git a/drivers/thermal/Kconfig b/drivers/thermal/Kconfig
-index 7a4ba50ba..984b2daac 100644
+index 7a4ba50ba97d..984b2daac858 100644
 --- a/drivers/thermal/Kconfig
 +++ b/drivers/thermal/Kconfig
 @@ -487,4 +487,5 @@ config KHADAS_MCU_FAN_THERMAL
@@ -20,7 +20,7 @@ index 7a4ba50ba..984b2daac 100644
 +source "drivers/thermal/realtek/Kconfig"
  endif
 diff --git a/drivers/thermal/Makefile b/drivers/thermal/Makefile
-index 9729a2b08..b15b8598d 100644
+index 9729a2b08991..b15b8598d967 100644
 --- a/drivers/thermal/Makefile
 +++ b/drivers/thermal/Makefile
 @@ -60,3 +60,5 @@ obj-$(CONFIG_UNIPHIER_THERMAL)	+= uniphier_thermal.o
@@ -30,5 +30,5 @@ index 9729a2b08..b15b8598d 100644
 +obj-$(CONFIG_RTK_THERMAL)	+= realtek/
 +
 -- 
-2.42.0
+2.45.2
 

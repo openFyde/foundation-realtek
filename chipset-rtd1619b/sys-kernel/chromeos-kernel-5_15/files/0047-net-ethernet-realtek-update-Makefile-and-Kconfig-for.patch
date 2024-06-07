@@ -1,7 +1,7 @@
-From 0b313f00c2b9d458cfefc951cd1e7c4b9127a83d Mon Sep 17 00:00:00 2001
+From 742d6af45966e539d177c4b4a5cedb052a5a58af Mon Sep 17 00:00:00 2001
 From: TY Chang <tychang@realtek.com>
 Date: Mon, 23 Oct 2023 16:56:49 +0800
-Subject: [PATCH 47/69] net: ethernet: realtek: update Makefile and Kconfig for
+Subject: [PATCH 47/80] net: ethernet: realtek: update Makefile and Kconfig for
  r8125 and r8168
 
 Change-Id: I445d76a0c82dfc524899f8d2df4741c72da4b4b6
@@ -11,7 +11,7 @@ Change-Id: I445d76a0c82dfc524899f8d2df4741c72da4b4b6
  2 files changed, 34 insertions(+)
 
 diff --git a/drivers/net/ethernet/realtek/Kconfig b/drivers/net/ethernet/realtek/Kconfig
-index 0de8a6b2e..88b46ae32 100644
+index 0de8a6b2e758..88b46ae32573 100644
 --- a/drivers/net/ethernet/realtek/Kconfig
 +++ b/drivers/net/ethernet/realtek/Kconfig
 @@ -123,6 +123,38 @@ config R8169SOC
@@ -54,7 +54,7 @@ index 0de8a6b2e..88b46ae32 100644
  	bool "Support to receive packets without memory copy"
  	default n
 diff --git a/drivers/net/ethernet/realtek/Makefile b/drivers/net/ethernet/realtek/Makefile
-index 5b3af94eb..a5ada1952 100644
+index 5b3af94eb565..a5ada1952163 100644
 --- a/drivers/net/ethernet/realtek/Makefile
 +++ b/drivers/net/ethernet/realtek/Makefile
 @@ -9,3 +9,5 @@ obj-$(CONFIG_ATP) += atp.o
@@ -64,5 +64,5 @@ index 5b3af94eb..a5ada1952 100644
 +obj-$(CONFIG_R8168) += r8168/
 +obj-$(CONFIG_R8125) += r8125/
 -- 
-2.42.0
+2.45.2
 

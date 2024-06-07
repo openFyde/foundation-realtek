@@ -1,7 +1,7 @@
-From 59ef69565224b625b27e73640b617396245ed49f Mon Sep 17 00:00:00 2001
+From 67e48b4e6933c07328e2f385d88ddab765ac808f Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Sun, 13 Nov 2022 20:39:38 +0800
-Subject: [PATCH 22/69] regulator: add regulator driver for apw888x series PMIC
+Subject: [PATCH 22/80] regulator: add regulator driver for apw888x series PMIC
 
 Change-Id: I52fbf7ef433db173d10f33a0f324a5872ff3314b
 ---
@@ -10,7 +10,7 @@ Change-Id: I52fbf7ef433db173d10f33a0f324a5872ff3314b
  2 files changed, 22 insertions(+)
 
 diff --git a/drivers/regulator/Kconfig b/drivers/regulator/Kconfig
-index 8fa4543ac..2c3369c9c 100644
+index 8fa4543ac822..2c3369c9c273 100644
 --- a/drivers/regulator/Kconfig
 +++ b/drivers/regulator/Kconfig
 @@ -1423,5 +1423,24 @@ config REGULATOR_QCOM_LABIBB
@@ -39,7 +39,7 @@ index 8fa4543ac..2c3369c9c 100644
  endif
  
 diff --git a/drivers/regulator/Makefile b/drivers/regulator/Makefile
-index 9e382b50a..e20711a06 100644
+index 9e382b50a5ef..e20711a06631 100644
 --- a/drivers/regulator/Makefile
 +++ b/drivers/regulator/Makefile
 @@ -171,5 +171,8 @@ obj-$(CONFIG_REGULATOR_WM831X) += wm831x-ldo.o
@@ -52,5 +52,5 @@ index 9e382b50a..e20711a06 100644
  
  ccflags-$(CONFIG_REGULATOR_DEBUG) += -DDEBUG
 -- 
-2.42.0
+2.45.2
 

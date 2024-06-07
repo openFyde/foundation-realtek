@@ -1,0 +1,27 @@
+From 6c00681c10a2105533206eb4c05f7823f46b8b8f Mon Sep 17 00:00:00 2001
+From: yaozenhu <yaozenhu@realtek.com>
+Date: Tue, 4 Jun 2024 11:03:36 +0800
+Subject: [PATCH 76/80] fix rpmeg driver issue
+
+---
+ drivers/rpmsg/rpmsg_internal.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/rpmsg/rpmsg_internal.h b/drivers/rpmsg/rpmsg_internal.h
+index d1b8949d36d3..63cb74ea68d6 100644
+--- a/drivers/rpmsg/rpmsg_internal.h
++++ b/drivers/rpmsg/rpmsg_internal.h
+@@ -98,8 +98,8 @@ int rpmsg_release_channel(struct rpmsg_device *rpdev,
+  */
+ static inline int rpmsg_ctrldev_register_device(struct rpmsg_device *rpdev)
+ {
+-	strcpy(rpdev->id.name, "rpmsg_chrdev");
+-	rpdev->driver_override = "rpmsg_chrdev";
++	strcpy(rpdev->id.name, "rpmsg_ctrl");
++	rpdev->driver_override = "rpmsg_ctrl";
+ 
+ 	return rpmsg_register_device(rpdev);
+ }
+-- 
+2.45.2
+

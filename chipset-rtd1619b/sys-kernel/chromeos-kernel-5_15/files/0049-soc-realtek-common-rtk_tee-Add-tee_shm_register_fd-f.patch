@@ -1,7 +1,7 @@
-From 303992bfa7d383c5947ec853cfded29a97a2830c Mon Sep 17 00:00:00 2001
+From a8b52d65c640e1f25b110aaf9357e4c24c363539 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 10 Aug 2023 17:35:46 +0800
-Subject: [PATCH 49/69] soc: realtek: common: rtk_tee: Add tee_shm_register_fd
+Subject: [PATCH 49/80] soc: realtek: common: rtk_tee: Add tee_shm_register_fd
  function
 
 register a shared memory from a file descriptor.
@@ -13,7 +13,7 @@ Change-Id: Ibe2c96ebcf639263b1ec503f5c5e841739d629cd
  2 files changed, 40 insertions(+)
 
 diff --git a/include/linux/tee_drv.h b/include/linux/tee_drv.h
-index 38b701b7a..6201fe521 100644
+index 38b701b7af4c..6201fe521a8b 100644
 --- a/include/linux/tee_drv.h
 +++ b/include/linux/tee_drv.h
 @@ -203,6 +203,7 @@ int tee_session_calc_client_uuid(uuid_t *uuid, u32 connection_method,
@@ -42,7 +42,7 @@ index 38b701b7a..6201fe521 100644
   * tee_shm_free() - Free shared memory
   * @shm:	Handle to shared memory to free
 diff --git a/include/uapi/linux/tee.h b/include/uapi/linux/tee.h
-index 25a6c534b..39e283d2f 100644
+index 25a6c534beb1..39e283d2f8da 100644
 --- a/include/uapi/linux/tee.h
 +++ b/include/uapi/linux/tee.h
 @@ -363,6 +363,35 @@ struct tee_iocl_supp_send_arg {
@@ -82,5 +82,5 @@ index 25a6c534b..39e283d2f 100644
   * struct tee_ioctl_shm_register_data - Shared memory register argument
   * @addr:      [in] Start address of shared memory to register
 -- 
-2.42.0
+2.45.2
 

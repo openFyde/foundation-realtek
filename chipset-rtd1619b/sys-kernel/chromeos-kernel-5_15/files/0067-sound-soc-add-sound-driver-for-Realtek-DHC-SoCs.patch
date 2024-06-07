@@ -1,7 +1,7 @@
-From de6f22af2c120cd4c7ddf7c7cea27190f66909db Mon Sep 17 00:00:00 2001
+From 962bd65097a7cafff1353c9a9bfc04a97528489c Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Mon, 12 Dec 2022 13:05:41 +0800
-Subject: [PATCH 67/69] sound: soc: add sound driver for Realtek DHC SoCs
+Subject: [PATCH 67/80] sound: soc: add sound driver for Realtek DHC SoCs
 
 Change-Id: Ica907805bb3fc5f6c12d9113457ab98a6e61d417
 ---
@@ -10,7 +10,7 @@ Change-Id: Ica907805bb3fc5f6c12d9113457ab98a6e61d417
  2 files changed, 2 insertions(+)
 
 diff --git a/sound/soc/Kconfig b/sound/soc/Kconfig
-index 848fbae26..a0936582c 100644
+index 848fbae26c3b..a0936582cf7e 100644
 --- a/sound/soc/Kconfig
 +++ b/sound/soc/Kconfig
 @@ -85,6 +85,7 @@ source "sound/soc/meson/Kconfig"
@@ -22,7 +22,7 @@ index 848fbae26..a0936582c 100644
  source "sound/soc/samsung/Kconfig"
  source "sound/soc/sh/Kconfig"
 diff --git a/sound/soc/Makefile b/sound/soc/Makefile
-index 9b198d4ed..51168962e 100644
+index 9b198d4edf37..51168962e651 100644
 --- a/sound/soc/Makefile
 +++ b/sound/soc/Makefile
 @@ -53,6 +53,7 @@ obj-$(CONFIG_SND_SOC)	+= mxs/
@@ -34,5 +34,5 @@ index 9b198d4ed..51168962e 100644
  obj-$(CONFIG_SND_SOC)	+= samsung/
  obj-$(CONFIG_SND_SOC)	+= sh/
 -- 
-2.42.0
+2.45.2
 

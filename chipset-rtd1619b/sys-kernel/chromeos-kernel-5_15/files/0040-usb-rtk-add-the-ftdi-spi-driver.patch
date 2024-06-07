@@ -1,7 +1,7 @@
-From 12de58a2926ea229ca051a5e88036bd2976d9221 Mon Sep 17 00:00:00 2001
+From 8735039fd9257705612bb87d50a24808036312fa Mon Sep 17 00:00:00 2001
 From: Haru Zheng <haruzheng@realtek.com>
 Date: Wed, 10 Nov 2021 16:40:11 +0800
-Subject: [PATCH 40/69] usb: rtk: add the ftdi-spi driver.
+Subject: [PATCH 40/80] usb: rtk: add the ftdi-spi driver.
 
 [REVIEWER] Haru Zheng
 [Information]
@@ -17,7 +17,7 @@ Change-Id: I5063b702a0aa75c65db3d0e03ef630905a0eca30
  2 files changed, 14 insertions(+)
 
 diff --git a/drivers/usb/misc/Kconfig b/drivers/usb/misc/Kconfig
-index 2a10d4e3d..3cca5c587 100644
+index 2a10d4e3dbb6..3cca5c58798b 100644
 --- a/drivers/usb/misc/Kconfig
 +++ b/drivers/usb/misc/Kconfig
 @@ -285,6 +285,17 @@ config BRCM_USB_PINMAP
@@ -39,7 +39,7 @@ index 2a10d4e3d..3cca5c587 100644
  	tristate "Onboard USB hub support"
  	depends on OF || COMPILE_TEST
 diff --git a/drivers/usb/misc/Makefile b/drivers/usb/misc/Makefile
-index 2c5aec6f1..ccd1c924d 100644
+index 2c5aec6f1b26..ccd1c924d88a 100644
 --- a/drivers/usb/misc/Makefile
 +++ b/drivers/usb/misc/Makefile
 @@ -32,4 +32,7 @@ obj-$(CONFIG_USB_CHAOSKEY)		+= chaoskey.o
@@ -51,5 +51,5 @@ index 2c5aec6f1..ccd1c924d 100644
 +
  obj-$(CONFIG_USB_ONBOARD_HUB)		+= onboard_usb_hub.o
 -- 
-2.42.0
+2.45.2
 

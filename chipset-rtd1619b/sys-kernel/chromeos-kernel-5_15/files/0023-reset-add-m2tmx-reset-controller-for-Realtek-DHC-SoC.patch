@@ -1,7 +1,7 @@
-From a6dc7ecbac7bbec7ac53f976ef90847a4305496f Mon Sep 17 00:00:00 2001
+From d308b6bf527fa0a004bc0911b00aeb1394decc67 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 17 Nov 2022 15:37:52 +0800
-Subject: [PATCH 23/69] reset: add m2tmx reset controller for Realtek DHC SoCs
+Subject: [PATCH 23/80] reset: add m2tmx reset controller for Realtek DHC SoCs
 
 Change-Id: If4e28933601387a95d10be5f9b5b68f3f1b40e83
 ---
@@ -10,7 +10,7 @@ Change-Id: If4e28933601387a95d10be5f9b5b68f3f1b40e83
  2 files changed, 9 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/reset/Kconfig b/drivers/reset/Kconfig
-index b0056ae5d..a44d0896d 100644
+index b0056ae5d463..a44d0896d478 100644
 --- a/drivers/reset/Kconfig
 +++ b/drivers/reset/Kconfig
 @@ -275,6 +275,14 @@ config RESET_ZYNQ
@@ -29,7 +29,7 @@ index b0056ae5d..a44d0896d 100644
  source "drivers/reset/hisilicon/Kconfig"
  source "drivers/reset/tegra/Kconfig"
 diff --git a/drivers/reset/Makefile b/drivers/reset/Makefile
-index 21d46d886..60daf2772 100644
+index 21d46d8869ff..60daf2772a50 100644
 --- a/drivers/reset/Makefile
 +++ b/drivers/reset/Makefile
 @@ -36,4 +36,4 @@ obj-$(CONFIG_RESET_UNIPHIER) += reset-uniphier.o
@@ -39,5 +39,5 @@ index 21d46d886..60daf2772 100644
 -
 +obj-$(CONFIG_RESET_RTK_M2TMX) += reset-rtk-m2tmx.o
 -- 
-2.42.0
+2.45.2
 

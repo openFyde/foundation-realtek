@@ -1,7 +1,7 @@
-From fbbc469648da0534ab982b2cf8539e5eaedfb89b Mon Sep 17 00:00:00 2001
+From 7a3213dcf37f8c06e81fa79f66ddbc91333d8a33 Mon Sep 17 00:00:00 2001
 From: Edward Wu <edwardwu@realtek.com>
 Date: Tue, 23 Jan 2024 07:55:05 +0800
-Subject: [PATCH 56/69] dma-buf: heaps: realtek: an option to use Realtek media
+Subject: [PATCH 56/80] dma-buf: heaps: realtek: an option to use Realtek media
  heap without Soc memory protection
 
 Change-Id: I454417d36ffabd2d1d7ad91feea89feb235a71be
@@ -10,17 +10,17 @@ Change-Id: I454417d36ffabd2d1d7ad91feea89feb235a71be
  1 file changed, 33 insertions(+)
 
 diff --git a/drivers/dma-buf/heaps/rtk_protect.c b/drivers/dma-buf/heaps/rtk_protect.c
-index 9d2b84376..ba9a469ff 100644
+index 9d2b84376261..6aa3bb81700c 100644
 --- a/drivers/dma-buf/heaps/rtk_protect.c
 +++ b/drivers/dma-buf/heaps/rtk_protect.c
-@@ -11,6 +11,7 @@
-
+@@ -9,6 +9,7 @@
+ #include <soc/realtek/rtk_tee.h>
+ #include "rtk_protect.h"
+ 
 +#ifdef CONFIG_OPTEE_MEM_API
  static struct tee_mem_device *memdev;
  
  int rtk_protect_create(struct rtk_protect_create_info *info)
- {
- 	struct tee_mem_protected_slot *slot;
 @@ -102,3 +103,35 @@ bool rtk_protect_handler_ready(void)
  
  	return memdev != NULL;
@@ -58,5 +58,5 @@ index 9d2b84376..ba9a469ff 100644
 +}
 +#endif /* CONFIG_OPTEE_MEM_API */
 -- 
-2.42.0
+2.45.2
 

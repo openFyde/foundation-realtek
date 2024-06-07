@@ -1,7 +1,7 @@
-From e3016941b762ff25f13d218795d1689189f31516 Mon Sep 17 00:00:00 2001
+From 996ce40e3a4fd442a4dcdb2c139e090be49100d1 Mon Sep 17 00:00:00 2001
 From: simon_hsu <simon_hsu@realtek.com>
 Date: Wed, 3 May 2023 11:25:15 +0800
-Subject: [PATCH 58/69] gpu: drm: realtek: add DRM_MODE_ATOMIC_NONBLOCK flag
+Subject: [PATCH 58/80] gpu: drm: realtek: add DRM_MODE_ATOMIC_NONBLOCK flag
 
 Change-Id: I164efcab1d61340ba4808005d009cf266da851d2
 ---
@@ -9,7 +9,7 @@ Change-Id: I164efcab1d61340ba4808005d009cf266da851d2
  1 file changed, 3 insertions(+)
 
 diff --git a/drivers/gpu/drm/drm_atomic_uapi.c b/drivers/gpu/drm/drm_atomic_uapi.c
-index 79730fa1d..60ef178ee 100644
+index 79730fa1dd8e..60ef178ee1e3 100644
 --- a/drivers/gpu/drm/drm_atomic_uapi.c
 +++ b/drivers/gpu/drm/drm_atomic_uapi.c
 @@ -1317,6 +1317,9 @@ int drm_mode_atomic_ioctl(struct drm_device *dev,
@@ -23,5 +23,5 @@ index 79730fa1d..60ef178ee 100644
  		drm_dbg_atomic(dev,
  			       "commit failed: invalid flag DRM_MODE_PAGE_FLIP_ASYNC\n");
 -- 
-2.42.0
+2.45.2
 

@@ -1,7 +1,7 @@
-From 659ae0293df3d2ed0cf751173e990115bf0ec97e Mon Sep 17 00:00:00 2001
+From b83fc61e28e18da5650111c46d9b95bb82a69bd2 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 8 Dec 2022 15:28:32 +0800
-Subject: [PATCH 11/69] hwspinlock: add realtek hwlock driver
+Subject: [PATCH 11/80] hwspinlock: add realtek hwlock driver
 
 Change-Id: Iee35a94fa15f66128426d359886cfecc56f0ce97
 ---
@@ -10,7 +10,7 @@ Change-Id: Iee35a94fa15f66128426d359886cfecc56f0ce97
  2 files changed, 9 insertions(+)
 
 diff --git a/drivers/hwspinlock/Kconfig b/drivers/hwspinlock/Kconfig
-index 3874d15b0..4ca1a2bc4 100644
+index 3874d15b0e9b..4ca1a2bc4984 100644
 --- a/drivers/hwspinlock/Kconfig
 +++ b/drivers/hwspinlock/Kconfig
 @@ -63,4 +63,12 @@ config HSEM_U8500
@@ -27,7 +27,7 @@ index 3874d15b0..4ca1a2bc4 100644
 +
  endif # HWSPINLOCK
 diff --git a/drivers/hwspinlock/Makefile b/drivers/hwspinlock/Makefile
-index a0f16c9aa..5340f7f43 100644
+index a0f16c9aaa82..5340f7f43424 100644
 --- a/drivers/hwspinlock/Makefile
 +++ b/drivers/hwspinlock/Makefile
 @@ -10,3 +10,4 @@ obj-$(CONFIG_HWSPINLOCK_SPRD)		+= sprd_hwspinlock.o
@@ -36,5 +36,5 @@ index a0f16c9aa..5340f7f43 100644
  obj-$(CONFIG_HSEM_U8500)		+= u8500_hsem.o
 +obj-$(CONFIG_HWSPINLOCK_RTK)		+= rtk_hwspinlock.o
 -- 
-2.42.0
+2.45.2
 

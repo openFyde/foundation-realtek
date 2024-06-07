@@ -1,7 +1,7 @@
-From 22aa4a44a491ef20ac3d06b1d9a7a6665fae6444 Mon Sep 17 00:00:00 2001
+From a65aac4c3424c19344dbe609785dcc596e86c077 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Sun, 13 Nov 2022 20:38:26 +0800
-Subject: [PATCH 15/69] mtd: add mfd driver for apw888x series PMIC
+Subject: [PATCH 15/80] mtd: add mfd driver for apw888x series PMIC
 
 Change-Id: Id1806c06511eca150c49344c87a135969842708d
 ---
@@ -10,7 +10,7 @@ Change-Id: Id1806c06511eca150c49344c87a135969842708d
  2 files changed, 13 insertions(+)
 
 diff --git a/drivers/mfd/Kconfig b/drivers/mfd/Kconfig
-index 064299ea2..9d28180f8 100644
+index 064299ea2340..9d28180f8819 100644
 --- a/drivers/mfd/Kconfig
 +++ b/drivers/mfd/Kconfig
 @@ -2220,5 +2220,16 @@ config MFD_RSMU_SPI
@@ -31,7 +31,7 @@ index 064299ea2..9d28180f8 100644
  endmenu
  endif
 diff --git a/drivers/mfd/Makefile b/drivers/mfd/Makefile
-index e0db12a24..912a33f00 100644
+index e0db12a24d1f..912a33f00ad2 100644
 --- a/drivers/mfd/Makefile
 +++ b/drivers/mfd/Makefile
 @@ -252,6 +252,8 @@ obj-$(CONFIG_MFD_ALTERA_SYSMGR) += altera-sysmgr.o
@@ -44,5 +44,5 @@ index e0db12a24..912a33f00 100644
  obj-$(CONFIG_MFD_STM32_TIMERS) 	+= stm32-timers.o
  obj-$(CONFIG_MFD_MXS_LRADC)     += mxs-lradc.o
 -- 
-2.42.0
+2.45.2
 

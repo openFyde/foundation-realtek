@@ -1,7 +1,7 @@
-From 49a0f65d5eac884c8a025dba92d644134672a134 Mon Sep 17 00:00:00 2001
+From bf1c02b2862c87944f46e94c4dc4caccb71220e9 Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Thu, 25 May 2023 10:22:50 +0800
-Subject: [PATCH 32/69] FROMGIT: usb: phy: add usb phy notify port status API
+Subject: [PATCH 32/80] FROMGIT: usb: phy: add usb phy notify port status API
 
 In Realtek SoC, the parameter of usb phy is designed to can dynamic
 tuning base on port status. Therefore, add a notify callback of phy
@@ -41,7 +41,7 @@ Signed-off-by: Stanley Chang <stanley_chang@realtek.com>
  2 files changed, 36 insertions(+)
 
 diff --git a/drivers/usb/core/hub.c b/drivers/usb/core/hub.c
-index 8236d4910..ff208f071 100644
+index 8236d491091d..ff208f0717f3 100644
 --- a/drivers/usb/core/hub.c
 +++ b/drivers/usb/core/hub.c
 @@ -643,6 +643,29 @@ static int hub_ext_port_status(struct usb_hub *hub, int port1, int type,
@@ -75,7 +75,7 @@ index 8236d4910..ff208f071 100644
  }
  
 diff --git a/include/linux/usb/phy.h b/include/linux/usb/phy.h
-index e4de6bc1f..d16a4d682 100644
+index e4de6bc1f69b..d16a4d68215d 100644
 --- a/include/linux/usb/phy.h
 +++ b/include/linux/usb/phy.h
 @@ -144,6 +144,10 @@ struct usb_phy {
@@ -106,5 +106,5 @@ index e4de6bc1f..d16a4d682 100644
  usb_phy_notify_disconnect(struct usb_phy *x, enum usb_device_speed speed)
  {
 -- 
-2.42.0
+2.45.2
 

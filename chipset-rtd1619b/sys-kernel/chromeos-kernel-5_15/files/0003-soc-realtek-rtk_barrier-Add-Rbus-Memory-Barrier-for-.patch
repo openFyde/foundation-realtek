@@ -1,7 +1,7 @@
-From f9b86cef32684bfde457d81686f850b080d36b1b Mon Sep 17 00:00:00 2001
+From 52cdcaa23ff53714c29df10bff1c609535a06878 Mon Sep 17 00:00:00 2001
 From: phinex <phinex@realtek.com>
 Date: Fri, 21 Oct 2022 19:43:56 +0800
-Subject: [PATCH 03/69] soc: realtek: rtk_barrier : Add Rbus Memory Barrier for
+Subject: [PATCH 03/80] soc: realtek: rtk_barrier : Add Rbus Memory Barrier for
  rtd129x
 
 Change-Id: Ia5300a4f589e33516e4f53c07afaecbc13a42461
@@ -10,7 +10,7 @@ Change-Id: Ia5300a4f589e33516e4f53c07afaecbc13a42461
  1 file changed, 9 insertions(+)
 
 diff --git a/arch/arm64/include/asm/barrier.h b/arch/arm64/include/asm/barrier.h
-index 1c5a00598..3d9cc514a 100644
+index 1c5a00598458..3d9cc514a7ae 100644
 --- a/arch/arm64/include/asm/barrier.h
 +++ b/arch/arm64/include/asm/barrier.h
 @@ -11,6 +11,10 @@
@@ -38,5 +38,5 @@ index 1c5a00598..3d9cc514a 100644
  #define dma_mb()	dmb(osh)
  #define dma_rmb()	dmb(oshld)
 -- 
-2.42.0
+2.45.2
 

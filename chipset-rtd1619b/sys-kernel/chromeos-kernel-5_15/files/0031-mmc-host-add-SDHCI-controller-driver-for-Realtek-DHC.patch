@@ -1,7 +1,7 @@
-From e968afd7e642e6d8ef4577571a00950b5d1599e5 Mon Sep 17 00:00:00 2001
+From e02ce652537291775fcc130ebae7658063288855 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Fri, 11 Nov 2022 22:31:24 +0800
-Subject: [PATCH 31/69] mmc: host: add SDHCI controller driver for Realtek DHC
+Subject: [PATCH 31/80] mmc: host: add SDHCI controller driver for Realtek DHC
  SoCs
 
 Change-Id: I82d52bf774b7bd7624ef2dbdc45ce65bb823f48e
@@ -11,7 +11,7 @@ Change-Id: I82d52bf774b7bd7624ef2dbdc45ce65bb823f48e
  2 files changed, 14 insertions(+)
 
 diff --git a/drivers/mmc/host/Kconfig b/drivers/mmc/host/Kconfig
-index d6cb1a7ea..606e85bbe 100644
+index d6cb1a7ea3c7..606e85bbe333 100644
 --- a/drivers/mmc/host/Kconfig
 +++ b/drivers/mmc/host/Kconfig
 @@ -216,6 +216,19 @@ config MMC_SDHCI_OF_HLWD
@@ -35,7 +35,7 @@ index d6cb1a7ea..606e85bbe 100644
  	tristate "SDHCI OF support for the Synopsys DWC MSHC"
  	depends on MMC_SDHCI_PLTFM
 diff --git a/drivers/mmc/host/Makefile b/drivers/mmc/host/Makefile
-index 3e9ffacec..2c9cb17a1 100644
+index 3e9ffacec16c..2c9cb17a10d4 100644
 --- a/drivers/mmc/host/Makefile
 +++ b/drivers/mmc/host/Makefile
 @@ -91,6 +91,7 @@ obj-$(CONFIG_MMC_SDHCI_OF_ESDHC)	+= sdhci-of-esdhc.o
@@ -47,5 +47,5 @@ index 3e9ffacec..2c9cb17a1 100644
  obj-$(CONFIG_MMC_SDHCI_IPROC)		+= sdhci-iproc.o
  obj-$(CONFIG_MMC_SDHCI_MSM)		+= sdhci-msm.o
 -- 
-2.42.0
+2.45.2
 

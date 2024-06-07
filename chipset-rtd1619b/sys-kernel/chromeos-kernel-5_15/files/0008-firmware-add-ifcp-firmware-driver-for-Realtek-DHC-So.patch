@@ -1,7 +1,7 @@
-From a809c63275ed3d87e75cca80583e7d83868f4a87 Mon Sep 17 00:00:00 2001
+From acad800e979901102df6fa71f389b67a1060dc43 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Wed, 7 Dec 2022 13:39:05 +0800
-Subject: [PATCH 08/69] firmware: add ifcp firmware driver for Realtek DHC SoCs
+Subject: [PATCH 08/80] firmware: add ifcp firmware driver for Realtek DHC SoCs
 
 Change-Id: I5003846b920c5be938c0a7eed97c03e6f09be371
 ---
@@ -10,7 +10,7 @@ Change-Id: I5003846b920c5be938c0a7eed97c03e6f09be371
  2 files changed, 7 insertions(+)
 
 diff --git a/drivers/firmware/Kconfig b/drivers/firmware/Kconfig
-index b59e3041f..8a8fdfb6d 100644
+index b59e3041fd62..8a8fdfb6d418 100644
 --- a/drivers/firmware/Kconfig
 +++ b/drivers/firmware/Kconfig
 @@ -303,6 +303,12 @@ config TURRIS_MOX_RWTM
@@ -27,7 +27,7 @@ index b59e3041f..8a8fdfb6d 100644
  source "drivers/firmware/broadcom/Kconfig"
  source "drivers/firmware/cirrus/Kconfig"
 diff --git a/drivers/firmware/Makefile b/drivers/firmware/Makefile
-index 1be0e8295..ca11fd056 100644
+index 1be0e8295222..ca11fd056c31 100644
 --- a/drivers/firmware/Makefile
 +++ b/drivers/firmware/Makefile
 @@ -25,6 +25,7 @@ obj-$(CONFIG_SYSFB_SIMPLEFB)	+= sysfb_simplefb.o
@@ -39,5 +39,5 @@ index 1be0e8295..ca11fd056 100644
  obj-y				+= arm_ffa/
  obj-y				+= arm_scmi/
 -- 
-2.42.0
+2.45.2
 

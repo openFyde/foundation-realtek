@@ -1,0 +1,26 @@
+From 6248aa23754d4b3fe08841b34b6b3618f0e247d8 Mon Sep 17 00:00:00 2001
+From: invalid_git config <unknown@unknown>
+Date: Fri, 10 May 2024 06:30:58 +0000
+Subject: [PATCH 48/80] Add Realtek USB driver
+
+Change-Id: Ia6099b0e74a8a6ad4d4518b8907aa4a28b9f3f37
+---
+ drivers/net/usb/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/usb/Makefile b/drivers/net/usb/Makefile
+index 4964f7b326fb..b5408f8daee3 100644
+--- a/drivers/net/usb/Makefile
++++ b/drivers/net/usb/Makefile
+@@ -7,7 +7,7 @@ obj-$(CONFIG_USB_CATC)		+= catc.o
+ obj-$(CONFIG_USB_KAWETH)	+= kaweth.o
+ obj-$(CONFIG_USB_PEGASUS)	+= pegasus.o
+ obj-$(CONFIG_USB_RTL8150)	+= rtl8150.o
+-obj-$(CONFIG_USB_RTL8152)	+= r8152.o
++obj-$(CONFIG_USB_RTL8152)	+= r8152/
+ obj-$(CONFIG_USB_HSO)		+= hso.o
+ obj-$(CONFIG_USB_LAN78XX)	+= lan78xx.o
+ obj-$(CONFIG_USB_NET_AX8817X)	+= asix.o
+-- 
+2.45.2
+

@@ -1,7 +1,7 @@
-From 7cc7c7ec840fb291fae430b521c31ff7444d8d65 Mon Sep 17 00:00:00 2001
+From d75412db79ce8e022d3fc990461326e7fb5046c4 Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Thu, 18 May 2023 19:22:14 +0800
-Subject: [PATCH 44/69] FROMGIT: phy: realtek: usb: Add driver for the Realtek
+Subject: [PATCH 44/80] FROMGIT: phy: realtek: usb: Add driver for the Realtek
  SoC USB 2.0 PHY
 
 Realtek DHC (digital home center) RTD SoCs support DWC3 XHCI USB
@@ -22,7 +22,7 @@ Signed-off-by: Stanley Chang <stanley_chang@realtek.com>
  2 files changed, 2 insertions(+)
 
 diff --git a/drivers/phy/Kconfig b/drivers/phy/Kconfig
-index 82b63e60c..09086f25f 100644
+index 82b63e60c5a2..09086f25fc13 100644
 --- a/drivers/phy/Kconfig
 +++ b/drivers/phy/Kconfig
 @@ -85,6 +85,7 @@ source "drivers/phy/motorola/Kconfig"
@@ -34,7 +34,7 @@ index 82b63e60c..09086f25f 100644
  source "drivers/phy/rockchip/Kconfig"
  source "drivers/phy/samsung/Kconfig"
 diff --git a/drivers/phy/Makefile b/drivers/phy/Makefile
-index 01e9efffc..62f8c1804 100644
+index 01e9efffc726..62f8c1804082 100644
 --- a/drivers/phy/Makefile
 +++ b/drivers/phy/Makefile
 @@ -26,6 +26,7 @@ obj-y					+= allwinner/	\
@@ -46,5 +46,5 @@ index 01e9efffc..62f8c1804 100644
  					   rockchip/	\
  					   samsung/	\
 -- 
-2.42.0
+2.45.2
 

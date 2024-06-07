@@ -1,7 +1,7 @@
-From 94ccddf0048b72bd983f1e9aad2c2226703161e0 Mon Sep 17 00:00:00 2001
+From 099c60b4123e5f0957e03ccee10f216ea590f058 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 10 Nov 2022 17:28:28 +0800
-Subject: [PATCH 26/69] soc: realtek: common: add Realtek chip info driver
+Subject: [PATCH 26/80] soc: realtek: common: add Realtek chip info driver
 
 Change-Id: Ie8576b79af4256ebaa1004dba16ee6e2d52405c8
 ---
@@ -10,7 +10,7 @@ Change-Id: Ie8576b79af4256ebaa1004dba16ee6e2d52405c8
  2 files changed, 2 insertions(+)
 
 diff --git a/drivers/soc/Kconfig b/drivers/soc/Kconfig
-index e8a30c4c5..96ab6c002 100644
+index e8a30c4c5aec..96ab6c002a54 100644
 --- a/drivers/soc/Kconfig
 +++ b/drivers/soc/Kconfig
 @@ -13,6 +13,7 @@ source "drivers/soc/ixp4xx/Kconfig"
@@ -22,7 +22,7 @@ index e8a30c4c5..96ab6c002 100644
  source "drivers/soc/rockchip/Kconfig"
  source "drivers/soc/samsung/Kconfig"
 diff --git a/drivers/soc/Makefile b/drivers/soc/Makefile
-index a05e9fbcd..c49ffe9c6 100644
+index a05e9fbcd3e0..c49ffe9c6ccd 100644
 --- a/drivers/soc/Makefile
 +++ b/drivers/soc/Makefile
 @@ -19,6 +19,7 @@ obj-$(CONFIG_LITEX_SOC_CONTROLLER) += litex/
@@ -34,5 +34,5 @@ index a05e9fbcd..c49ffe9c6 100644
  obj-$(CONFIG_ARCH_ROCKCHIP)	+= rockchip/
  obj-$(CONFIG_SOC_SAMSUNG)	+= samsung/
 -- 
-2.42.0
+2.45.2
 

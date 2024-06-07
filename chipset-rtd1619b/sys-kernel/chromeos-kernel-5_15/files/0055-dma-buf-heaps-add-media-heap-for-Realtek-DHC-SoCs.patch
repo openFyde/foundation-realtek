@@ -1,7 +1,7 @@
-From 82c48f77d208e29ce81dbdcb68a359d8b49a445e Mon Sep 17 00:00:00 2001
+From fd0ccf84a151c58f00d8cff9472af294456d6d20 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 10 Nov 2022 17:49:56 +0800
-Subject: [PATCH 55/69] dma-buf: heaps: add media heap for Realtek DHC SoCs
+Subject: [PATCH 55/80] dma-buf: heaps: add media heap for Realtek DHC SoCs
 
 Change-Id: I138716fa30359301279fa7e397405afdc2e23b0f
 ---
@@ -10,7 +10,7 @@ Change-Id: I138716fa30359301279fa7e397405afdc2e23b0f
  2 files changed, 14 insertions(+)
 
 diff --git a/drivers/dma-buf/heaps/Kconfig b/drivers/dma-buf/heaps/Kconfig
-index a5eef06c4..116afb2ab 100644
+index a5eef06c4226..116afb2ab8e1 100644
 --- a/drivers/dma-buf/heaps/Kconfig
 +++ b/drivers/dma-buf/heaps/Kconfig
 @@ -12,3 +12,12 @@ config DMABUF_HEAPS_CMA
@@ -27,7 +27,7 @@ index a5eef06c4..116afb2ab 100644
 +	  by the Contiguous Memory Allocator (CMA) & Reserved Memory for Realtek
 +	  Platform.
 diff --git a/drivers/dma-buf/heaps/Makefile b/drivers/dma-buf/heaps/Makefile
-index 974467791..9ee158fa4 100644
+index 974467791032..9ee158fa4422 100644
 --- a/drivers/dma-buf/heaps/Makefile
 +++ b/drivers/dma-buf/heaps/Makefile
 @@ -1,3 +1,8 @@
@@ -40,5 +40,5 @@ index 974467791..9ee158fa4 100644
 +					   rtk_heap_dma.o rtk_protect.o
 +ccflags-y				+= -I$(srctree)/mm
 -- 
-2.42.0
+2.45.2
 

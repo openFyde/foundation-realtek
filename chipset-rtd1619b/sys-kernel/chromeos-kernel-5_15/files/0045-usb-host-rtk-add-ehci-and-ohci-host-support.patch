@@ -1,7 +1,7 @@
-From bf0b899b4ffeed6a2ae5feb7926237d9b0a76d93 Mon Sep 17 00:00:00 2001
+From 1afe5d7fbe4e3ae21c0aba5454a7d392465cd414 Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Tue, 16 Jan 2024 11:12:11 +0800
-Subject: [PATCH 45/69] usb: host: rtk: add ehci and ohci host support
+Subject: [PATCH 45/80] usb: host: rtk: add ehci and ohci host support
 
 Kylin usb port3 is ehci/ohci host.
 
@@ -12,7 +12,7 @@ Change-Id: Ia2e812f0004c5eaf72825900c033c2bc12e66cc8
  2 files changed, 22 insertions(+)
 
 diff --git a/drivers/usb/host/Kconfig b/drivers/usb/host/Kconfig
-index f3c054608..a8f0c33c0 100644
+index f3c0546083d0..a8f0c33c0d35 100644
 --- a/drivers/usb/host/Kconfig
 +++ b/drivers/usb/host/Kconfig
 @@ -212,6 +212,16 @@ config USB_EHCI_FSL
@@ -50,7 +50,7 @@ index f3c054608..a8f0c33c0 100644
  	tristate "OHCI support for OMAP1/2 chips"
  	depends on ARCH_OMAP1
 diff --git a/drivers/usb/host/Makefile b/drivers/usb/host/Makefile
-index 171de4df5..eba5ce65a 100644
+index 171de4df50bd..eba5ce65acbe 100644
 --- a/drivers/usb/host/Makefile
 +++ b/drivers/usb/host/Makefile
 @@ -46,6 +46,7 @@ obj-$(CONFIG_USB_EHCI_HCD_STI)	+= ehci-st.o
@@ -70,5 +70,5 @@ index 171de4df5..eba5ce65a 100644
  obj-$(CONFIG_USB_UHCI_HCD)	+= uhci-hcd.o
  obj-$(CONFIG_USB_FHCI_HCD)	+= fhci.o
 -- 
-2.42.0
+2.45.2
 

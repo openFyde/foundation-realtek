@@ -1,7 +1,7 @@
-From f17ad53959026af300ddbb26d86e799d4bf19c7c Mon Sep 17 00:00:00 2001
+From 85cb0383c14dd2197d0a3963b84c2a8110856c56 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 10 Nov 2022 17:29:53 +0800
-Subject: [PATCH 14/69] irqchip: add irq mux driver for Realtek DHC SoCs
+Subject: [PATCH 14/80] irqchip: add irq mux driver for Realtek DHC SoCs
 
 Change-Id: Ice1fdc02426ba7bc8030fe49a07e25e07eced038
 ---
@@ -10,7 +10,7 @@ Change-Id: Ice1fdc02426ba7bc8030fe49a07e25e07eced038
  2 files changed, 7 insertions(+)
 
 diff --git a/drivers/irqchip/Kconfig b/drivers/irqchip/Kconfig
-index ae1b9f59a..fd8a4b2b9 100644
+index ae1b9f59abc5..fd8a4b2b90ed 100644
 --- a/drivers/irqchip/Kconfig
 +++ b/drivers/irqchip/Kconfig
 @@ -214,6 +214,12 @@ config RDA_INTC
@@ -27,7 +27,7 @@ index ae1b9f59a..fd8a4b2b9 100644
  	bool "Renesas INTC External IRQ Pin Support" if COMPILE_TEST
  	select IRQ_DOMAIN
 diff --git a/drivers/irqchip/Makefile b/drivers/irqchip/Makefile
-index f88cbf36a..274f95436 100644
+index f88cbf36a9d2..274f95436330 100644
 --- a/drivers/irqchip/Makefile
 +++ b/drivers/irqchip/Makefile
 @@ -48,6 +48,7 @@ obj-$(CONFIG_IRQ_MIPS_CPU)		+= irq-mips-cpu.o
@@ -39,5 +39,5 @@ index f88cbf36a..274f95436 100644
  obj-$(CONFIG_RENESAS_IRQC)		+= irq-renesas-irqc.o
  obj-$(CONFIG_RENESAS_RZA1_IRQC)		+= irq-renesas-rza1.o
 -- 
-2.42.0
+2.45.2
 

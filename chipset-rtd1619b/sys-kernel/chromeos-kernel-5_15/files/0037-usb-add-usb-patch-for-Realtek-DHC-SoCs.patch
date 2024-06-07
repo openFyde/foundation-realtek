@@ -1,7 +1,7 @@
-From 094ca00615ec0295c5c28a6be327defa51dbc7f7 Mon Sep 17 00:00:00 2001
+From 6057d9d2d54195b5549e09b8e76765e909036c9a Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Mon, 14 Nov 2022 15:38:40 +0800
-Subject: [PATCH 37/69] usb: add usb patch for Realtek DHC SoCs
+Subject: [PATCH 37/80] usb: add usb patch for Realtek DHC SoCs
 
 Change-Id: I042c40866e4b2bc34e4df2127c0deecce589afb2
 ---
@@ -17,7 +17,7 @@ Change-Id: I042c40866e4b2bc34e4df2127c0deecce589afb2
  9 files changed, 391 insertions(+)
 
 diff --git a/drivers/usb/host/ehci-dbg.c b/drivers/usb/host/ehci-dbg.c
-index 0b7f1edd9..f3b5bb933 100644
+index 0b7f1edd9eec..f3b5bb933077 100644
 --- a/drivers/usb/host/ehci-dbg.c
 +++ b/drivers/usb/host/ehci-dbg.c
 @@ -867,6 +867,28 @@ static ssize_t fill_registers_buffer(struct debug_buffer *buf)
@@ -50,7 +50,7 @@ index 0b7f1edd9..f3b5bb933 100644
  		temp = dbg_port_buf(scratch, sizeof(scratch), label, i,
  				ehci_readl(ehci,
 diff --git a/drivers/usb/host/ehci-q.c b/drivers/usb/host/ehci-q.c
-index 2cbf4f85b..1d121346f 100644
+index 2cbf4f85bff3..1d121346f0b1 100644
 --- a/drivers/usb/host/ehci-q.c
 +++ b/drivers/usb/host/ehci-q.c
 @@ -33,6 +33,33 @@
@@ -87,7 +87,7 @@ index 2cbf4f85b..1d121346f 100644
  static int
  qtd_fill(struct ehci_hcd *ehci, struct ehci_qtd *qtd, dma_addr_t buf,
  		  size_t len, int token, int maxpacket)
-@@ -952,6 +979,11 @@ done:
+@@ -952,6 +979,11 @@ qh_make (
  
  static void enable_async(struct ehci_hcd *ehci)
  {
@@ -162,7 +162,7 @@ index 2cbf4f85b..1d121346f 100644
  	ehci->iaa_in_progress = false;
  
 diff --git a/drivers/usb/host/ehci-sched.c b/drivers/usb/host/ehci-sched.c
-index 0f85aa9b2..0b7b07a32 100644
+index 0f85aa9b2fb1..0b7b07a322d1 100644
 --- a/drivers/usb/host/ehci-sched.c
 +++ b/drivers/usb/host/ehci-sched.c
 @@ -6,6 +6,11 @@
@@ -193,7 +193,7 @@ index 0f85aa9b2..0b7b07a32 100644
  
  	if (unlikely(!HCD_HW_ACCESSIBLE(ehci_to_hcd(ehci)))) {
 diff --git a/drivers/usb/host/ehci.h b/drivers/usb/host/ehci.h
-index 9888ca5f5..cbe2369ce 100644
+index 9888ca5f5f36..cbe2369cead4 100644
 --- a/drivers/usb/host/ehci.h
 +++ b/drivers/usb/host/ehci.h
 @@ -220,6 +220,9 @@ struct ehci_hcd {			/* one per controller */
@@ -207,7 +207,7 @@ index 9888ca5f5..cbe2369ce 100644
  
  	/* required for usb32 quirk */
 diff --git a/drivers/usb/host/ohci-hub.c b/drivers/usb/host/ohci-hub.c
-index f474f2f9c..dd93b20db 100644
+index f474f2f9c1e4..dd93b20dbb74 100644
 --- a/drivers/usb/host/ohci-hub.c
 +++ b/drivers/usb/host/ohci-hub.c
 @@ -43,6 +43,13 @@
@@ -245,7 +245,7 @@ index f474f2f9c..dd93b20db 100644
  	ohci->autostop = 0;
  	ohci->hc_control = ohci_readl (ohci, &ohci->regs->control);
  
-@@ -295,6 +316,12 @@ skip_resume:
+@@ -295,6 +316,12 @@ __acquires(ohci->lock)
  	}
  
  	ohci->rh_state = OHCI_RH_RUNNING;
@@ -277,7 +277,7 @@ index f474f2f9c..dd93b20db 100644
  done:
  	spin_unlock_irqrestore (&ohci->lock, flags);
 diff --git a/drivers/usb/host/ohci.h b/drivers/usb/host/ohci.h
-index aac6285b3..88a3e45f2 100644
+index aac6285b37f8..88a3e45f2f2f 100644
 --- a/drivers/usb/host/ohci.h
 +++ b/drivers/usb/host/ohci.h
 @@ -8,6 +8,10 @@
@@ -351,7 +351,7 @@ index aac6285b3..88a3e45f2 100644
  	big_endian_mmio(ohci) ?
  		writel_be (val, regs) :
 diff --git a/drivers/usb/host/xhci-plat.c b/drivers/usb/host/xhci-plat.c
-index ff193819e..88de2f8bd 100644
+index ff193819ec3c..88de2f8bd5cb 100644
 --- a/drivers/usb/host/xhci-plat.c
 +++ b/drivers/usb/host/xhci-plat.c
 @@ -311,6 +311,11 @@ static int xhci_plat_probe(struct platform_device *pdev)
@@ -404,7 +404,7 @@ index ff193819e..88de2f8bd 100644
  	xhci->shared_hcd->tpl_support = hcd->tpl_support;
  
 diff --git a/drivers/usb/host/xhci-ring.c b/drivers/usb/host/xhci-ring.c
-index 7969492b7..ca6ea65e5 100644
+index 7969492b7bc5..ca6ea65e535e 100644
 --- a/drivers/usb/host/xhci-ring.c
 +++ b/drivers/usb/host/xhci-ring.c
 @@ -761,6 +761,68 @@ static void xhci_giveback_urb_in_irq(struct xhci_hcd *xhci,
@@ -629,7 +629,7 @@ index 7969492b7..ca6ea65e5 100644
  			}
  		}
 diff --git a/drivers/usb/host/xhci.h b/drivers/usb/host/xhci.h
-index 77184805e..919733112 100644
+index 77184805e974..919733112960 100644
 --- a/drivers/usb/host/xhci.h
 +++ b/drivers/usb/host/xhci.h
 @@ -1557,6 +1557,17 @@ enum xhci_cancelled_td_status {
@@ -675,5 +675,5 @@ index 77184805e..919733112 100644
  	struct dentry		*debugfs_slots;
  	struct list_head	regset_list;
 -- 
-2.42.0
+2.45.2
 

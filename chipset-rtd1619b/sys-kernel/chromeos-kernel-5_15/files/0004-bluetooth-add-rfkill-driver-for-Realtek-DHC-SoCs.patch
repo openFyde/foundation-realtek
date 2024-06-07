@@ -1,7 +1,7 @@
-From 32788a08820d18b1dd67381824db25ef20294eac Mon Sep 17 00:00:00 2001
+From 5498fcae83e61319df40c76e567124cf191f0074 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 17 Nov 2022 16:05:12 +0800
-Subject: [PATCH 04/69] bluetooth: add rfkill driver for Realtek DHC SoCs
+Subject: [PATCH 04/80] bluetooth: add rfkill driver for Realtek DHC SoCs
 
 Change-Id: I2abd10ee0b8357cc067bad8c68123fd8fd43ffa3
 ---
@@ -10,7 +10,7 @@ Change-Id: I2abd10ee0b8357cc067bad8c68123fd8fd43ffa3
  2 files changed, 7 insertions(+)
 
 diff --git a/drivers/bluetooth/Kconfig b/drivers/bluetooth/Kconfig
-index cbe806333..1e670b81d 100644
+index cbe806333649..1e670b81d73d 100644
 --- a/drivers/bluetooth/Kconfig
 +++ b/drivers/bluetooth/Kconfig
 @@ -52,6 +52,12 @@ config BT_HCIBTUSB_INTERVAL
@@ -27,7 +27,7 @@ index cbe806333..1e670b81d 100644
  	bool "Broadcom protocol support"
  	depends on BT_HCIBTUSB
 diff --git a/drivers/bluetooth/Makefile b/drivers/bluetooth/Makefile
-index 3321a8aea..5b0a3e603 100644
+index 3321a8aea4a0..5b0a3e6038ce 100644
 --- a/drivers/bluetooth/Makefile
 +++ b/drivers/bluetooth/Makefile
 @@ -13,6 +13,7 @@ obj-$(CONFIG_BT_HCIBT3C)	+= bt3c_cs.o
@@ -39,5 +39,5 @@ index 3321a8aea..5b0a3e603 100644
  
  obj-$(CONFIG_BT_INTEL)		+= btintel.o
 -- 
-2.42.0
+2.45.2
 

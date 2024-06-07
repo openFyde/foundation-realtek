@@ -1,7 +1,7 @@
-From 6baea2732271b5ea3405c69b8e9052680e54b128 Mon Sep 17 00:00:00 2001
+From 0b14fffa745f9df82412fb65f50d092971f03a0a Mon Sep 17 00:00:00 2001
 From: Chris Lew <clew@codeaurora.org>
 Date: Tue, 14 Jul 2020 17:18:30 -0700
-Subject: [PATCH 62/69] rpmsg: update rpmsg driver
+Subject: [PATCH 62/80] rpmsg: update rpmsg driver
 
 update rpmsg driver from Google branch(android13-5.15-lts)
 
@@ -39,7 +39,7 @@ Change-Id: Ib35845fd89e57f77e9ab95d3c922b0bb3ed4af2b
  create mode 100644 drivers/rpmsg/rpmsg_ctrl.c
 
 diff --git a/drivers/rpmsg/Kconfig b/drivers/rpmsg/Kconfig
-index 7a2e80300..cff320072 100644
+index 7a2e803002df..cff32007298e 100644
 --- a/drivers/rpmsg/Kconfig
 +++ b/drivers/rpmsg/Kconfig
 @@ -15,6 +15,14 @@ config RPMSG_CHAR
@@ -58,7 +58,7 @@ index 7a2e80300..cff320072 100644
  	tristate "RPMSG name service announcement"
  	depends on RPMSG
 diff --git a/drivers/rpmsg/Makefile b/drivers/rpmsg/Makefile
-index 90722c118..1156237f4 100644
+index 90722c11877f..1156237f4a62 100644
 --- a/drivers/rpmsg/Makefile
 +++ b/drivers/rpmsg/Makefile
 @@ -1,6 +1,7 @@
@@ -70,7 +70,7 @@ index 90722c118..1156237f4 100644
  obj-$(CONFIG_RPMSG_MTK_SCP)	+= mtk_rpmsg.o
  qcom_glink-objs			:= qcom_glink_native.o qcom_glink_ssr.o
 diff --git a/drivers/rpmsg/qcom_glink_native.c b/drivers/rpmsg/qcom_glink_native.c
-index 16cb25022..138e1c1fd 100644
+index 16cb25022221..138e1c1fd1d5 100644
 --- a/drivers/rpmsg/qcom_glink_native.c
 +++ b/drivers/rpmsg/qcom_glink_native.c
 @@ -1720,7 +1720,7 @@ static int qcom_glink_create_chrdev(struct qcom_glink *glink)
@@ -83,7 +83,7 @@ index 16cb25022..138e1c1fd 100644
  
  struct qcom_glink *qcom_glink_native_probe(struct device *dev,
 diff --git a/drivers/rpmsg/qcom_smd.c b/drivers/rpmsg/qcom_smd.c
-index 56bc622de..754161b02 100644
+index 56bc622de25e..754161b02407 100644
 --- a/drivers/rpmsg/qcom_smd.c
 +++ b/drivers/rpmsg/qcom_smd.c
 @@ -1113,7 +1113,7 @@ static int qcom_smd_create_chrdev(struct qcom_smd_edge *edge)
@@ -96,7 +96,7 @@ index 56bc622de..754161b02 100644
  
  /*
 diff --git a/drivers/rpmsg/rpmsg_char.c b/drivers/rpmsg/rpmsg_char.c
-index 88c985f9e..aff402be5 100644
+index 88c985f9e73a..aff402be53dc 100644
 --- a/drivers/rpmsg/rpmsg_char.c
 +++ b/drivers/rpmsg/rpmsg_char.c
 @@ -1,5 +1,6 @@
@@ -351,7 +351,7 @@ index 88c985f9e..aff402be5 100644
  	ret = ida_simple_get(&rpmsg_minor_ida, 0, RPMSG_DEV_MAX, GFP_KERNEL);
  	if (ret < 0)
  		goto free_eptdev;
-@@ -404,163 +465,91 @@ free_eptdev:
+@@ -404,163 +465,91 @@ static int rpmsg_eptdev_create(struct rpmsg_ctrldev *ctrldev,
  	return ret;
  }
  
@@ -571,7 +571,7 @@ index 88c985f9e..aff402be5 100644
  module_exit(rpmsg_chrdev_exit);
 diff --git a/drivers/rpmsg/rpmsg_char.h b/drivers/rpmsg/rpmsg_char.h
 new file mode 100644
-index 000000000..117d9cbc5
+index 000000000000..117d9cbc52f0
 --- /dev/null
 +++ b/drivers/rpmsg/rpmsg_char.h
 @@ -0,0 +1,46 @@
@@ -622,7 +622,7 @@ index 000000000..117d9cbc5
 +
 +#endif /*__RPMSG_CHRDEV_H__ */
 diff --git a/drivers/rpmsg/rpmsg_core.c b/drivers/rpmsg/rpmsg_core.c
-index a71de08ac..79d696166 100644
+index a71de08acc7b..79d6961663a9 100644
 --- a/drivers/rpmsg/rpmsg_core.c
 +++ b/drivers/rpmsg/rpmsg_core.c
 @@ -20,6 +20,9 @@
@@ -739,7 +739,7 @@ index a71de08ac..79d696166 100644
  
 diff --git a/drivers/rpmsg/rpmsg_ctrl.c b/drivers/rpmsg/rpmsg_ctrl.c
 new file mode 100644
-index 000000000..107da70fd
+index 000000000000..107da70fdbaa
 --- /dev/null
 +++ b/drivers/rpmsg/rpmsg_ctrl.c
 @@ -0,0 +1,243 @@
@@ -987,7 +987,7 @@ index 000000000..107da70fd
 +MODULE_ALIAS("rpmsg:" KBUILD_MODNAME);
 +MODULE_LICENSE("GPL v2");
 diff --git a/drivers/rpmsg/rpmsg_internal.h b/drivers/rpmsg/rpmsg_internal.h
-index a76c34425..d1b8949d3 100644
+index a76c344253bf..d1b8949d36d3 100644
 --- a/drivers/rpmsg/rpmsg_internal.h
 +++ b/drivers/rpmsg/rpmsg_internal.h
 @@ -2,6 +2,7 @@
@@ -1043,7 +1043,7 @@ index a76c34425..d1b8949d3 100644
  	strcpy(rpdev->id.name, "rpmsg_chrdev");
  	rpdev->driver_override = "rpmsg_chrdev";
 diff --git a/drivers/rpmsg/virtio_rpmsg_bus.c b/drivers/rpmsg/virtio_rpmsg_bus.c
-index b03e74042..fca034aaf 100644
+index b03e7404212f..fca034aafd15 100644
 --- a/drivers/rpmsg/virtio_rpmsg_bus.c
 +++ b/drivers/rpmsg/virtio_rpmsg_bus.c
 @@ -840,7 +840,7 @@ static struct rpmsg_device *rpmsg_virtio_add_ctrl_dev(struct virtio_device *vdev
@@ -1056,7 +1056,7 @@ index b03e74042..fca034aaf 100644
  		/* vch will be free in virtio_rpmsg_release_device() */
  		return ERR_PTR(err);
 diff --git a/include/linux/rpmsg.h b/include/linux/rpmsg.h
-index a8dcf8a9a..e301b2269 100644
+index a8dcf8a9ae88..e301b2269400 100644
 --- a/include/linux/rpmsg.h
 +++ b/include/linux/rpmsg.h
 @@ -2,6 +2,7 @@
@@ -1168,7 +1168,7 @@ index a8dcf8a9a..e301b2269 100644
  
  /* use a macro to avoid include chaining to get THIS_MODULE */
 diff --git a/include/uapi/linux/rpmsg.h b/include/uapi/linux/rpmsg.h
-index f5ca8740f..1637e6817 100644
+index f5ca8740f3fb..1637e68177d9 100644
 --- a/include/uapi/linux/rpmsg.h
 +++ b/include/uapi/linux/rpmsg.h
 @@ -33,4 +33,14 @@ struct rpmsg_endpoint_info {
@@ -1187,5 +1187,5 @@ index f5ca8740f..1637e6817 100644
 +
  #endif
 -- 
-2.42.0
+2.45.2
 

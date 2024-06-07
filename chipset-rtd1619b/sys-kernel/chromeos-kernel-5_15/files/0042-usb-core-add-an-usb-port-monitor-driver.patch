@@ -1,7 +1,7 @@
-From fa82005fb3033a8577b9980223e67edb8b98437b Mon Sep 17 00:00:00 2001
+From ef8d61430a39ce17ba44d77dac6d19de33b6aff6 Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Fri, 7 Jan 2022 15:44:14 +0800
-Subject: [PATCH 42/69] usb: core: add an usb port monitor driver
+Subject: [PATCH 42/80] usb: core: add an usb port monitor driver
 
 [Information]
 Implement an usb port monitor driver to check if usb device disconnected or died.
@@ -16,7 +16,7 @@ Signed-off-by: Stanley Chang <stanley_chang@realtek.com>
  create mode 100644 drivers/usb/core/monitor-usbport.c
 
 diff --git a/drivers/usb/core/Kconfig b/drivers/usb/core/Kconfig
-index 5f4704c40..f690283dc 100644
+index 5f4704c40388..f690283dc8b3 100644
 --- a/drivers/usb/core/Kconfig
 +++ b/drivers/usb/core/Kconfig
 @@ -105,6 +105,12 @@ config USB_LEDS_TRIGGER_USBPORT
@@ -33,7 +33,7 @@ index 5f4704c40..f690283dc 100644
  	int "Default autosuspend delay"
  	depends on USB
 diff --git a/drivers/usb/core/Makefile b/drivers/usb/core/Makefile
-index 7d338e9c0..ca758f04f 100644
+index 7d338e9c0657..ca758f04f9bd 100644
 --- a/drivers/usb/core/Makefile
 +++ b/drivers/usb/core/Makefile
 @@ -19,3 +19,4 @@ endif
@@ -43,7 +43,7 @@ index 7d338e9c0..ca758f04f 100644
 +obj-$(CONFIG_USB_MONITOR_USBPORT)	+= monitor-usbport.o
 diff --git a/drivers/usb/core/monitor-usbport.c b/drivers/usb/core/monitor-usbport.c
 new file mode 100644
-index 000000000..fa968c98e
+index 000000000000..fa968c98ea1d
 --- /dev/null
 +++ b/drivers/usb/core/monitor-usbport.c
 @@ -0,0 +1,529 @@
@@ -577,5 +577,5 @@ index 000000000..fa968c98e
 +MODULE_DESCRIPTION("USB port monitor");
 +MODULE_LICENSE("GPL v2");
 -- 
-2.42.0
+2.45.2
 

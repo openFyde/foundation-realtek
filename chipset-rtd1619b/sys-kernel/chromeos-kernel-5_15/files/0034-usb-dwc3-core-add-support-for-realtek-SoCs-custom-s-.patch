@@ -1,7 +1,7 @@
-From c8c0f8f2a355256d537cbc387d4876a43135f407 Mon Sep 17 00:00:00 2001
+From 010162e5bbd3a548d010e905d868e15ae403fcac Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Fri, 5 May 2023 10:50:54 +0800
-Subject: [PATCH 34/69] usb: dwc3: core: add support for realtek SoCs custom's
+Subject: [PATCH 34/80] usb: dwc3: core: add support for realtek SoCs custom's
  global register start address
 
 [ Upstream commit ec5eb43813a4c775b5abf20f50461037bca7c4e5 ]
@@ -24,7 +24,7 @@ Change-Id: I32d65056d09ccced69e3ddc23f10580287081f4b
  2 files changed, 13 insertions(+)
 
 diff --git a/drivers/usb/dwc3/core.c b/drivers/usb/dwc3/core.c
-index ff97a96b8..358d5ef0d 100644
+index ff97a96b870c..358d5ef0d83f 100644
 --- a/drivers/usb/dwc3/core.c
 +++ b/drivers/usb/dwc3/core.c
 @@ -1749,6 +1749,17 @@ static int dwc3_probe(struct platform_device *pdev)
@@ -46,7 +46,7 @@ index ff97a96b8..358d5ef0d 100644
  	if (IS_ERR(regs))
  		return PTR_ERR(regs);
 diff --git a/drivers/usb/dwc3/core.h b/drivers/usb/dwc3/core.h
-index 877dc1755..6335e0c42 100644
+index 877dc175585a..6335e0c42ec0 100644
 --- a/drivers/usb/dwc3/core.h
 +++ b/drivers/usb/dwc3/core.h
 @@ -84,6 +84,8 @@
@@ -59,5 +59,5 @@ index 877dc1755..6335e0c42 100644
  #define DWC3_GSBUSCFG0		0xc100
  #define DWC3_GSBUSCFG1		0xc104
 -- 
-2.42.0
+2.45.2
 

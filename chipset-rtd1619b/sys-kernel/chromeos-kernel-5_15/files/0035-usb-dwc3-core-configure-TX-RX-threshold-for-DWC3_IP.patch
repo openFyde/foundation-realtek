@@ -1,7 +1,7 @@
-From 7dd9d9686245f95ebc3569532a781096e2ec5ff0 Mon Sep 17 00:00:00 2001
+From e2588e4481f5979f08739fa66386639a46bfc210 Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Tue, 12 Sep 2023 12:19:02 +0800
-Subject: [PATCH 35/69] usb: dwc3: core: configure TX/RX threshold for DWC3_IP
+Subject: [PATCH 35/80] usb: dwc3: core: configure TX/RX threshold for DWC3_IP
 
 [ upstream commit e72fc8d6a12af7ae8dd1b52cf68ed68569d29f80 ]
 
@@ -25,7 +25,7 @@ Change-Id: I5ac89c496461e741a8706b6489166ea1d34acbb3
  2 files changed, 137 insertions(+), 36 deletions(-)
 
 diff --git a/drivers/usb/dwc3/core.c b/drivers/usb/dwc3/core.c
-index 358d5ef0d..b79585f51 100644
+index 358d5ef0d83f..b79585f51799 100644
 --- a/drivers/usb/dwc3/core.c
 +++ b/drivers/usb/dwc3/core.c
 @@ -1106,6 +1106,111 @@ static void dwc3_set_power_down_clk_scale(struct dwc3 *dwc)
@@ -224,7 +224,7 @@ index 358d5ef0d..b79585f51 100644
  	dwc->rx_max_burst_prd = rx_max_burst_prd;
  
 diff --git a/drivers/usb/dwc3/core.h b/drivers/usb/dwc3/core.h
-index 6335e0c42..5e8f4a30e 100644
+index 6335e0c42ec0..5e8f4a30eabd 100644
 --- a/drivers/usb/dwc3/core.h
 +++ b/drivers/usb/dwc3/core.h
 @@ -210,6 +210,11 @@
@@ -262,5 +262,5 @@ index 6335e0c42..5e8f4a30e 100644
  	u8			rx_max_burst_prd;
  	u8			tx_thr_num_pkt_prd;
 -- 
-2.42.0
+2.45.2
 

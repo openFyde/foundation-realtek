@@ -1,7 +1,7 @@
-From a26cff7d8252ce02624e8325f4c17d98be2796f0 Mon Sep 17 00:00:00 2001
+From 646a5f22cb9f91da0c21e636dc14205b9c136cf4 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Fri, 11 Nov 2022 21:56:00 +0800
-Subject: [PATCH 30/69] mmc: host: add SD/MMC host controller driver for
+Subject: [PATCH 30/80] mmc: host: add SD/MMC host controller driver for
  Realtek DHC SoCs
 
 Change-Id: If6679f7825af5c6fb266be21887cd26115cb34cb
@@ -11,7 +11,7 @@ Change-Id: If6679f7825af5c6fb266be21887cd26115cb34cb
  2 files changed, 6 insertions(+)
 
 diff --git a/drivers/mmc/host/Kconfig b/drivers/mmc/host/Kconfig
-index 8253b44b0..d6cb1a7ea 100644
+index 8253b44b0aef..d6cb1a7ea3c7 100644
 --- a/drivers/mmc/host/Kconfig
 +++ b/drivers/mmc/host/Kconfig
 @@ -964,6 +964,11 @@ config MMC_WMT
@@ -27,7 +27,7 @@ index 8253b44b0..d6cb1a7ea 100644
  	tristate "Renesas USDHI6ROL0 SD/SDIO Host Controller support"
  	depends on HAS_DMA
 diff --git a/drivers/mmc/host/Makefile b/drivers/mmc/host/Makefile
-index 8b16677af..3e9ffacec 100644
+index 8b16677afeb8..3e9ffacec16c 100644
 --- a/drivers/mmc/host/Makefile
 +++ b/drivers/mmc/host/Makefile
 @@ -73,6 +73,7 @@ obj-$(CONFIG_MMC_TOSHIBA_PCI)	+= toshsd.o
@@ -39,5 +39,5 @@ index 8b16677af..3e9ffacec 100644
  obj-$(CONFIG_MMC_REALTEK_USB)	+= rtsx_usb_sdmmc.o
  
 -- 
-2.42.0
+2.45.2
 

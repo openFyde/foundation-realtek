@@ -1,7 +1,7 @@
-From 593ec6831c49acb7d59450a51b4bbb825c8d75b1 Mon Sep 17 00:00:00 2001
+From 1e2afd549135013a3fe9fac94cfb9f4de3f43e95 Mon Sep 17 00:00:00 2001
 From: TY Chang <tychang@realtek.com>
 Date: Thu, 8 Dec 2022 16:41:25 +0800
-Subject: [PATCH 61/69] rpmsg: add rpmsg driver for realtek DHC platform
+Subject: [PATCH 61/80] rpmsg: add rpmsg driver for realtek DHC platform
 
 Change-Id: I685230c74adc19bb57a2cefa7a19c0f3442c68f9
 ---
@@ -10,7 +10,7 @@ Change-Id: I685230c74adc19bb57a2cefa7a19c0f3442c68f9
  2 files changed, 5 insertions(+)
 
 diff --git a/drivers/rpmsg/Kconfig b/drivers/rpmsg/Kconfig
-index 0b4407abd..7a2e80300 100644
+index 0b4407abdf13..7a2e803002df 100644
 --- a/drivers/rpmsg/Kconfig
 +++ b/drivers/rpmsg/Kconfig
 @@ -73,4 +73,8 @@ config RPMSG_VIRTIO
@@ -23,7 +23,7 @@ index 0b4407abd..7a2e80300 100644
 +
  endmenu
 diff --git a/drivers/rpmsg/Makefile b/drivers/rpmsg/Makefile
-index 8d452656f..90722c118 100644
+index 8d452656f0ee..90722c11877f 100644
 --- a/drivers/rpmsg/Makefile
 +++ b/drivers/rpmsg/Makefile
 @@ -9,3 +9,4 @@ obj-$(CONFIG_RPMSG_QCOM_GLINK_RPM) += qcom_glink_rpm.o
@@ -32,5 +32,5 @@ index 8d452656f..90722c118 100644
  obj-$(CONFIG_RPMSG_VIRTIO)	+= virtio_rpmsg_bus.o
 +obj-$(CONFIG_RPMSG_RTK_RPC) += rpmsg_rtk.o
 -- 
-2.42.0
+2.45.2
 

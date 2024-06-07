@@ -1,7 +1,7 @@
-From 50b51d116cb34ad28827dae0bc91217207020703 Mon Sep 17 00:00:00 2001
+From 588d51b5843342c938aad7143b11b7bc71253174 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Mon, 14 Nov 2022 16:27:11 +0800
-Subject: [PATCH 24/69] rtc: add rtc driver for Realtek DHC SoCs
+Subject: [PATCH 24/80] rtc: add rtc driver for Realtek DHC SoCs
 
 Change-Id: I5451f398ac663de185fbe9ddda8740741520a7e0
 ---
@@ -10,7 +10,7 @@ Change-Id: I5451f398ac663de185fbe9ddda8740741520a7e0
  2 files changed, 8 insertions(+)
 
 diff --git a/drivers/rtc/Kconfig b/drivers/rtc/Kconfig
-index e1bc52144..51d61467a 100644
+index e1bc5214494e..51d61467aa98 100644
 --- a/drivers/rtc/Kconfig
 +++ b/drivers/rtc/Kconfig
 @@ -1314,6 +1314,13 @@ config RTC_DRV_NTXEC
@@ -28,7 +28,7 @@ index e1bc52144..51d61467a 100644
  
  config RTC_DRV_ASM9260
 diff --git a/drivers/rtc/Makefile b/drivers/rtc/Makefile
-index 5ceeafe4d..1e3a2c7dc 100644
+index 5ceeafe4d5b2..1e3a2c7dc8e1 100644
 --- a/drivers/rtc/Makefile
 +++ b/drivers/rtc/Makefile
 @@ -180,3 +180,4 @@ obj-$(CONFIG_RTC_DRV_WM8350)	+= rtc-wm8350.o
@@ -37,5 +37,5 @@ index 5ceeafe4d..1e3a2c7dc 100644
  obj-$(CONFIG_RTC_DRV_ZYNQMP)	+= rtc-zynqmp.o
 +obj-$(CONFIG_RTC_DRV_RTK)	+= rtc-rtk.o
 -- 
-2.42.0
+2.45.2
 

@@ -1,7 +1,7 @@
-From 4186ac63d4cf183f5902d259450fe7b08e6e4c20 Mon Sep 17 00:00:00 2001
+From a5c38f5e1a99a50a708cb1a425395a80a3361153 Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Wed, 21 Jun 2023 11:43:15 +0800
-Subject: [PATCH 33/69] usb: core: quirks: refactor the quirk device list
+Subject: [PATCH 33/80] usb: core: quirks: refactor the quirk device list
 
 Change-Id: I15bd848185bf0e47486b0c82039e68016435f69c
 Signed-off-by: Stanley Chang <stanley_chang@realtek.com>
@@ -10,7 +10,7 @@ Signed-off-by: Stanley Chang <stanley_chang@realtek.com>
  1 file changed, 17 insertions(+)
 
 diff --git a/drivers/usb/core/quirks.c b/drivers/usb/core/quirks.c
-index e70a0c80d..036621438 100644
+index e70a0c80dc97..0366214388f5 100644
 --- a/drivers/usb/core/quirks.c
 +++ b/drivers/usb/core/quirks.c
 @@ -545,6 +545,23 @@ static const struct usb_device_id usb_quirk_list[] = {
@@ -38,5 +38,5 @@ index e70a0c80d..036621438 100644
  };
  
 -- 
-2.42.0
+2.45.2
 

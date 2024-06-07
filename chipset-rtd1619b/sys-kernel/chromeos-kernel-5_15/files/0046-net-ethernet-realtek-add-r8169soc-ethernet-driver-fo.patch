@@ -1,7 +1,7 @@
-From 972e83df0ffd9c1b1b4d6d52e220573eed48f194 Mon Sep 17 00:00:00 2001
+From 9580b4902e61e2d5b6037eea03b0d8a4934e3f1d Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 10 Nov 2022 20:31:16 +0800
-Subject: [PATCH 46/69] net: ethernet: realtek: add r8169soc ethernet driver
+Subject: [PATCH 46/80] net: ethernet: realtek: add r8169soc ethernet driver
  for Realtek DHC SoCs
 
 Change-Id: Ibb5203e995fcfed5b4a9434df308ddbc603b34a2
@@ -11,7 +11,7 @@ Change-Id: Ibb5203e995fcfed5b4a9434df308ddbc603b34a2
  2 files changed, 20 insertions(+)
 
 diff --git a/drivers/net/ethernet/realtek/Kconfig b/drivers/net/ethernet/realtek/Kconfig
-index 93d9df55b..0de8a6b2e 100644
+index 93d9df55b361..0de8a6b2e758 100644
 --- a/drivers/net/ethernet/realtek/Kconfig
 +++ b/drivers/net/ethernet/realtek/Kconfig
 @@ -113,4 +113,23 @@ config R8169
@@ -39,7 +39,7 @@ index 93d9df55b..0de8a6b2e 100644
 +
  endif # NET_VENDOR_REALTEK
 diff --git a/drivers/net/ethernet/realtek/Makefile b/drivers/net/ethernet/realtek/Makefile
-index 2e1d78b10..5b3af94eb 100644
+index 2e1d78b106b0..5b3af94eb565 100644
 --- a/drivers/net/ethernet/realtek/Makefile
 +++ b/drivers/net/ethernet/realtek/Makefile
 @@ -8,3 +8,4 @@ obj-$(CONFIG_8139TOO) += 8139too.o
@@ -48,5 +48,5 @@ index 2e1d78b10..5b3af94eb 100644
  obj-$(CONFIG_R8169) += r8169.o
 +obj-$(CONFIG_R8169SOC) += r8169soc.o
 -- 
-2.42.0
+2.45.2
 

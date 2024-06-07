@@ -1,7 +1,7 @@
-From 30841d5d2a47b072c655720ba5c82209cc4ab2d8 Mon Sep 17 00:00:00 2001
+From 98de92d877730481b6f92d9c959f611ec7eeb4af Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 10 Nov 2022 17:32:09 +0800
-Subject: [PATCH 10/69] gpio: add Realtek DHC SoCs gpio driver
+Subject: [PATCH 10/80] gpio: add Realtek DHC SoCs gpio driver
 
 Change-Id: I7543bb16157ef6a41515b3a346d99f72e33f3d2e
 ---
@@ -10,7 +10,7 @@ Change-Id: I7543bb16157ef6a41515b3a346d99f72e33f3d2e
  2 files changed, 9 insertions(+)
 
 diff --git a/drivers/gpio/Kconfig b/drivers/gpio/Kconfig
-index 7b9def6b1..1777f3b2c 100644
+index 7b9def6b1004..1777f3b2c4a8 100644
 --- a/drivers/gpio/Kconfig
 +++ b/drivers/gpio/Kconfig
 @@ -514,6 +514,14 @@ config GPIO_REALTEK_OTTO
@@ -29,7 +29,7 @@ index 7b9def6b1..1777f3b2c 100644
  	bool
  	help
 diff --git a/drivers/gpio/Makefile b/drivers/gpio/Makefile
-index fbcda637d..70590c8a1 100644
+index fbcda637d5e1..70590c8a1ce1 100644
 --- a/drivers/gpio/Makefile
 +++ b/drivers/gpio/Makefile
 @@ -126,6 +126,7 @@ obj-$(CONFIG_GPIO_RCAR)			+= gpio-rcar.o
@@ -41,5 +41,5 @@ index fbcda637d..70590c8a1 100644
  obj-$(CONFIG_GPIO_ROCKCHIP)	+= gpio-rockchip.o
  obj-$(CONFIG_ARCH_SA1100)		+= gpio-sa1100.o
 -- 
-2.42.0
+2.45.2
 

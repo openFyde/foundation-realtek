@@ -1,7 +1,7 @@
-From 00c9bd8f8b752d911ad3a24ccdbb6f159ce2812f Mon Sep 17 00:00:00 2001
+From c18681aec120046f4d1e5848a6b972768e34db5d Mon Sep 17 00:00:00 2001
 From: Jyan Chou <jyanchou@realtek.com>
 Date: Mon, 14 Aug 2023 18:28:41 +0800
-Subject: [PATCH 17/69] Do not need to retune when switching to rpmb partition
+Subject: [PATCH 17/80] Do not need to retune when switching to rpmb partition
 
 Change-Id: I93ac16e05f6f0cac6dbe1f1d249f4200348168b7
 ---
@@ -9,7 +9,7 @@ Change-Id: I93ac16e05f6f0cac6dbe1f1d249f4200348168b7
  1 file changed, 4 insertions(+)
 
 diff --git a/drivers/mmc/core/block.c b/drivers/mmc/core/block.c
-index 25077a1a3..b895c7960 100644
+index 25077a1a3d82..b895c7960e2b 100644
 --- a/drivers/mmc/core/block.c
 +++ b/drivers/mmc/core/block.c
 @@ -847,7 +847,9 @@ static int mmc_blk_part_switch_pre(struct mmc_card *card,
@@ -33,5 +33,5 @@ index 25077a1a3..b895c7960 100644
  			ret = mmc_cmdq_enable(card);
  	}
 -- 
-2.42.0
+2.45.2
 

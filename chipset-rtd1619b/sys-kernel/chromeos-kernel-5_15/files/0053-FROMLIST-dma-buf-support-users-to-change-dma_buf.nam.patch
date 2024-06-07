@@ -1,7 +1,7 @@
-From 2aad7741446d97144e36039f83903759760ad498 Mon Sep 17 00:00:00 2001
+From 114c524bd3f9bfd74ee215ef7497e9f58a2fd98b Mon Sep 17 00:00:00 2001
 From: Guangming Cao <Guangming.Cao@mediatek.com>
 Date: Wed, 1 Sep 2021 20:41:54 +0800
-Subject: [PATCH 53/69] FROMLIST: dma-buf: support users to change dma_buf.name
+Subject: [PATCH 53/80] FROMLIST: dma-buf: support users to change dma_buf.name
 
 User space user can call DMA_BUF_SET_NAME to set dma_buf.name,
 but until now we can't set it at kernel side, it's difficult to debug
@@ -34,7 +34,7 @@ Signed-off-by: Chris Goldsworthy <quic_cgoldswo@quicinc.com>
  2 files changed, 31 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/dma-buf/dma-buf.c b/drivers/dma-buf/dma-buf.c
-index 90d96a05c..ab4ccca8f 100644
+index 90d96a05c661..ab4ccca8fc53 100644
 --- a/drivers/dma-buf/dma-buf.c
 +++ b/drivers/dma-buf/dma-buf.c
 @@ -303,6 +303,17 @@ static __poll_t dma_buf_poll(struct file *file, poll_table *poll)
@@ -101,7 +101,7 @@ index 90d96a05c..ab4ccca8f 100644
  #if IS_ENABLED(CONFIG_SYNC_FILE)
  	case DMA_BUF_IOCTL_EXPORT_SYNC_FILE:
 diff --git a/include/linux/dma-buf.h b/include/linux/dma-buf.h
-index 88bb8fa35..a79d6388c 100644
+index 88bb8fa35e3a..a79d6388c14a 100644
 --- a/include/linux/dma-buf.h
 +++ b/include/linux/dma-buf.h
 @@ -632,4 +632,5 @@ int dma_buf_mmap(struct dma_buf *, struct vm_area_struct *,
@@ -111,5 +111,5 @@ index 88bb8fa35..a79d6388c 100644
 +long dma_buf_set_name(struct dma_buf *dmabuf, const char *name);
  #endif /* __DMA_BUF_H__ */
 -- 
-2.42.0
+2.45.2
 

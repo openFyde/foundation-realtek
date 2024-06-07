@@ -1,7 +1,7 @@
-From 46c20824457b89bfe1c95f1df70783bb0c75944d Mon Sep 17 00:00:00 2001
+From 097a98bac925ad0e496fc8b4c24c5e7c412aa0a5 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 17 Nov 2022 16:42:46 +0800
-Subject: [PATCH 50/69] pci: controller: add pcie host driver for Realtek DHC
+Subject: [PATCH 50/80] pci: controller: add pcie host driver for Realtek DHC
  SoCs
 
 Change-Id: I1abda74f8a2b47d353c1456ae3ac9541252cf463
@@ -11,7 +11,7 @@ Change-Id: I1abda74f8a2b47d353c1456ae3ac9541252cf463
  2 files changed, 20 insertions(+)
 
 diff --git a/drivers/pci/controller/Kconfig b/drivers/pci/controller/Kconfig
-index 326f7d130..f39ba53a5 100644
+index 326f7d13024f..f39ba53a5510 100644
 --- a/drivers/pci/controller/Kconfig
 +++ b/drivers/pci/controller/Kconfig
 @@ -312,6 +312,24 @@ config PCIE_HISI_ERR
@@ -40,7 +40,7 @@ index 326f7d130..f39ba53a5 100644
  source "drivers/pci/controller/mobiveil/Kconfig"
  source "drivers/pci/controller/cadence/Kconfig"
 diff --git a/drivers/pci/controller/Makefile b/drivers/pci/controller/Makefile
-index aaf30b3dc..d5c01deb9 100644
+index aaf30b3dcc14..d5c01deb9f0a 100644
 --- a/drivers/pci/controller/Makefile
 +++ b/drivers/pci/controller/Makefile
 @@ -37,6 +37,8 @@ obj-$(CONFIG_VMD) += vmd.o
@@ -53,5 +53,5 @@ index aaf30b3dc..d5c01deb9 100644
  obj-y				+= dwc/
  obj-y				+= mobiveil/
 -- 
-2.42.0
+2.45.2
 
