@@ -1,0 +1,794 @@
+From 5a4c3e2f402d47db2438d62307cef999986352dd Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Fri, 7 Jun 2024 10:42:26 +0800
+Subject: [PATCH 81/81] v4l2 support mplane
+
+Change-Id: Ie2c1c511c6c3e4cbef2f046e96ba9ec6be4ae86f
+---
+ .../media/platform/rtk_vdec_rtd16xxb/drv_if.c |  28 +-
+ .../platform/rtk_vdec_rtd16xxb/ve1_v4l2.c     |   6 +-
+ .../platform/rtk_vdec_rtd16xxb/ve1_vdi.c      |   2 +
+ .../media/platform/rtk_vdec_rtd16xxb/ve2.c    |  14 +-
+ .../media/platform/rtk_vdec_rtd16xxb/ve2rpc.c |   6 +-
+ .../media/platform/rtk_vdec_rtd16xxb/vpu.c    | 351 +++++++++---------
+ 6 files changed, 206 insertions(+), 201 deletions(-)
+
+diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/drv_if.c b/drivers/media/platform/rtk_vdec_rtd16xxb/drv_if.c
+index 687277e2ff6b..d3c33e6b73cc 100644
+--- a/drivers/media/platform/rtk_vdec_rtd16xxb/drv_if.c
++++ b/drivers/media/platform/rtk_vdec_rtd16xxb/drv_if.c
+@@ -130,8 +130,8 @@ static void job_abort(void *priv)
+ 	if (!op)
+ 		return;
+ 	/* Will cancel the transaction in the next interrupt handler */
+-	op->vpu_abort(priv, V4L2_BUF_TYPE_VIDEO_OUTPUT);
+-	op->vpu_abort(priv, V4L2_BUF_TYPE_VIDEO_CAPTURE);
++	op->vpu_abort(priv, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
++	op->vpu_abort(priv, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
+ 	v4l2_m2m_job_finish(dev->m2m_dev, ctx->fh.m2m_ctx);
+ 	vpu_input_dbg("%s done\n", __func__);
+ }
+@@ -156,7 +156,7 @@ static int vidioc_querycap(struct file *file, void *priv,
+ 	strncpy(cap->driver, VPU_NAME, sizeof(cap->driver) - 1);
+ 	strncpy(cap->card, VPU_NAME, sizeof(cap->card) - 1);
+ 	snprintf(cap->bus_info, sizeof(cap->bus_info), "platform:%s", VPU_NAME);
+-	cap->device_caps = V4L2_CAP_VIDEO_M2M | V4L2_CAP_STREAMING;
++	cap->device_caps = V4L2_CAP_VIDEO_M2M_MPLANE | V4L2_CAP_STREAMING;
+ 	cap->capabilities = cap->device_caps | V4L2_CAP_DEVICE_CAPS;
+ 	return 0;
+ }
+@@ -496,6 +496,8 @@ static int videc_g_selection(struct file *file, void *fh,
+ 		vpu_err("vpu ops is NULL\n");
+ 		return 0;
+ 	}
++
++
+ 	ret = op->vpu_g_crop(fh, &rsel);
+ 
+ 	switch (sel->target) {
+@@ -536,7 +538,7 @@ static int videc_frmsizeenum(struct file *file, void *priv,
+ 		ret = -ENOTTY;
+ 	}
+ 
+-	fsize->type = V4L2_FRMSIZE_TYPE_CONTINUOUS;
++	fsize->type = V4L2_FRMSIZE_TYPE_STEPWISE;
+ 
+ 	return ret;
+ }
+@@ -594,14 +596,14 @@ static const struct v4l2_ioctl_ops vpu_ioctl_ops = {
+ 	.vidioc_querycap = vidioc_querycap,
+ 
+ 	.vidioc_enum_fmt_vid_cap = videc_enum_fmt_vid_cap,
+-	.vidioc_g_fmt_vid_cap = videc_g_fmt,
+-	.vidioc_try_fmt_vid_cap = videc_try_fmt_vid_cap,
+-	.vidioc_s_fmt_vid_cap = videc_s_fmt_vid_cap,
++	.vidioc_g_fmt_vid_cap_mplane = videc_g_fmt,
++	.vidioc_try_fmt_vid_cap_mplane	= videc_try_fmt_vid_cap,
++	.vidioc_s_fmt_vid_cap_mplane	= videc_s_fmt_vid_cap,
+ 
+ 	.vidioc_enum_fmt_vid_out = videc_enum_fmt_vid_out,
+-	.vidioc_g_fmt_vid_out = videc_g_fmt,
+-	.vidioc_try_fmt_vid_out = videc_try_fmt_vid_out,
+-	.vidioc_s_fmt_vid_out = videc_s_fmt_vid_out,
++	.vidioc_g_fmt_vid_out_mplane = videc_g_fmt,
++	.vidioc_try_fmt_vid_out_mplane	= videc_try_fmt_vid_out,
++	.vidioc_s_fmt_vid_out_mplane = videc_s_fmt_vid_out,
+ 
+ 	.vidioc_reqbufs = v4l2_m2m_ioctl_reqbufs,
+ 	.vidioc_querybuf = videc_querybuf,
+@@ -893,7 +895,7 @@ static int queue_init(void *priv, struct vb2_queue *src_vq,
+ 	struct videc_ctx *ctx = priv;
+ 	int ret;
+ 
+-	src_vq->type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
++	src_vq->type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+ 	src_vq->io_modes = VB2_DMABUF | VB2_MMAP;
+ 	src_vq->drv_priv = ctx;
+ 	src_vq->buf_struct_size = sizeof(struct v4l2_m2m_buffer);
+@@ -907,7 +909,7 @@ static int queue_init(void *priv, struct vb2_queue *src_vq,
+ 	if (ret)
+ 		return ret;
+ 
+-	dst_vq->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
++	dst_vq->type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+ 	dst_vq->io_modes = VB2_DMABUF | VB2_MMAP;
+ 	dst_vq->drv_priv = ctx;
+ 	dst_vq->buf_struct_size = sizeof(struct v4l2_m2m_buffer);
+@@ -1074,7 +1076,7 @@ static int vpu_probe(struct platform_device *pdev)
+ 	video_dev = &dev->video_dev;
+ 	video_dev->lock = &dev->dev_mutex;
+ 	video_dev->v4l2_dev = &dev->v4l2_dev;
+-	video_dev->device_caps = V4L2_CAP_VIDEO_M2M | V4L2_CAP_STREAMING;
++	video_dev->device_caps = V4L2_CAP_VIDEO_M2M_MPLANE | V4L2_CAP_STREAMING;
+ 
+ 	/* Register video4linux device */
+ 	ret = video_register_device(video_dev, VFL_TYPE_VIDEO, 0);
+diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_v4l2.c b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_v4l2.c
+index 6766fcf273e1..2af79f1267eb 100644
+--- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_v4l2.c
++++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_v4l2.c
+@@ -460,9 +460,9 @@ static void ve1_start_work(void *fh, struct ve1_ctx *ctx)
+ 				info.visible_rect_top, info.visible_rect_w,
+ 				info.visible_rect_h, info.minDpbCount);
+ 			vpu_get_cap_fmt(fh, (void *)&vpu_fmt);
+-			vpu_fmt.spec.fmt.pix.width = info.pic_width;
+-			vpu_fmt.spec.fmt.pix.height = info.pic_height;
+-			vpu_fmt.spec.fmt.pix.bytesperline = info.pic_width;
++			vpu_fmt.spec.fmt.pix_mp.width = info.pic_width;
++			vpu_fmt.spec.fmt.pix_mp.height = info.pic_height;
++			vpu_fmt.spec.fmt.pix_mp.plane_fmt[0].bytesperline = info.pic_width;
+ 			vpu_fmt.misc.bufcnt = info.minDpbCount;
+ 			vpu_update_cap_fmt(fh, (void *)&vpu_fmt);
+ #ifdef ENABLE_SHOW_VIDEO_INFO
+diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vdi.c b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vdi.c
+index 460c724c01c6..a3bd52d720ac 100644
+--- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vdi.c
++++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_vdi.c
+@@ -2943,6 +2943,8 @@ static int Internal_vdi_get_total_instance_num(unsigned long core_idx)
+ {
+ 	vdi_info_t *vdi;
+ 	vpudrv_inst_info_t inst_info;
++	inst_info.inst_open_count = 4;
++	//TODO: need to add rtd16xxb_vdi_ioctl_get_total_instance_num to get vpudrv_inst_info
+ 
+ 	if (core_idx >= MAX_NUM_VPU_CORE)
+ 		return -1;
+diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve2.c b/drivers/media/platform/rtk_vdec_rtd16xxb/ve2.c
+index 785596f2ae6d..327dea1a4a01 100644
+--- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve2.c
++++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve2.c
+@@ -543,8 +543,8 @@ static int ve2_cap_qbuf(void *fh, struct vb2_buffer *vb)
+ 			ctx->out_hndl, ctx->cap_hndl,
+ 			v_ctx->cap_fmt.misc.ori_width,
+ 			v_ctx->cap_fmt.misc.ori_height,
+-			v_ctx->cap_fmt.spec.fmt.pix.width,
+-			v_ctx->cap_fmt.spec.fmt.pix.height, cap_buf_size,
++			v_ctx->cap_fmt.spec.fmt.pix_mp.width,
++			v_ctx->cap_fmt.spec.fmt.pix_mp.height, cap_buf_size,
+ 			(uint64_t)cap_buf_paddr, vb2_v4l2_buf,
+ 			vb->index, v_ctx->bit_depth);
+ 		if (ret != 0)
+@@ -778,7 +778,7 @@ static int ve2_stop_cmd(void *fh, int pixelformat)
+ 
+ 	if (ctx->eosEvent == 0 &&
+ 		hndl->out_q_fill_cnt >= v_ctx->out_q_cnt) {
+-		if (v_ctx->out_fmt.spec.fmt.pix.pixelformat ==
++		if (v_ctx->out_fmt.spec.fmt.pix_mp.pixelformat ==
+ 		    V4L2_PIX_FMT_HEVC)
+ 			ve2rpc_inband_eos_event(&hndl->sub_rb,
+ 						hndl->main_rb.pRBH, 2);
+@@ -837,7 +837,7 @@ static int ve2_pasre_header(void *fh, struct vb2_buffer *vb, uint32_t *width,
+ 	buf = vb2_plane_vaddr(&v4l2_buf->vb2_buf, 0);
+ 
+ 	ret = ve2rpc_get_bs_info(vb->vb2_queue->dev, fh,
+-				 v_ctx->out_fmt.spec.fmt.pix.pixelformat, size,
++				 v_ctx->out_fmt.spec.fmt.pix_mp.pixelformat, size,
+ 				 buf, width, height, &ddr_width, &ddr_height,
+ 				 min_reqbuf, bit_depth);
+ 
+@@ -856,9 +856,9 @@ static int ve2_pasre_header(void *fh, struct vb2_buffer *vb, uint32_t *width,
+ 
+ #if 1
+ 	vpu_get_cap_fmt(fh, (void *)&vpu_fmt);
+-	vpu_fmt.spec.fmt.pix.width = *width;
+-	vpu_fmt.spec.fmt.pix.height = *height;
+-	vpu_fmt.spec.fmt.pix.bytesperline = *width;
++	vpu_fmt.spec.fmt.pix_mp.width = *width;
++	vpu_fmt.spec.fmt.pix_mp.height = *height;
++	vpu_fmt.spec.fmt.pix_mp.plane_fmt[0].bytesperline = *width;
+ 	vpu_fmt.misc.bufcnt = *min_reqbuf;
+ 	v_ctx->bit_depth = (*bit_depth == 0)?8:10;
+ 	v_ctx->ddr_width = ddr_width;
+diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.c b/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.c
+index 1aefa7ea9b0c..eaae8f06029a 100644
+--- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.c
++++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.c
+@@ -504,9 +504,9 @@ static int handle_rpc_command(struct rtk_krpc_ept_info *krpc_ept_info,
+ 			hndl->main_rb.pRBH->reserve3 = htonl(width << 16 | height);
+ 
+ 		vpu_get_cap_fmt(fh, (void *)&vpu_fmt);
+-		vpu_fmt.spec.fmt.pix.width = width;
+-		vpu_fmt.spec.fmt.pix.height = height;
+-		vpu_fmt.spec.fmt.pix.bytesperline = width;
++		vpu_fmt.spec.fmt.pix_mp.width = width;
++		vpu_fmt.spec.fmt.pix_mp.height = height;
++		vpu_fmt.spec.fmt.pix_mp.plane_fmt[0].bytesperline = width;
+ 		vpu_update_cap_fmt(fh, (void *)&vpu_fmt);
+ 
+ 		vpu_notify_event_resolution_change(fh);
+diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/vpu.c b/drivers/media/platform/rtk_vdec_rtd16xxb/vpu.c
+index aed5191d6e82..b1e8489bb2a9 100644
+--- a/drivers/media/platform/rtk_vdec_rtd16xxb/vpu.c
++++ b/drivers/media/platform/rtk_vdec_rtd16xxb/vpu.c
+@@ -53,20 +53,20 @@ const static struct vpu_fmt out_fmt[] = {
+ 	/* video engine VE1 output format */
+ 	{
+ 		/* struct v4l2_pix_format */
+-		.spec.fmt.pix.width = 1920,
+-		.spec.fmt.pix.height = 1088,
+-		.spec.fmt.pix.pixelformat = V4L2_PIX_FMT_H264,
+-		.spec.fmt.pix.field = V4L2_FIELD_NONE,
+-		.spec.fmt.pix.bytesperline = 0,
+-		.spec.fmt.pix.sizeimage = 3 * 1024 * 1024, // FIXME: 1024*1024
+-		.spec.fmt.pix.colorspace = V4L2_COLORSPACE_REC709,
+-		.spec.fmt.pix.priv = 0,
+-		.spec.fmt.pix.flags = 0,
+-		.spec.fmt.pix.quantization = V4L2_QUANTIZATION_DEFAULT,
+-		.spec.fmt.pix.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
+-		.spec.fmt.pix.xfer_func = V4L2_XFER_FUNC_DEFAULT,
++		.spec.fmt.pix_mp.width = 1920,
++		.spec.fmt.pix_mp.height = 1088,
++		.spec.fmt.pix_mp.pixelformat = V4L2_PIX_FMT_H264,
++		.spec.fmt.pix_mp.field = V4L2_FIELD_NONE,
++		.spec.fmt.pix_mp.plane_fmt[0].bytesperline = 0,
++		.spec.fmt.pix_mp.plane_fmt[0].sizeimage = 3 * 1024 * 1024, // FIXME: 1024*1024
++		.spec.fmt.pix_mp.colorspace = V4L2_COLORSPACE_REC709,
++		.spec.fmt.pix_mp.num_planes = 1,
++		.spec.fmt.pix_mp.flags = 0,
++		.spec.fmt.pix_mp.quantization = V4L2_QUANTIZATION_DEFAULT,
++		.spec.fmt.pix_mp.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
++		.spec.fmt.pix_mp.xfer_func = V4L2_XFER_FUNC_DEFAULT,
+ 		/* enum v4l2_buf_type */
+-		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
++		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
+ 
+ 		/* struct v4l2_frmsize_stepwise */
+ 		.frmsize.min_width = 64,
+@@ -81,19 +81,19 @@ const static struct vpu_fmt out_fmt[] = {
+ 		.misc.VideoEngine = VIDEO_ENGINE_1,
+ 	},
+ 	{
+-		.spec.fmt.pix.width = 1920,
+-		.spec.fmt.pix.height = 1088,
+-		.spec.fmt.pix.pixelformat = V4L2_PIX_FMT_MPEG2,
+-		.spec.fmt.pix.field = V4L2_FIELD_NONE,
+-		.spec.fmt.pix.bytesperline = 0,
+-		.spec.fmt.pix.sizeimage = 3 * 1024 * 1024, // FIXME: 1024*1024
+-		.spec.fmt.pix.colorspace = V4L2_COLORSPACE_REC709,
+-		.spec.fmt.pix.priv = 0,
+-		.spec.fmt.pix.flags = 0,
+-		.spec.fmt.pix.quantization = V4L2_QUANTIZATION_DEFAULT,
+-		.spec.fmt.pix.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
+-		.spec.fmt.pix.xfer_func = V4L2_XFER_FUNC_DEFAULT,
+-		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
++		.spec.fmt.pix_mp.width = 1920,
++		.spec.fmt.pix_mp.height = 1088,
++		.spec.fmt.pix_mp.pixelformat = V4L2_PIX_FMT_MPEG2,
++		.spec.fmt.pix_mp.field = V4L2_FIELD_NONE,
++		.spec.fmt.pix_mp.plane_fmt[0].bytesperline = 0,
++		.spec.fmt.pix_mp.plane_fmt[0].sizeimage = 3 * 1024 * 1024, // FIXME: 1024*1024
++		.spec.fmt.pix_mp.colorspace = V4L2_COLORSPACE_REC709,
++		.spec.fmt.pix_mp.num_planes = 1,
++		.spec.fmt.pix_mp.flags = 0,
++		.spec.fmt.pix_mp.quantization = V4L2_QUANTIZATION_DEFAULT,
++		.spec.fmt.pix_mp.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
++		.spec.fmt.pix_mp.xfer_func = V4L2_XFER_FUNC_DEFAULT,
++		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
+ 
+ 		/* struct v4l2_frmsize_stepwise */
+ 		.frmsize.min_width = 64,
+@@ -108,19 +108,19 @@ const static struct vpu_fmt out_fmt[] = {
+ 		.misc.VideoEngine = VIDEO_ENGINE_1,
+ 	},
+ 	{
+-		.spec.fmt.pix.width = 1920,
+-		.spec.fmt.pix.height = 1088,
+-		.spec.fmt.pix.pixelformat = V4L2_PIX_FMT_MPEG4,
+-		.spec.fmt.pix.field = V4L2_FIELD_NONE,
+-		.spec.fmt.pix.bytesperline = 0,
+-		.spec.fmt.pix.sizeimage = 3 * 1024 * 1024, // FIXME: 1024*1024
+-		.spec.fmt.pix.colorspace = V4L2_COLORSPACE_REC709,
+-		.spec.fmt.pix.priv = 0,
+-		.spec.fmt.pix.flags = 0,
+-		.spec.fmt.pix.quantization = V4L2_QUANTIZATION_DEFAULT,
+-		.spec.fmt.pix.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
+-		.spec.fmt.pix.xfer_func = V4L2_XFER_FUNC_DEFAULT,
+-		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
++		.spec.fmt.pix_mp.width = 1920,
++		.spec.fmt.pix_mp.height = 1088,
++		.spec.fmt.pix_mp.pixelformat = V4L2_PIX_FMT_MPEG4,
++		.spec.fmt.pix_mp.field = V4L2_FIELD_NONE,
++		.spec.fmt.pix_mp.plane_fmt[0].bytesperline = 0,
++		.spec.fmt.pix_mp.plane_fmt[0].sizeimage = 3 * 1024 * 1024, // FIXME: 1024*1024
++		.spec.fmt.pix_mp.colorspace = V4L2_COLORSPACE_REC709,
++		.spec.fmt.pix_mp.num_planes = 1,
++		.spec.fmt.pix_mp.flags = 0,
++		.spec.fmt.pix_mp.quantization = V4L2_QUANTIZATION_DEFAULT,
++		.spec.fmt.pix_mp.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
++		.spec.fmt.pix_mp.xfer_func = V4L2_XFER_FUNC_DEFAULT,
++		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
+ 
+ 		/* struct v4l2_frmsize_stepwise */
+ 		.frmsize.min_width = 64,
+@@ -135,19 +135,19 @@ const static struct vpu_fmt out_fmt[] = {
+ 		.misc.VideoEngine = VIDEO_ENGINE_1,
+ 	},
+ 	{
+-		.spec.fmt.pix.width = 1920,
+-		.spec.fmt.pix.height = 1088,
+-		.spec.fmt.pix.pixelformat = V4L2_PIX_FMT_VP8,
+-		.spec.fmt.pix.field = V4L2_FIELD_NONE,
+-		.spec.fmt.pix.bytesperline = 0,
+-		.spec.fmt.pix.sizeimage = 3 * 1024 * 1024, // FIXME: 1024*1024
+-		.spec.fmt.pix.colorspace = V4L2_COLORSPACE_REC709,
+-		.spec.fmt.pix.priv = 0,
+-		.spec.fmt.pix.flags = 0,
+-		.spec.fmt.pix.quantization = V4L2_QUANTIZATION_DEFAULT,
+-		.spec.fmt.pix.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
+-		.spec.fmt.pix.xfer_func = V4L2_XFER_FUNC_DEFAULT,
+-		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
++		.spec.fmt.pix_mp.width = 1920,
++		.spec.fmt.pix_mp.height = 1088,
++		.spec.fmt.pix_mp.pixelformat = V4L2_PIX_FMT_VP8,
++		.spec.fmt.pix_mp.field = V4L2_FIELD_NONE,
++		.spec.fmt.pix_mp.plane_fmt[0].bytesperline = 0,
++		.spec.fmt.pix_mp.plane_fmt[0].sizeimage = 3 * 1024 * 1024, // FIXME: 1024*1024
++		.spec.fmt.pix_mp.colorspace = V4L2_COLORSPACE_REC709,
++		.spec.fmt.pix_mp.num_planes = 1,
++		.spec.fmt.pix_mp.flags = 0,
++		.spec.fmt.pix_mp.quantization = V4L2_QUANTIZATION_DEFAULT,
++		.spec.fmt.pix_mp.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
++		.spec.fmt.pix_mp.xfer_func = V4L2_XFER_FUNC_DEFAULT,
++		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
+ 
+ 		/* struct v4l2_frmsize_stepwise */
+ 		.frmsize.min_width = 64,
+@@ -162,19 +162,19 @@ const static struct vpu_fmt out_fmt[] = {
+ 		.misc.VideoEngine = VIDEO_ENGINE_1,
+ 	},
+ 	{
+-		.spec.fmt.pix.width = 1920,
+-		.spec.fmt.pix.height = 1088,
+-		.spec.fmt.pix.pixelformat = V4L2_PIX_FMT_VC1_ANNEX_G,
+-		.spec.fmt.pix.field = V4L2_FIELD_NONE,
+-		.spec.fmt.pix.bytesperline = 0,
+-		.spec.fmt.pix.sizeimage = 3 * 1024 * 1024, // FIXME: 1024*1024
+-		.spec.fmt.pix.colorspace = V4L2_COLORSPACE_REC709,
+-		.spec.fmt.pix.priv = 0,
+-		.spec.fmt.pix.flags = 0,
+-		.spec.fmt.pix.quantization = V4L2_QUANTIZATION_DEFAULT,
+-		.spec.fmt.pix.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
+-		.spec.fmt.pix.xfer_func = V4L2_XFER_FUNC_DEFAULT,
+-		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
++		.spec.fmt.pix_mp.width = 1920,
++		.spec.fmt.pix_mp.height = 1088,
++		.spec.fmt.pix_mp.pixelformat = V4L2_PIX_FMT_VC1_ANNEX_G,
++		.spec.fmt.pix_mp.field = V4L2_FIELD_NONE,
++		.spec.fmt.pix_mp.plane_fmt[0].bytesperline = 0,
++		.spec.fmt.pix_mp.plane_fmt[0].sizeimage = 3 * 1024 * 1024, // FIXME: 1024*1024
++		.spec.fmt.pix_mp.colorspace = V4L2_COLORSPACE_REC709,
++		.spec.fmt.pix_mp.num_planes = 1,
++		.spec.fmt.pix_mp.flags = 0,
++		.spec.fmt.pix_mp.quantization = V4L2_QUANTIZATION_DEFAULT,
++		.spec.fmt.pix_mp.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
++		.spec.fmt.pix_mp.xfer_func = V4L2_XFER_FUNC_DEFAULT,
++		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
+ 
+ 		/* struct v4l2_frmsize_stepwise */
+ 		.frmsize.min_width = 64,
+@@ -189,19 +189,19 @@ const static struct vpu_fmt out_fmt[] = {
+ 		.misc.VideoEngine = VIDEO_ENGINE_1,
+ 	},
+ 	{
+-		.spec.fmt.pix.width = 1920,
+-		.spec.fmt.pix.height = 1088,
+-		.spec.fmt.pix.pixelformat = V4L2_PIX_FMT_VC1_ANNEX_L,
+-		.spec.fmt.pix.field = V4L2_FIELD_NONE,
+-		.spec.fmt.pix.bytesperline = 0,
+-		.spec.fmt.pix.sizeimage = 3 * 1024 * 1024, // FIXME: 1024*1024
+-		.spec.fmt.pix.colorspace = V4L2_COLORSPACE_REC709,
+-		.spec.fmt.pix.priv = 0,
+-		.spec.fmt.pix.flags = 0,
+-		.spec.fmt.pix.quantization = V4L2_QUANTIZATION_DEFAULT,
+-		.spec.fmt.pix.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
+-		.spec.fmt.pix.xfer_func = V4L2_XFER_FUNC_DEFAULT,
+-		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
++		.spec.fmt.pix_mp.width = 1920,
++		.spec.fmt.pix_mp.height = 1088,
++		.spec.fmt.pix_mp.pixelformat = V4L2_PIX_FMT_VC1_ANNEX_L,
++		.spec.fmt.pix_mp.field = V4L2_FIELD_NONE,
++		.spec.fmt.pix_mp.plane_fmt[0].bytesperline = 0,
++		.spec.fmt.pix_mp.plane_fmt[0].sizeimage = 3 * 1024 * 1024, // FIXME: 1024*1024
++		.spec.fmt.pix_mp.colorspace = V4L2_COLORSPACE_REC709,
++		.spec.fmt.pix_mp.num_planes = 1,
++		.spec.fmt.pix_mp.flags = 0,
++		.spec.fmt.pix_mp.quantization = V4L2_QUANTIZATION_DEFAULT,
++		.spec.fmt.pix_mp.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
++		.spec.fmt.pix_mp.xfer_func = V4L2_XFER_FUNC_DEFAULT,
++		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
+ 
+ 		/* struct v4l2_frmsize_stepwise */
+ 		.frmsize.min_width = 64,
+@@ -218,20 +218,20 @@ const static struct vpu_fmt out_fmt[] = {
+ 	/* video engine VE2 output format */
+ 	{
+ 		/* struct v4l2_pix_format */
+-		.spec.fmt.pix.width = 1920,
+-		.spec.fmt.pix.height = 1088,
+-		.spec.fmt.pix.pixelformat = V4L2_PIX_FMT_HEVC,
+-		.spec.fmt.pix.field = V4L2_FIELD_NONE,
+-		.spec.fmt.pix.bytesperline = 0,
+-		.spec.fmt.pix.sizeimage = 3 * 1024 * 1024,
+-		.spec.fmt.pix.colorspace = V4L2_COLORSPACE_REC709,
+-		.spec.fmt.pix.priv = 0,
+-		.spec.fmt.pix.flags = 0,
+-		.spec.fmt.pix.quantization = V4L2_QUANTIZATION_DEFAULT,
+-		.spec.fmt.pix.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
+-		.spec.fmt.pix.xfer_func = V4L2_XFER_FUNC_DEFAULT,
++		.spec.fmt.pix_mp.width = 1920,
++		.spec.fmt.pix_mp.height = 1088,
++		.spec.fmt.pix_mp.pixelformat = V4L2_PIX_FMT_HEVC,
++		.spec.fmt.pix_mp.field = V4L2_FIELD_NONE,
++		.spec.fmt.pix_mp.plane_fmt[0].bytesperline = 0,
++		.spec.fmt.pix_mp.plane_fmt[0].sizeimage = 3 * 1024 * 1024,
++		.spec.fmt.pix_mp.colorspace = V4L2_COLORSPACE_REC709,
++		.spec.fmt.pix_mp.num_planes = 1,
++		.spec.fmt.pix_mp.flags = 0,
++		.spec.fmt.pix_mp.quantization = V4L2_QUANTIZATION_DEFAULT,
++		.spec.fmt.pix_mp.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
++		.spec.fmt.pix_mp.xfer_func = V4L2_XFER_FUNC_DEFAULT,
+ 		/* enum v4l2_buf_type */
+-		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
++		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
+ 
+ 		/* struct v4l2_frmsize_stepwise */
+ 		.frmsize.min_width = 64,
+@@ -246,19 +246,19 @@ const static struct vpu_fmt out_fmt[] = {
+ 		.misc.VideoEngine = VIDEO_ENGINE_2,
+ 	},
+ 	{
+-		.spec.fmt.pix.width = 1920,
+-		.spec.fmt.pix.height = 1088,
+-		.spec.fmt.pix.pixelformat = V4L2_PIX_FMT_VP9,
+-		.spec.fmt.pix.field = V4L2_FIELD_NONE,
+-		.spec.fmt.pix.bytesperline = 0,
+-		.spec.fmt.pix.sizeimage = 3 * 1024 * 1024,
+-		.spec.fmt.pix.colorspace = V4L2_COLORSPACE_REC709,
+-		.spec.fmt.pix.priv = 0,
+-		.spec.fmt.pix.flags = 0,
+-		.spec.fmt.pix.quantization = V4L2_QUANTIZATION_DEFAULT,
+-		.spec.fmt.pix.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
+-		.spec.fmt.pix.xfer_func = V4L2_XFER_FUNC_DEFAULT,
+-		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
++		.spec.fmt.pix_mp.width = 1920,
++		.spec.fmt.pix_mp.height = 1088,
++		.spec.fmt.pix_mp.pixelformat = V4L2_PIX_FMT_VP9,
++		.spec.fmt.pix_mp.field = V4L2_FIELD_NONE,
++		.spec.fmt.pix_mp.plane_fmt[0].bytesperline = 0,
++		.spec.fmt.pix_mp.plane_fmt[0].sizeimage = 3 * 1024 * 1024,
++		.spec.fmt.pix_mp.colorspace = V4L2_COLORSPACE_REC709,
++		.spec.fmt.pix_mp.num_planes = 1,
++		.spec.fmt.pix_mp.flags = 0,
++		.spec.fmt.pix_mp.quantization = V4L2_QUANTIZATION_DEFAULT,
++		.spec.fmt.pix_mp.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
++		.spec.fmt.pix_mp.xfer_func = V4L2_XFER_FUNC_DEFAULT,
++		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
+ 
+ 		/* struct v4l2_frmsize_stepwise */
+ 		.frmsize.min_width = 64,
+@@ -273,19 +273,19 @@ const static struct vpu_fmt out_fmt[] = {
+ 		.misc.VideoEngine = VIDEO_ENGINE_2,
+ 	},
+ 	{
+-		.spec.fmt.pix.width = 1920,
+-		.spec.fmt.pix.height = 1088,
+-		.spec.fmt.pix.pixelformat = V4L2_PIX_FMT_AV1,
+-		.spec.fmt.pix.field = V4L2_FIELD_NONE,
+-		.spec.fmt.pix.bytesperline = 0,
+-		.spec.fmt.pix.sizeimage = 3 * 1024 * 1024,
+-		.spec.fmt.pix.colorspace = V4L2_COLORSPACE_REC709,
+-		.spec.fmt.pix.priv = 0,
+-		.spec.fmt.pix.flags = 0,
+-		.spec.fmt.pix.quantization = V4L2_QUANTIZATION_DEFAULT,
+-		.spec.fmt.pix.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
+-		.spec.fmt.pix.xfer_func = V4L2_XFER_FUNC_DEFAULT,
+-		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
++		.spec.fmt.pix_mp.width = 1920,
++		.spec.fmt.pix_mp.height = 1088,
++		.spec.fmt.pix_mp.pixelformat = V4L2_PIX_FMT_AV1,
++		.spec.fmt.pix_mp.field = V4L2_FIELD_NONE,
++		.spec.fmt.pix_mp.plane_fmt[0].bytesperline = 0,
++		.spec.fmt.pix_mp.plane_fmt[0].sizeimage = 3 * 1024 * 1024,
++		.spec.fmt.pix_mp.colorspace = V4L2_COLORSPACE_REC709,
++		.spec.fmt.pix_mp.num_planes = 1,
++		.spec.fmt.pix_mp.flags = 0,
++		.spec.fmt.pix_mp.quantization = V4L2_QUANTIZATION_DEFAULT,
++		.spec.fmt.pix_mp.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
++		.spec.fmt.pix_mp.xfer_func = V4L2_XFER_FUNC_DEFAULT,
++		.spec.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
+ 
+ 		/* struct v4l2_frmsize_stepwise */
+ 		.frmsize.min_width = 64,
+@@ -303,19 +303,19 @@ const static struct vpu_fmt out_fmt[] = {
+ 
+ static const struct vpu_fmt cap_fmt[] = {
+ 	{
+-		.spec.fmt.pix.width = 1920,
+-		.spec.fmt.pix.height = 1088,
+-		.spec.fmt.pix.pixelformat = V4L2_PIX_FMT_NV12,
+-		.spec.fmt.pix.field = V4L2_FIELD_NONE,
+-		.spec.fmt.pix.bytesperline = 1920,
+-		.spec.fmt.pix.sizeimage = 3133440, // 1920*1088*3/2
+-		.spec.fmt.pix.colorspace = V4L2_COLORSPACE_REC709,
+-		.spec.fmt.pix.priv = 0,
+-		.spec.fmt.pix.flags = 0,
+-		.spec.fmt.pix.quantization = V4L2_QUANTIZATION_DEFAULT,
+-		.spec.fmt.pix.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
+-		.spec.fmt.pix.xfer_func = V4L2_XFER_FUNC_DEFAULT,
+-		.spec.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
++		.spec.fmt.pix_mp.width = 1920,
++		.spec.fmt.pix_mp.height = 1088,
++		.spec.fmt.pix_mp.pixelformat = V4L2_PIX_FMT_NV12,
++		.spec.fmt.pix_mp.field = V4L2_FIELD_NONE,
++		.spec.fmt.pix_mp.plane_fmt[0].bytesperline = 1920,
++		.spec.fmt.pix_mp.plane_fmt[0].sizeimage = 3133440, // 1920*1088*3/2
++		.spec.fmt.pix_mp.colorspace = V4L2_COLORSPACE_REC709,
++		.spec.fmt.pix_mp.num_planes = 1,
++		.spec.fmt.pix_mp.flags = 0,
++		.spec.fmt.pix_mp.quantization = V4L2_QUANTIZATION_DEFAULT,
++		.spec.fmt.pix_mp.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
++		.spec.fmt.pix_mp.xfer_func = V4L2_XFER_FUNC_DEFAULT,
++		.spec.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE,
+ 
+ 		/* struct v4l2_frmsize_stepwise */
+ 		.frmsize.min_width = 64,
+@@ -425,7 +425,7 @@ static int threadcap(void *data)
+ 			bool no_frame = 0;
+ 
+ 			mutex_lock(&ctx->vpu_mutex);
+-			sizeimage = ctx->cap_fmt.spec.fmt.pix.sizeimage;
++			sizeimage = ctx->cap_fmt.spec.fmt.pix_mp.plane_fmt[0].sizeimage;
+ 			sequence = ctx->seq_cap;
+ 			mutex_unlock(&ctx->vpu_mutex);
+ 
+@@ -470,7 +470,7 @@ static int threadout(void *data)
+ 	struct vb2_v4l2_buffer *v4l2_buf;
+ 	unsigned long flags;
+ 	const struct vpu_fmt_ops *op = get_vpu_fmt_ops();
+-	int ret = 0, qbuf_ret;
++	int ret = 0, qbuf_ret = 0;
+ 	const struct v4l2_event eos_event = { .type = V4L2_EVENT_EOS };
+ 	struct vb2_queue *dst_vq = NULL;
+ 	bool bForceEscapeDone = false;
+@@ -504,7 +504,7 @@ static int threadout(void *data)
+ 			if (((ret < 0) && (!bForceEscapeDone)) || ctx->miss_last_buf_done) {
+ 				dst_vq = v4l2_m2m_get_vq(
+ 					fh->m2m_ctx,
+-					V4L2_BUF_TYPE_VIDEO_CAPTURE);
++					V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
+ 
+ 				if (list_empty(&dst_vq->done_list)) {
+ 					vpu_info("%d.%s.force last_buffer_dequeued\n",
+@@ -518,7 +518,7 @@ static int threadout(void *data)
+ 		}
+ 
+ #ifdef ENABLE_SHOW_VIDEO_INFO
+-		pixfmt = ctx->out_fmt.spec.fmt.pix.pixelformat;
++		pixfmt = ctx->out_fmt.spec.fmt.pix_mp.pixelformat;
+ #endif // #ifdef ENABLE_SHOW_VIDEO_INFO
+ 
+ 		if (v4l2_m2m_num_src_bufs_ready(fh->m2m_ctx)) {
+@@ -530,7 +530,7 @@ static int threadout(void *data)
+ 					break;
+ 
+ 				mutex_lock(&ctx->vpu_mutex);
+-				sizeimage = ctx->out_fmt.spec.fmt.pix.sizeimage;
++				sizeimage = ctx->out_fmt.spec.fmt.pix_mp.plane_fmt[0].sizeimage;
+ 				sequence = ctx->seq_out;
+ 				mutex_unlock(&ctx->vpu_mutex);
+ 
+@@ -600,7 +600,7 @@ static int vpu_enum_fmt_cap(struct v4l2_fmtdesc *f)
+ {
+ 	if (f->index < ARRAY_SIZE(cap_fmt)) {
+ 		/* Format found */
+-		f->pixelformat = cap_fmt[f->index].spec.fmt.pix.pixelformat;
++		f->pixelformat = cap_fmt[f->index].spec.fmt.pix_mp.pixelformat;
+ 		return 0;
+ 	}
+ 	return -EINVAL;
+@@ -610,7 +610,7 @@ static int vpu_enum_fmt_out(struct v4l2_fmtdesc *f)
+ {
+ 	if (f->index < ARRAY_SIZE(out_fmt)) {
+ 		/* Format found */
+-		f->pixelformat = out_fmt[f->index].spec.fmt.pix.pixelformat;
++		f->pixelformat = out_fmt[f->index].spec.fmt.pix_mp.pixelformat;
+ 		return 0;
+ 	}
+ 	return -EINVAL;
+@@ -622,11 +622,11 @@ static int vpu_g_fmt(struct v4l2_fh *fh, struct v4l2_format *f)
+ 
+ 	mutex_lock(&ctx->vpu_mutex);
+ 	if (V4L2_TYPE_IS_OUTPUT(f->type))
+-		memcpy(&f->fmt.pix, &ctx->out_fmt.spec.fmt.pix,
+-		       sizeof(struct v4l2_pix_format));
++		memcpy(&f->fmt.pix_mp, &ctx->out_fmt.spec.fmt.pix_mp,
++		       sizeof(struct v4l2_pix_format_mplane));
+ 	else
+-		memcpy(&f->fmt.pix, &ctx->cap_fmt.spec.fmt.pix,
+-		       sizeof(struct v4l2_pix_format));
++		memcpy(&f->fmt.pix_mp, &ctx->cap_fmt.spec.fmt.pix_mp,
++		       sizeof(struct v4l2_pix_format_mplane));
+ 	mutex_unlock(&ctx->vpu_mutex);
+ 	return 0;
+ }
+@@ -646,13 +646,13 @@ static const struct vpu_fmt *find_format(struct v4l2_format *f)
+ 	}
+ 
+ 	for (i = 0; i < size; i++) {
+-		if (fmt[i].spec.fmt.pix.pixelformat == f->fmt.pix.pixelformat)
++		if (fmt[i].spec.fmt.pix_mp.pixelformat == f->fmt.pix_mp.pixelformat)
+ 			break;
+ 	}
+ 
+ 	if (i == size) {
+ 		vpu_warn("unknow type %d format %p4cc, use default\n",
+-			 f->type, &f->fmt.pix.pixelformat);
++			 f->type, &f->fmt.pix_mp.pixelformat);
+ 		return NULL;
+ 	}
+ 
+@@ -676,14 +676,14 @@ static int vpu_try_fmt(struct v4l2_fh *fh, struct v4l2_format *f)
+ 		else
+ 			fmt = &cap_fmt[0];
+ 
+-		f->fmt.pix.pixelformat = fmt->spec.fmt.pix.pixelformat;
++		f->fmt.pix_mp.pixelformat = fmt->spec.fmt.pix_mp.pixelformat;
+ 	}
+ 
+ 	field = V4L2_FIELD_NONE;
+ 
+-	width = clamp(f->fmt.pix.width, fmt->frmsize.min_width,
++	width = clamp(f->fmt.pix_mp.width, fmt->frmsize.min_width,
+ 		fmt->frmsize.max_width);
+-	height = clamp(f->fmt.pix.height, fmt->frmsize.min_height,
++	height = clamp(f->fmt.pix_mp.height, fmt->frmsize.min_height,
+ 		fmt->frmsize.max_height);
+ 
+ 	if (V4L2_TYPE_IS_CAPTURE(f->type)) {
+@@ -704,14 +704,15 @@ static int vpu_try_fmt(struct v4l2_fh *fh, struct v4l2_format *f)
+ 		height = ALIGN(height, RTK_DPB_HEIGHT_ALIGN);
+ 
+ 		bytesperline = 0;
+-		sizeimage = fmt->spec.fmt.pix.sizeimage;
++		sizeimage = fmt->spec.fmt.pix_mp.plane_fmt[0].sizeimage;
+ 	}
+ 
+-	f->fmt.pix.width = width;
+-	f->fmt.pix.height = height;
+-	f->fmt.pix.field = field;
+-	f->fmt.pix.bytesperline = bytesperline;
+-	f->fmt.pix.sizeimage = sizeimage;
++	f->fmt.pix_mp.width = width;
++	f->fmt.pix_mp.height = height;
++	f->fmt.pix_mp.field = field;
++	f->fmt.pix_mp.plane_fmt[0].bytesperline = bytesperline;
++	f->fmt.pix_mp.plane_fmt[0].sizeimage = sizeimage;
++	f->fmt.pix_mp.num_planes = 1;
+ 
+ 	return 0;
+ }
+@@ -727,19 +728,19 @@ static int vpu_s_fmt_cap(struct v4l2_fh *fh, struct v4l2_format *f)
+ 	if (!fmt)
+ 		memcpy(f, &cap_fmt[0], sizeof(struct v4l2_format));
+ 
+-	width = f->fmt.pix.width;
+-	height = f->fmt.pix.height;
++	width = f->fmt.pix_mp.width;
++	height = f->fmt.pix_mp.height;
+ 
+ 	vpu_try_fmt(fh, f);
+ 
+ 	mutex_lock(&ctx->vpu_mutex);
+ 	memcpy(&ctx->cap_fmt.spec, f, sizeof(struct v4l2_format));
+-	ctx->cap_fmt.misc.ori_width = (width > 0) ? width : f->fmt.pix.width;
+-	ctx->cap_fmt.misc.ori_height = (height > 0) ? height : f->fmt.pix.height;
+-	ctx->out_fmt.spec.fmt.pix.colorspace = f->fmt.pix.colorspace;
+-	ctx->out_fmt.spec.fmt.pix.ycbcr_enc = f->fmt.pix.ycbcr_enc;
+-	ctx->out_fmt.spec.fmt.pix.quantization = f->fmt.pix.quantization;
+-	ctx->out_fmt.spec.fmt.pix.xfer_func = f->fmt.pix.xfer_func;
++	ctx->cap_fmt.misc.ori_width = (width > 0) ? width : f->fmt.pix_mp.width;
++	ctx->cap_fmt.misc.ori_height = (height > 0) ? height : f->fmt.pix_mp.height;
++	ctx->out_fmt.spec.fmt.pix_mp.colorspace = f->fmt.pix_mp.colorspace;
++	ctx->out_fmt.spec.fmt.pix_mp.ycbcr_enc = f->fmt.pix_mp.ycbcr_enc;
++	ctx->out_fmt.spec.fmt.pix_mp.quantization = f->fmt.pix_mp.quantization;
++	ctx->out_fmt.spec.fmt.pix_mp.xfer_func = f->fmt.pix_mp.xfer_func;
+ 
+ 	mutex_unlock(&ctx->vpu_mutex);
+ 
+@@ -759,13 +760,13 @@ static int vpu_s_fmt_out(struct v4l2_fh *fh, struct v4l2_format *f)
+ 	}
+ 
+ 	mutex_lock(&ctx->vpu_mutex);
+-	ctx->rect.width = f->fmt.pix.width;
+-	ctx->rect.height = f->fmt.pix.height;
++	ctx->rect.width = f->fmt.pix_mp.width;
++	ctx->rect.height = f->fmt.pix_mp.height;
+ 	mutex_unlock(&ctx->vpu_mutex);
+ 
+ 	vpu_try_fmt(fh, f);
+ 
+-	pixelformat = f->fmt.pix.pixelformat;
++	pixelformat = f->fmt.pix_mp.pixelformat;
+ 	mutex_lock(&ctx->vpu_mutex);
+ 	switch (pixelformat) {
+ 	case V4L2_PIX_FMT_H264:
+@@ -801,10 +802,10 @@ static int vpu_s_fmt_out(struct v4l2_fh *fh, struct v4l2_format *f)
+ 	memcpy(&ctx->out_fmt.spec, f, sizeof(struct v4l2_format));
+ 	memcpy(&ctx->out_fmt.frmsize, &fmt->frmsize, sizeof(struct v4l2_frmsize_stepwise));
+ 	memcpy(&ctx->out_fmt.misc, &fmt->misc, sizeof(struct vpu_misc));
+-	ctx->cap_fmt.spec.fmt.pix.colorspace = f->fmt.pix.colorspace;
+-	ctx->cap_fmt.spec.fmt.pix.ycbcr_enc = f->fmt.pix.ycbcr_enc;
+-	ctx->cap_fmt.spec.fmt.pix.quantization = f->fmt.pix.quantization;
+-	ctx->cap_fmt.spec.fmt.pix.xfer_func = f->fmt.pix.xfer_func;
++	ctx->cap_fmt.spec.fmt.pix_mp.colorspace = f->fmt.pix_mp.colorspace;
++	ctx->cap_fmt.spec.fmt.pix_mp.ycbcr_enc = f->fmt.pix_mp.ycbcr_enc;
++	ctx->cap_fmt.spec.fmt.pix_mp.quantization = f->fmt.pix_mp.quantization;
++	ctx->cap_fmt.spec.fmt.pix_mp.xfer_func = f->fmt.pix_mp.xfer_func;
+ 
+ 	mutex_unlock(&ctx->vpu_mutex);
+ 
+@@ -839,7 +840,7 @@ static int vpu_queue_info(struct vb2_queue *vq, int *bufcnt,
+ 
+ 	if (nplanes) {
+ 		if (*nplanes) {
+-			if (*sizeimage < fmt->spec.fmt.pix.sizeimage) {
++			if (*sizeimage < fmt->spec.fmt.pix_mp.plane_fmt[0].sizeimage) {
+ 				mutex_unlock(&ctx->vpu_mutex);
+ 				return -EINVAL;
+ 			}
+@@ -849,7 +850,7 @@ static int vpu_queue_info(struct vb2_queue *vq, int *bufcnt,
+ 	}
+ 
+ 	if (sizeimage) {
+-		*sizeimage = fmt->spec.fmt.pix.sizeimage;
++		*sizeimage = fmt->spec.fmt.pix_mp.plane_fmt[0].sizeimage;
+ 	}
+ 
+ 	mutex_unlock(&ctx->vpu_mutex);
+@@ -862,7 +863,7 @@ int vpu_start_streaming(struct vb2_queue *q, uint32_t count)
+ 	struct vpu_ctx *ctx = vid_ctx->vpu_ctx;
+ 	struct v4l2_fh *fh = &vid_ctx->fh;
+ 	int ret,i;
+-	int pixelformat = ctx->out_fmt.spec.fmt.pix.pixelformat;
++	int pixelformat = ctx->out_fmt.spec.fmt.pix_mp.pixelformat;
+ 
+ 	if (!ctx->veng_ops){
+ 		ret = -EINVAL;
+@@ -1090,7 +1091,7 @@ static int vpu_stop_cmd(void *fh)
+ 
+ 	if (ctx->veng_ops->ve_stop_cmd)
+ 		ret = ctx->veng_ops->ve_stop_cmd(
+-			fh, ctx->out_fmt.spec.fmt.pix.pixelformat);
++			fh, ctx->out_fmt.spec.fmt.pix_mp.pixelformat);
+ 
+ 	return ret;
+ }
+@@ -1100,12 +1101,12 @@ void *vpu_get_frmsize(uint32_t pixel_format)
+ 	int i = 0;
+ 
+ 	for (i = 0; i < OUT_NUM; i++) {
+-		if (pixel_format == out_fmt[i].spec.fmt.pix.pixelformat)
++		if (pixel_format == out_fmt[i].spec.fmt.pix_mp.pixelformat)
+ 			return (void *)&out_fmt[i].frmsize;
+ 	}
+ 
+ 	for (i = 0; i < CAP_NUM; i++) {
+-		if (pixel_format == cap_fmt[i].spec.fmt.pix.pixelformat)
++		if (pixel_format == cap_fmt[i].spec.fmt.pix_mp.pixelformat)
+ 			return (void *)&cap_fmt[i].frmsize;
+ 	}
+ 
+@@ -1132,8 +1133,8 @@ int vpu_update_cap_fmt(void *fh, void *cap_fmt)
+ 
+ 	if (ctx && cap_fmt) {
+ 		mutex_lock(&ctx->vpu_mutex);
+-		v_fmt->misc.ori_width = v_fmt->spec.fmt.pix.width;
+-		v_fmt->misc.ori_height = v_fmt->spec.fmt.pix.height;
++		v_fmt->misc.ori_width = v_fmt->spec.fmt.pix_mp.width;
++		v_fmt->misc.ori_height = v_fmt->spec.fmt.pix_mp.height;
+ 		ctx->rect.width = v_fmt->misc.ori_width;
+ 		ctx->rect.height = v_fmt->misc.ori_height;
+ 
+-- 
+2.45.2
+
