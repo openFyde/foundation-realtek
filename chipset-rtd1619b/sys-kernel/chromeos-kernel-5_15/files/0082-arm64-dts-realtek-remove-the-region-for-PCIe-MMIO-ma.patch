@@ -1,0 +1,119 @@
+From a11baab2884b1aaa2c1519971c4c8d0036b8d8b6 Mon Sep 17 00:00:00 2001
+From: edwardwu <edwardwu@realtek.com>
+Date: Tue, 11 Jun 2024 14:51:17 +0800
+Subject: [PATCH 1/2] arm64: dts: realtek: remove the region for PCIe MMIO
+ mapping in the memory node.
+
+Change-Id: I0a5f534876058781c8eb31801f09c8ebbe4be3cd
+---
+ .../boot/dts/realtek/rtd1315e-captainmarvel-4gb.dts   | 11 ++---------
+ arch/arm64/boot/dts/realtek/rtd1319d-steatoda-4gb.dts |  3 ++-
+ .../boot/dts/realtek/rtd1325-livingvampire-4gb.dts    | 11 ++---------
+ arch/arm64/boot/dts/realtek/rtd1325-milo-4gb.dts      | 11 ++---------
+ .../boot/dts/realtek/rtd1619b-bleedingedge-4gb.dts    | 11 ++---------
+ 5 files changed, 10 insertions(+), 37 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/realtek/rtd1315e-captainmarvel-4gb.dts b/arch/arm64/boot/dts/realtek/rtd1315e-captainmarvel-4gb.dts
+index 292f90bbb1c5..934f61535189 100644
+--- a/arch/arm64/boot/dts/realtek/rtd1315e-captainmarvel-4gb.dts
++++ b/arch/arm64/boot/dts/realtek/rtd1315e-captainmarvel-4gb.dts
+@@ -16,15 +16,8 @@ memory@40000 {
+ 		reg = <0x00040000 0x7ffc0000>,
+ 		      <0x80024000 0x080dc000>,
+ 		      <0x8a100000 0x0def0000>,
+-		      <0x98700000 0x66900000>;
+-	};
+-
+-	reserved-memory {
+-		pcie_reserved: pcie_reserved {
+-			size = <0x300000>;
+-			alloc-ranges = <0xa0000000 0x0300000>;
+-			no-map;
+-		};
++		      <0x98700000 0x07900000>,
++		      <0xa0300000 0x5ed00000>;
+ 	};
+ };
+ 
+diff --git a/arch/arm64/boot/dts/realtek/rtd1319d-steatoda-4gb.dts b/arch/arm64/boot/dts/realtek/rtd1319d-steatoda-4gb.dts
+index d49a2947e594..141d5fa314f2 100644
+--- a/arch/arm64/boot/dts/realtek/rtd1319d-steatoda-4gb.dts
++++ b/arch/arm64/boot/dts/realtek/rtd1319d-steatoda-4gb.dts
+@@ -16,7 +16,8 @@ memory@40000 {
+ 		reg = <0x00040000 0x7ffc0000>,
+ 		      <0x80024000 0x080dc000>,
+ 		      <0x8a100000 0x0def0000>,
+-		      <0x98700000 0x66900000>; /* 4 GB */
++		      <0x98700000 0x07900000>,
++		      <0xa0300000 0x5ed00000>; /* 4 GB */
+ 	};
+ 
+ 	reserved-memory {
+diff --git a/arch/arm64/boot/dts/realtek/rtd1325-livingvampire-4gb.dts b/arch/arm64/boot/dts/realtek/rtd1325-livingvampire-4gb.dts
+index 62c6b8b26cd9..c1a8d2d4fb0b 100644
+--- a/arch/arm64/boot/dts/realtek/rtd1325-livingvampire-4gb.dts
++++ b/arch/arm64/boot/dts/realtek/rtd1325-livingvampire-4gb.dts
+@@ -16,15 +16,8 @@ memory@40000 {
+ 		reg = <0x00040000 0x7ffc0000>,
+ 		      <0x80024000 0x080dc000>,
+ 		      <0x8a100000 0x0def0000>,
+-		      <0x98700000 0x66900000>;
+-	};
+-
+-	reserved-memory {
+-		pcie_reserved: pcie_reserved {
+-			size = <0x300000>;
+-			alloc-ranges = <0xa0000000 0x0300000>;
+-			no-map;
+-		};
++		      <0x98700000 0x07900000>,
++		      <0xa0300000 0x5ed00000>;
+ 	};
+ };
+ 
+diff --git a/arch/arm64/boot/dts/realtek/rtd1325-milo-4gb.dts b/arch/arm64/boot/dts/realtek/rtd1325-milo-4gb.dts
+index 2d8368e16235..a0a97220cd79 100644
+--- a/arch/arm64/boot/dts/realtek/rtd1325-milo-4gb.dts
++++ b/arch/arm64/boot/dts/realtek/rtd1325-milo-4gb.dts
+@@ -16,15 +16,8 @@ memory@40000 {
+ 		reg = <0x00040000 0x7ffc0000>,
+ 		      <0x80024000 0x080dc000>,
+ 		      <0x8a100000 0x0def0000>,
+-		      <0x98700000 0x66900000>;
+-	};
+-
+-	reserved-memory {
+-		pcie_reserved: pcie_reserved {
+-			size = <0x300000>;
+-			alloc-ranges = <0xa0000000 0x0300000>;
+-			no-map;
+-		};
++		      <0x98700000 0x07900000>,
++                      <0xa0300000 0x5ed00000>;
+ 	};
+ };
+ 
+diff --git a/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge-4gb.dts b/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge-4gb.dts
+index 37f4cbf358ca..93fc97307e63 100644
+--- a/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge-4gb.dts
++++ b/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge-4gb.dts
+@@ -17,14 +17,7 @@ memory@40000 {
+ 		      <0x80020000 0x080e0000>,
+ 		      <0x8a100000 0x0defc000>,
+ 		      <0x98200000 0x00df0000>,
+-		      <0x99000000 0x66000000>;
+-	};
+-
+-	reserved-memory {
+-		pcie_reserved: pcie_reserved {
+-			size = <0x200000>;
+-			alloc-ranges = <0xa0000000 0x00200000>;
+-			no-map;
+-		};
++		      <0x99000000 0x07000000>,
++		      <0xa0200000 0x5ee00000>;
+ 	};
+ };
+-- 
+2.25.1
+
