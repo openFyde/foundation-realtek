@@ -18,6 +18,8 @@ DEPEND="${RDEPEND}"
 S=${FILESDIR}
 
 src_install() {
-  insinto /lib/firmware/realtek/rtd1619b
-  doins -r *
+  insinto /lib/firmware/realtek/
+  doins -r rtd1619b
+  insinto /lib/firmware
+  doins -r rtw89
 }
