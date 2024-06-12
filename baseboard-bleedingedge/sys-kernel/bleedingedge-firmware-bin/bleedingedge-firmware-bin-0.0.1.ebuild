@@ -22,4 +22,6 @@ src_install() {
   doins -r rtd1619b
   insinto /lib/firmware
   doins -r rtw89
+  insinto /lib/firmware
+  doins -r rtl_bt
 }
