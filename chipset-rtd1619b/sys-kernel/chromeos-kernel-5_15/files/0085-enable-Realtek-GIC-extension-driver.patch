@@ -1,0 +1,22 @@
+From c748454e5d3d5f48a488f239d06e11783b6ee009 Mon Sep 17 00:00:00 2001
+From: edwardwu <edwardwu@realtek.com>
+Date: Wed, 12 Jun 2024 13:35:29 +0800
+Subject: [PATCH] enable Realtek GIC extension driver
+
+Change-Id: Ia0571c1abb8c3d83dbb8a129bcad8d457f2925b9
+---
+ chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+index 43d88afaeb6f..d20aa2699406 100644
+--- a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
++++ b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+@@ -118,3 +118,4 @@ CONFIG_CPU_IDLE_GOV_MENU=y
+ CONFIG_MFD_APW8886_I2C=y
+ CONFIG_REGULATOR_APW888X_CORE=y
+ CONFIG_REGULATOR_APW8886=y
++CONFIG_RTK_GIC_EXT=y
+-- 
+2.25.1
+
