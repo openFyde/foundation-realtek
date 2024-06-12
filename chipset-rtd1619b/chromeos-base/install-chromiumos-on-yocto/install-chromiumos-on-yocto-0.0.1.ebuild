@@ -11,11 +11,7 @@ SLOT="0"
 KEYWORDS="*"
 IUSE=""
 
-RDEPEND="
-  sys-boot/realtek-uboot-bin
-  sys-boot/realtek-uboot-script
-  sys-boot/u-boot-update-script
-"
+RDEPEND=""
 
 DEPEND="${RDEPEND}"
 

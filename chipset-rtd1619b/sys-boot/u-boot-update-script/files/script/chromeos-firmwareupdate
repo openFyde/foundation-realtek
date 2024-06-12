@@ -1,0 +1,66 @@
+#/bin/bash
+UBOOT_VER="2.0"
+ENV_UPDATE=/usr/bin/fw_setenv
+ENV_READ=/usr/bin/fw_printenv
+FW_BIN=/boot/rtd1619b_emmc_bind.bin
+
+updated_already() {
+  local uboot_version=$($ENV_READ uboot_version 2>/dev/null)
+  uboot_version=${uboot_version#*=}
+  [ "$uboot_version" == "$UBOOT_VER" ]
+}
+
+set_boot_rw() {
+  local part=$1
+  echo 0 > /sys/block/mmcblk0boot${part}/force_ro
+}
+
+set_boot_ro() {
+  local part=$1
+  echo 1 > /sys/block/mmcblk0boot${part}/force_ro
+}
+
+update_boot() {
+  local part=$1
+  dd if=$FW_BIN of=/dev/mmcblk0boot${part} conv=fdatasync
+}
+
+update_env() {
+  $ENV_UPDATE boot_yacto 'fatload mmc 0:1 ${bootmaddr} yocto.itb; bootm ${bootmaddr}'
+  $ENV_UPDATE script_img '/boot/boot.scr.uimg'
+  $ENV_UPDATE script_addr 0x7000000
+  $ENV_UPDATE distro_bootpart c
+  $ENV_UPDATE devnum 0
+  $ENV_UPDATE find_uimg 'setenv dev_type; for dev_type in mmc sd usb; do if test -e ${dev_type} ${devnum}:${distro_bootpart} ${script_img}; then setenv devtype ${dev_type}; fi; done'
+  $ENV_UPDATE setup_usb 'if env exists boot_usb; then usb start; fi'
+  $ENV_UPDATE boot_chromium_os 'run setup_usb; run find_uimg; load ${devtype} ${devnum}:${distro_bootpart} ${script_addr} ${script_img}; source ${script_addr}'
+  $ENV_UPDATE bootcmd 'run boot_chromium_os; run boot_yacto'
+  $ENV_UPDATE uboot_version $UBOOT_VER
+  sync
+}
+
+die() {
+  echo "FATAL:" $@
+  exit 1
+}
+
+main() {
+  local part
+  [ -f $FW_BIN ] || die "no $FW_BIN"
+  if updated_already; then
+    echo "Uboot SPL is already updated, skip!"
+    exit 0
+  fi
+  for part in 0 1; do
+    [ -b /dev/mmcblk0boot${part} ] || die "no found /dev/mmcblk0boot${part}"
+    set_boot_rw $part
+    update_boot $part
+  done
+  update_env
+  $ENV_READ
+  for part in 0 1; do
+    set_boot_ro $part
+  done
+}
+
+main $@

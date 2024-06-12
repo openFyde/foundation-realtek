@@ -9,14 +9,21 @@ HOMEPAGE="http://fydeos.com"
 LICENSE="BSD-Google"
 SLOT="0"
 KEYWORDS="*"
-IUSE=""
+IUSE="update_uboot_spl"
 
 RDEPEND="
-  sys-boot/realtek-uboot-bin
-  sys-boot/realtek-uboot-script
-  sys-boot/u-boot-update-script
+  dev-embedded/u-boot-tools[envtools]
 "
 
 DEPEND="${RDEPEND}"
 
 S=${FILESDIR}
+
+src_install() {
+  exeinto /usr/sbin
+  doexe script/chromeos-firmwareupdate
+  if use update_uboot_spl; then
+    insinto /root
+    newins force_update_firmware .force_update_firmware
+  fi
+}

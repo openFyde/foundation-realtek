@@ -1,0 +1,20 @@
+Index: installer/chromeos_legacy.cc
+===================================================================
+--- installer.orig/chromeos_legacy.cc
++++ installer/chromeos_legacy.cc
+@@ -252,12 +252,13 @@ bool RunLegacyUBootPostInstall(const Ins
+ 
+   result &= CopyBootFile(install_config,
+                          "boot/boot-" + install_config.slot + ".scr.uimg",
+-                         "u-boot/boot.scr.uimg");
++                         "boot/boot.scr.uimg");
++#if 0
+   result &= CopyBootFile(
+       install_config, "boot/uEnv." + install_config.slot + ".txt", "uEnv.txt");
+   result &= CopyBootFile(install_config, "boot/MLO", "MLO");
+   result &= CopyBootFile(install_config, "boot/u-boot.img", "u-boot.img");
+-
++#endif
+   return result;
+ }
+ 

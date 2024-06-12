@@ -20,7 +20,7 @@ install_realtek_boot_scr() {
   if [ ! -d "${efi_dir}/boot" ]; then
     sudo mkdir ${efi_dir}/boot
   fi
-  sudo cp "${ROOT}/boot/boot.scr.uimg" "${efi_dir}/boot"
+  sudo cp "${ROOT}/boot/boot-A.scr.uimg" "${efi_dir}/boot/boot.scr.uimg"
   sudo umount "${efi_dir}"
   rmdir "${efi_dir}"
 
