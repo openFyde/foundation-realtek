@@ -1,0 +1,26 @@
+From 65ae8d8a752d321196adf14dfbd46e3ed2d322f0 Mon Sep 17 00:00:00 2001
+From: yaozenhu <yaozenhu@realtek.com>
+Date: Thu, 6 Jun 2024 09:31:27 +0800
+Subject: [PATCH] remove display mode over 1080p
+
+---
+ drivers/gpu/drm/realtek/rtk_hdmi.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/gpu/drm/realtek/rtk_hdmi.c b/drivers/gpu/drm/realtek/rtk_hdmi.c
+index 4dcede179d88..358112996e7c 100644
+--- a/drivers/gpu/drm/realtek/rtk_hdmi.c
++++ b/drivers/gpu/drm/realtek/rtk_hdmi.c
+@@ -1450,6 +1450,9 @@ rtk_hdmi_conn_mode_valid(struct drm_connector *connector,
+ 	if ((vic >= VIC_3840X2160P24) && (max_tmds_khz < 297000))
+ 		return MODE_CLOCK_HIGH;
+ 
++	if (vic >= VIC_3840X2160P24)
++		return MODE_CLOCK_HIGH;
++
+ 	if (rtk_hdmi_valid_vic(vic))
+ 		return MODE_OK;
+ 
+-- 
+2.34.1
+
