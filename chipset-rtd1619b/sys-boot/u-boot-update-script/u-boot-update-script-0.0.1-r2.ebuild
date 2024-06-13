@@ -22,6 +22,8 @@ S=${FILESDIR}
 src_install() {
   exeinto /usr/sbin
   doexe script/chromeos-firmwareupdate
+  exeinto /sbin
+  doexe script/boot_chromium_os
   if use update_uboot_spl; then
     insinto /root
     newins force_update_firmware .force_update_firmware
