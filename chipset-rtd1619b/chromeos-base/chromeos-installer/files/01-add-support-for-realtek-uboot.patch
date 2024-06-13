@@ -18,3 +18,16 @@ Index: installer/chromeos_legacy.cc
    return result;
  }
  
+Index: installer/chromeos_postinst.cc
+===================================================================
+--- installer.orig/chromeos_postinst.cc
++++ installer/chromeos_postinst.cc
+@@ -121,7 +121,7 @@ bool KernelConfigToBiosType(const string
+   }
+ 
+   if (kernel_config.find("cros_legacy") != string::npos) {
+-#ifdef __arm__
++#if defined(__arm__) || defined(__aarch64__)
+     // The Arm platform only uses U-Boot, but may set cros_legacy to mean
+     // U-Boot without our secure boot modifications.
+     *type = BiosType::kUBoot;
