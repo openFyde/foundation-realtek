@@ -5,11 +5,11 @@ modules=(
   rtk_rpc_mem
   rtk_krpc_agent
   rtk_urpc_service
+  snd_soc_hifi_realtek
+  snd_soc_realtek
   rtk_drm
   governor_simpleondemand
   mali_kbase
-  snd_soc_hifi_realtek
-  snd_soc_realtek
   rtkve1
   rtkve2
 )
