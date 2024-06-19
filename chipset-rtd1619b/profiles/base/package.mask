@@ -1,2 +1,3 @@
 sys-kernel/chromeos-kernel-5_15::chromiumos
 sys-libs/gcc-libs::chipset-rtd1619b
+media-libs/minigbm::chromiumos
