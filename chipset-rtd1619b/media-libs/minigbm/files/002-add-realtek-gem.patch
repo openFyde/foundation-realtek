@@ -67,7 +67,7 @@ Index: minigbm/realtek.c
 ===================================================================
 --- /dev/null
 +++ minigbm/realtek.c
-@@ -0,0 +1,100 @@
+@@ -0,0 +1,102 @@
 +#ifdef DRV_REALTEK
 +
 +#include <errno.h>
@@ -106,6 +106,8 @@ Index: minigbm/realtek.c
 +             BO_USE_HW_VIDEO_ENCODER | BO_USE_HW_VIDEO_DECODER |
 +           BO_USE_CAMERA_READ | BO_USE_CAMERA_WRITE);
 +  drv_modify_combination(drv, DRM_FORMAT_NV21, &LINEAR_METADATA, BO_USE_HW_VIDEO_ENCODER);
++  drv_modify_combination(drv, DRM_FORMAT_ARGB8888, &LINEAR_METADATA, BO_USE_CURSOR | BO_USE_SCANOUT);
++  drv_modify_combination(drv, DRM_FORMAT_XRGB8888, &LINEAR_METADATA, BO_USE_CURSOR | BO_USE_SCANOUT);
 +
 +  return drv_modify_linear_combinations(drv);
 +}
@@ -120,9 +122,9 @@ Index: minigbm/realtek.c
 +	drv_bo_from_format(bo, stride, 1, height, format);
 +	bo->meta.total_size = ALIGN(bo->meta.total_size, 4096);
 +	args.size = bo->meta.total_size;
-+	ret = drmIoctl(bo->drv->fd, DRM_RTK_GEM_CREATE , &args);
++	ret = drmCommandWriteRead(bo->drv->fd, DRM_RTK_GEM_CREATE , &args, sizeof(args));
 +	if (ret) {
-+    drv_loge("DRM_RTK_GEM_CREATE failed (size=%zu)\n", bo->meta.total_size);
++    drv_loge("DRM_RTK_GEM_CREATE failed (size=%zu) ret:%d\n", bo->meta.total_size, ret);
 +    return -errno;
 +  }
 +	bo->handle.u32 = args.handle;
@@ -146,7 +148,7 @@ Index: minigbm/realtek.c
 +	int ret;
 +	struct drm_rtk_gem_map_off args = { 0 };
 +	args.handle = bo->handle.u32;
-+	ret = drmIoctl(bo->drv->fd, DRM_RTK_GEM_MAP_OFFSET, &args);
++	ret = drmCommandWriteRead(bo->drv->fd, DRM_RTK_GEM_MAP_OFFSET, &args, sizeof(args));
 +	if (ret) {
 +    drv_loge("DRM_RTK_GEM_MAP_OFFSET failed\n");
 +    return MAP_FAILED;
