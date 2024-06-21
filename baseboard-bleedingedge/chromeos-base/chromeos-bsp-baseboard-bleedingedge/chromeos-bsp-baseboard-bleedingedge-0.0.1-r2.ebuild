@@ -11,7 +11,7 @@ HOMEPAGE="http://fydeos.com"
 LICENSE="BSD-Google"
 SLOT="0"
 KEYWORDS="*"
-IUSE="tty_console_ttyS0"
+IUSE="tty_console_ttyS0 panfrost"
 
 RDEPEND="
   virtual/realtek-boot-files
@@ -31,6 +31,10 @@ src_install() {
   insinto /etc/modprobe.d
   doins modprobe.d/rtk_devices.conf
   exeinto /usr/sbin
-  doexe sbin/loadmodules.sh
+  if use panfrost; then
+    newexe sbin/loadmodules.sh.panfrost loadmodules.sh
+  else
+    doexe sbin/loadmodules.sh
+  fi
   udev_dorules rules/50-media.rules
 }

@@ -28,3 +28,13 @@ cros_post_src_install_add_rawimage_dtbs() {
     doins "${dtb_dir}"/realtek/overlay/*.dtbo || die
   fi
 }
+
+cros_post_src_prepare_add_additional_patches() {
+  if [[ ${PV} == "9999" ]]; then
+    return
+  fi
+  if use panfrost; then
+    einfo "apply patches for panfrost"
+    eapply ${CHIPSET_RTD1619B_BASHRC_FILESDIR}/panfrost/*.patch
+  fi
+}

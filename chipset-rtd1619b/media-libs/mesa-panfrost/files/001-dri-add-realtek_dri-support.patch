@@ -1,0 +1,50 @@
+From 65f222457160f21afc719f4b2791dae60b1a09e3 Mon Sep 17 00:00:00 2001
+From: yaozenhu <yaozenhu@realtek.com>
+Date: Mon, 26 Feb 2024 18:43:20 +0800
+Subject: [PATCH] dri-add-realtek_dri-support
+
+---
+ src/gallium/targets/dri/meson.build | 1 +
+ src/gallium/targets/dri/target.c    | 1 +
+ src/panfrost/lib/pan_props.c        | 1 +
+ 3 files changed, 3 insertions(+)
+
+diff --git a/src/gallium/targets/dri/meson.build b/src/gallium/targets/dri/meson.build
+index d0a9b91..58fde7a 100644
+--- a/src/gallium/targets/dri/meson.build
++++ b/src/gallium/targets/dri/meson.build
+@@ -92,6 +92,7 @@ foreach d : [[with_gallium_kmsro, [
+                'st7735r_dri.so',
+                'stm_dri.so',
+ 	       'sun4i-drm_dri.so',
++               'realtek_dri.so',
+              ]],
+              [with_gallium_radeonsi, 'radeonsi_dri.so'],
+              [with_gallium_nouveau, 'nouveau_dri.so'],
+diff --git a/src/gallium/targets/dri/target.c b/src/gallium/targets/dri/target.c
+index d506869..c354e7a 100644
+--- a/src/gallium/targets/dri/target.c
++++ b/src/gallium/targets/dri/target.c
+@@ -122,6 +122,7 @@ DEFINE_LOADER_DRM_ENTRYPOINT(st7586)
+ DEFINE_LOADER_DRM_ENTRYPOINT(st7735r)
+ DEFINE_LOADER_DRM_ENTRYPOINT(stm)
+ DEFINE_LOADER_DRM_ENTRYPOINT(sun4i_drm)
++DEFINE_LOADER_DRM_ENTRYPOINT(realtek)
+ #endif
+ 
+ #if defined(GALLIUM_LIMA)
+diff --git a/src/panfrost/lib/pan_props.c b/src/panfrost/lib/pan_props.c
+index e37c682..717bf86 100644
+--- a/src/panfrost/lib/pan_props.c
++++ b/src/panfrost/lib/pan_props.c
+@@ -69,6 +69,7 @@ const struct panfrost_model panfrost_model_list[] = {
+         MODEL(0x7211, "G76", "TNOx", HAS_ANISO, 16384, {}),
+         MODEL(0x7212, "G52", "TGOx", HAS_ANISO, 16384, {}),
+         MODEL(0x7402, "G52 r1", "TGOx", HAS_ANISO, 16384, {}),
++        MODEL(0x9091, "G57", "TNAx", HAS_ANISO, 16384, {}),
+         MODEL(0x9093, "G57", "TNAx", HAS_ANISO, 16384, {}),
+ };
+ 
+-- 
+2.34.1
+

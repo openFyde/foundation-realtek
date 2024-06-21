@@ -39,3 +39,13 @@ inherit cros-workon cros-kernel
 HOMEPAGE="https://www.chromium.org/chromium-os/chromiumos-design-docs/chromium-os-kernel"
 DESCRIPTION="Chrome OS Linux Kernel 5.15"
 KEYWORDS="~*"
+IUSE="${IUSE} panfrost"
+CONFIG_FRAGMENTS+=( panfrost )
+
+panfrost_desc="Enable GPU panfrost"
+panfrost_config="
+CONFIG_DRM=y
+CONFIG_DRM_RTK=m
+CONFIG_DRM_PANFROST=m
+CONFIG_RTK_GPU_WRAP=y
+"

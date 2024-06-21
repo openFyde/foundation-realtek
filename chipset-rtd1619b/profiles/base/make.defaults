@@ -15,6 +15,8 @@ USE="${USE} -coreboot -cros_ec -rgbkbd"
 USE="${USE} direncryption direncription_allow_v2"
 USE="${USE} -tpm tpm2 tpm2_simulator tpm_insecure_fallback vtpm_proxy"
 USE="${USE} update_uboot_spl"
+#switch gpu driver from mali to panfrost
+#USE="${USE} panfrost disable_explicit_dma_fences"
 
 ACCEPT_LICENSE="${ACCEPT_LICENSE} Google-TOS"
 VIDEO_CARDS="realtek"

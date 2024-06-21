@@ -42,17 +42,13 @@ HOMEPAGE="https://www.chromium.org/chromium-os/chromiumos-design-docs/chromium-o
 DESCRIPTION="Chrome OS Linux Kernel 5.15"
 KEYWORDS="*"
 
-#src_install() {
-#  local kernel_arch=${CHROMEOS_KERNEL_ARCH:-$(tc-arch-kernel)}
-#  local kernel_dir="$(cros-workon_get_build_dir)"
-#  local dtb_dir="${kernel_dir}/arch/${kernel_arch}/boot/dts"
-#  local version=$(kernelrelease)
-#  cros-kernel_src_install
-#  insinto /boot/realtek
-#  dosym Image-${version}  /boot/Image
-#  doins $dtb_dir/realtek/rtd1619b*.dtb || die
-#  if [[ -d "${dtb_dir}"/realtek/overlay ]] ; then
-#    insinto ${install_prefix}/boot/realtek/overlay
-#    doins "${dtb_dir}"/realtek/overlay/*.dtbo || die
-#  fi
-#}
+IUSE="${IUSE} panfrost"
+CONFIG_FRAGMENTS+=( panfrost )
+
+panfrost_desc="Enable GPU panfrost"
+panfrost_config="
+CONFIG_DRM=y
+CONFIG_DRM_RTK=m
+CONFIG_DRM_PANFROST=m
+CONFIG_RTK_GPU_WRAP=y
+"
