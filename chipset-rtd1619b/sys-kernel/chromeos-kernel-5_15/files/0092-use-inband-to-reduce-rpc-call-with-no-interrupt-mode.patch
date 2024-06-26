@@ -1,0 +1,581 @@
+From 87b564b59006651e984b3f3cc295494ab8e21a51 Mon Sep 17 00:00:00 2001
+From: yaozenhu <yaozenhu@realtek.com>
+Date: Tue, 25 Jun 2024 14:44:16 +0800
+Subject: [PATCH] use inband to reduce rpc call with no interrupt mode
+
+---
+ drivers/gpu/drm/realtek/rtk_drm_crtc.h  |   1 +
+ drivers/gpu/drm/realtek/rtk_drm_fb.c    |   3 +
+ drivers/gpu/drm/realtek/rtk_drm_fb.h    |   3 +
+ drivers/gpu/drm/realtek/rtk_drm_plane.c | 367 +++++++++++++++---------
+ drivers/gpu/drm/realtek/rtk_drm_rpc.h   |  47 ++-
+ 5 files changed, 291 insertions(+), 130 deletions(-)
+
+diff --git a/drivers/gpu/drm/realtek/rtk_drm_crtc.h b/drivers/gpu/drm/realtek/rtk_drm_crtc.h
+index 5f953044b..ee503eb94 100644
+--- a/drivers/gpu/drm/realtek/rtk_drm_crtc.h
++++ b/drivers/gpu/drm/realtek/rtk_drm_crtc.h
+@@ -61,6 +61,7 @@ struct rtk_drm_plane {
+ 
+ 	unsigned int buflock_idx;
+ 	struct plane_buf_lock buflock[BUFLOCK_MAX];
++	ktime_t update_time;
+ };
+ 
+ struct rtk_drm_crtc {
+diff --git a/drivers/gpu/drm/realtek/rtk_drm_fb.c b/drivers/gpu/drm/realtek/rtk_drm_fb.c
+index 4910a4c32..04cb4b84e 100644
+--- a/drivers/gpu/drm/realtek/rtk_drm_fb.c
++++ b/drivers/gpu/drm/realtek/rtk_drm_fb.c
+@@ -221,6 +221,9 @@ void rtk_drm_mode_config_init(struct drm_device *dev)
+ 		dev->mode_config.max_height = 4096;
+ 	}
+ 
++	dev->mode_config.cursor_width  = RTK_DRM_FB_MIN_WIDTH;
++	dev->mode_config.cursor_height = RTK_DRM_FB_MIN_HEIGHT;
++
+ 	dev->mode_config.funcs = &rtk_drm_mode_config_funcs;
+ 	dev->mode_config.helper_private = &rtk_drm_mode_config_helpers;
+ }
+diff --git a/drivers/gpu/drm/realtek/rtk_drm_fb.h b/drivers/gpu/drm/realtek/rtk_drm_fb.h
+index 922822eaf..740b9150f 100644
+--- a/drivers/gpu/drm/realtek/rtk_drm_fb.h
++++ b/drivers/gpu/drm/realtek/rtk_drm_fb.h
+@@ -6,6 +6,9 @@
+ #ifndef _RTK_DRM_FB_H
+ #define _RTK_DRM_FB_H
+ 
++#define RTK_DRM_FB_MIN_WIDTH  64
++#define RTK_DRM_FB_MIN_HEIGHT 64
++
+ struct drm_gem_object *rtk_fb_get_gem_obj(struct drm_framebuffer *fb,
+ 					  unsigned int plane);
+ void rtk_drm_mode_config_init(struct drm_device *dev);
+diff --git a/drivers/gpu/drm/realtek/rtk_drm_plane.c b/drivers/gpu/drm/realtek/rtk_drm_plane.c
+index 63930cd75..88778aa9e 100644
+--- a/drivers/gpu/drm/realtek/rtk_drm_plane.c
++++ b/drivers/gpu/drm/realtek/rtk_drm_plane.c
+@@ -37,6 +37,10 @@
+ 
+ #define INVERT_BITVAL_1 (~1)
+ 
++int rtk_plane_rpc_config_disp_win;
++module_param(rtk_plane_rpc_config_disp_win, int, 0644);
++MODULE_PARM_DESC(rtk_plane_rpc_config_disp_win, "Debug level (0-1)");
++
+ static const unsigned int osd_formats[] = {
+ 	DRM_FORMAT_XRGB8888,
+ 	DRM_FORMAT_ARGB8888,
+@@ -90,7 +94,6 @@ struct rtk_drm_plane_state {
+ 	struct drm_property_blob *rtk_meta_data_blob;
+ 	struct drm_property_enum *vo_plane_name;
+ 	struct video_object rtk_meta_data;
+-  ktime_t update_time;
+ };
+ 
+ static struct vo_rectangle rect_plane_disabled = {0};
+@@ -339,146 +342,231 @@ void rtk_plane_clear_buflock(struct rtk_drm_plane *rtk_plane, unsigned int mode)
+ 	}
+ }
+ 
+-static int queue_ring_buffer(struct drm_plane *plane)
++static int rtk_plane_inband_config_disp_win(struct drm_plane *plane, struct rpc_config_disp_win *disp_win)
++{
++	struct rtk_drm_plane *rtk_plane = to_rtk_plane(plane);
++	struct inband_config_disp_win *inband_cmd;
++
++	inband_cmd = (struct inband_config_disp_win *)kzalloc(sizeof(struct inband_config_disp_win), GFP_KERNEL);
++	if(!inband_cmd) {
++		DRM_ERROR("rtk_plane_inband_config_disp_win malloc inband_cmd fail\n");
++		return -1;
++	}
++
++	memset(inband_cmd, 0, sizeof(struct inband_config_disp_win));
++
++	inband_cmd->header.type = VIDEO_VO_INBAND_CMD_TYPE_CONFIGUREDISPLAYWINDOW;
++	inband_cmd->header.size = sizeof(struct inband_config_disp_win);
++
++	inband_cmd->videoPlane        = disp_win->videoPlane;
++	inband_cmd->videoWin.x        = disp_win->videoWin.x;
++	inband_cmd->videoWin.y        = disp_win->videoWin.y;
++	inband_cmd->videoWin.width    = disp_win->videoWin.width;
++	inband_cmd->videoWin.height   = disp_win->videoWin.height;
++	inband_cmd->borderWin.x       = disp_win->borderWin.x;
++	inband_cmd->borderWin.y       = disp_win->borderWin.y;
++	inband_cmd->borderWin.width   = disp_win->borderWin.width;
++	inband_cmd->borderWin.height  = disp_win->borderWin.height;
++	inband_cmd->borderColor.c1    = disp_win->borderColor.c1;
++	inband_cmd->borderColor.c2    = disp_win->borderColor.c2;
++	inband_cmd->borderColor.c3    = disp_win->borderColor.c3;
++	inband_cmd->borderColor.isRGB = disp_win->borderColor.isRGB;
++	inband_cmd->enBorder          = disp_win->enBorder;
++
++	write_cmd_to_ringbuffer(rtk_plane, inband_cmd);
++	kfree(inband_cmd);
++
++	return 0;
++}
++
++static int rtk_plane_update_scaling(struct drm_plane *plane)
+ {
+ 	struct rtk_drm_plane *rtk_plane = to_rtk_plane(plane);
+ 	struct rtk_rpc_info *rpc_info = rtk_plane->rpc_info;
++	struct vo_rectangle *old_disp_win;
++	struct vo_color blueBorder = {0, 0, 255, 1};
++
++	DRM_DEBUG_DRIVER("[rtk_plane_update_scaling] videoPlane : %d\n", rtk_plane->info.videoPlane);
++	DRM_DEBUG_DRIVER("[type] : %d] [new] crtc_x : %d, crtc_y : %d\n",
++	    plane->type, plane->state->crtc_x, plane->state->crtc_y);
++	DRM_DEBUG_DRIVER("[type] : %d] [new] crtc_w : %d, crtc_h : %d\n",
++	    plane->type, plane->state->crtc_w, plane->state->crtc_h);
++
++	old_disp_win = &rtk_plane->disp_win.videoWin;
++
++	if (old_disp_win->x != plane->state->crtc_x ||
++		old_disp_win->y != plane->state->crtc_y ||
++		old_disp_win->width != plane->state->crtc_w ||
++		old_disp_win->height != plane->state->crtc_h) {
++
++		DRM_DEBUG_DRIVER("plane type \x1b[31m%d\033[0m coordinate or size has changed\n", plane->type);
++		DRM_DEBUG_DRIVER("[type] : %d] [old] disp_win->x     : %d, disp_win->y      : %d\n",
++		    plane->type, old_disp_win->x, old_disp_win->y);
++		DRM_DEBUG_DRIVER("[type] : %d] [old] disp_win->width : %d, disp_win->height : %d\n",
++		    plane->type, old_disp_win->width, old_disp_win->height);
++
++		rtk_plane->disp_win.videoPlane       = rtk_plane->info.videoPlane;
++		rtk_plane->disp_win.videoWin.x       = plane->state->crtc_x;
++		rtk_plane->disp_win.videoWin.y       = plane->state->crtc_y;
++		rtk_plane->disp_win.videoWin.width   = plane->state->crtc_w;
++		rtk_plane->disp_win.videoWin.height  = plane->state->crtc_h;
++		rtk_plane->disp_win.borderWin.x      = plane->state->crtc_x;
++		rtk_plane->disp_win.borderWin.y      = plane->state->crtc_y;
++		rtk_plane->disp_win.borderWin.width  = plane->state->crtc_w;
++		rtk_plane->disp_win.borderWin.height = plane->state->crtc_h;
++		rtk_plane->disp_win.borderColor      = blueBorder;
++		rtk_plane->disp_win.enBorder         = 0;
++
++		if (plane->type == DRM_PLANE_TYPE_CURSOR && rtk_plane_rpc_config_disp_win == 0) {
++			DRM_DEBUG_DRIVER("[rtk_plane_inband_config_disp_win]\n");
++			if (rtk_plane_inband_config_disp_win(plane, &rtk_plane->disp_win)) {
++				DRM_ERROR("rtk_plane_inband_config_disp_win fail\n");
++				return -1;
++			}
++		} else {
++			DRM_DEBUG_DRIVER("[rpc_video_config_disp_win]\n");
++			if (rpc_video_config_disp_win(rpc_info, &rtk_plane->disp_win)) {
++				DRM_ERROR("rpc_video_config_disp_win RPC fail\n");
++				return -1;
++			}
++		}
++	}
++
++	return 0;
++}
++
++static int rtk_plane_update_video_obj(struct drm_plane *plane)
++{
++	struct rtk_drm_plane *rtk_plane = to_rtk_plane(plane);
+ 	struct rtk_drm_fence *rtk_fence = rtk_plane->rtk_fence;
+ 	struct drm_framebuffer *fb = plane->state->fb;
+ 	struct drm_gem_object *gem[4];
+ 	struct rtk_gem_object *rtk_gem[4];
+-	enum drm_plane_type type = plane->type;
+-	struct vo_rectangle *p_rect, rect;
+-	struct vo_color blueBorder = {0, 0, 255, 1};
+-	unsigned int videoplane;
+-	int i;
+-	int index;
+ 	const struct drm_format_info *info;
+ 
+-	struct rtk_drm_plane_state *s =	to_rtk_plane_state(plane->state);
+-
+-	videoplane = rtk_plane->info.videoPlane;
++	struct rtk_drm_plane_state *s = to_rtk_plane_state(plane->state);
++	int i;
++	int index;
++	struct video_object *obj = (struct video_object *)kzalloc(sizeof(struct video_object), GFP_KERNEL);
++	if(!obj) {
++		DRM_ERROR("rtk_plane_update_video_obj malloc video_object fail\n");
++		return -1;
++	}
+ 
+ 	info = drm_format_info(fb->format->format);
+-	for (i=0; i < info->num_planes; i++) {
++	for (i = 0; i < info->num_planes; i++) {
+ 		gem[i] = rtk_fb_get_gem_obj(fb, i);
+ 		if (!gem[i])
+ 			gem[i] = gem[0];
+ 		rtk_gem[i] = to_rtk_gem_obj(gem[i]);
+ 	}
+-
+-	if (type == DRM_PLANE_TYPE_OVERLAY) {
+-		struct video_object *obj = (struct video_object *)kzalloc(sizeof(struct video_object), GFP_KERNEL);
+-		if(!obj) {
+-			DRM_ERROR("queue_ring_buffer malloc video_object fail\n");
+-			return -1;
+-		}
+-		init_video_object(obj);
++	init_video_object(obj);
+ #ifdef CONFIG_RTK_METADATA_AUTOJUDGE
+-		if (rtk_gem[0]->dmabuf_type == DMABUF_TYPE_NORMAL) {
++	if (rtk_gem[0]->dmabuf_type == DMABUF_TYPE_NORMAL) {
+ #else
+-		if (s->rtk_meta_data.header.type != METADATA_HEADER) {
++	if (s->rtk_meta_data.header.type != METADATA_HEADER) {
+ #endif
+-			obj->header.type = VIDEO_VO_INBAND_CMD_TYPE_OBJ_PIC;
+-			obj->header.size = sizeof(struct video_object);
+-			obj->version = 0x72746B3F;
+-			obj->width = fb->width;
+-			obj->height = fb->height;
+-			obj->Y_pitch = fb->width;
+-			obj->mode = CONSECUTIVE_FRAME;
+-			obj->Y_addr = rtk_gem[0]->paddr + fb->offsets[0];
+-			obj->U_addr = rtk_gem[1]->paddr + fb->offsets[1];
+-		} else {
++		obj->header.type = VIDEO_VO_INBAND_CMD_TYPE_OBJ_PIC;
++		obj->header.size = sizeof(struct video_object);
++		obj->version = 0x72746B3F;
++		obj->width = fb->width;
++		obj->height = fb->height;
++		obj->Y_pitch = fb->width;
++		obj->mode = CONSECUTIVE_FRAME;
++		obj->Y_addr = rtk_gem[0]->paddr + fb->offsets[0];
++		obj->U_addr = rtk_gem[1]->paddr + fb->offsets[1];
++	} else {
+ #ifdef CONFIG_RTK_METADATA_AUTOJUDGE
+-			struct video_object *decObj = (struct video_object *)rtk_gem[0]->vaddr;
++		struct video_object *decObj = (struct video_object *)rtk_gem[0]->vaddr;
+ #else
+-			struct video_object *decObj = (struct video_object *)(&s->rtk_meta_data);
++		struct video_object *decObj = (struct video_object *)(&s->rtk_meta_data);
+ #endif
+-			memcpy(obj, decObj, sizeof(struct video_object));
+-
+-			obj->header.type = VIDEO_VO_INBAND_CMD_TYPE_OBJ_PIC;
+-			obj->header.size = sizeof(struct video_object);
+-			obj->version = 0x72746B3F;
+-
+-			index = s->display_idx;
+-			obj->context = index;
+-			obj->pLock = rtk_fence->pLock_paddr+index;
+-			obj->pReceived = rtk_fence->pReceived_paddr+index;
+-			obj->PTSH = decObj->PTSH;
+-			obj->PTSL = decObj->PTSL;
+-			obj->RPTSH = decObj->RPTSH;
+-			obj->RPTSL = decObj->RPTSL;
+-
+-			if(rtk_plane->rtk_fence->usePlock)
+-				rtk_fence_set_buf_st(rtk_plane->rtk_fence, index, PLOCK_STATUS_QPEND);
+-		}
+-		write_cmd_to_ringbuffer(rtk_plane, obj);
+-		kfree(obj);
+-	} else {
+-		struct graphic_object *obj = (struct graphic_object *)kzalloc(sizeof(struct graphic_object), GFP_KERNEL);
+-		unsigned int flags = 0;
+-		if(!obj) {
+-			DRM_ERROR("queue_ring_buffer malloc graphic_object fail\n");
+-			return -1;
+-		}
++		memcpy(obj, decObj, sizeof(struct video_object));
++
++		obj->header.type = VIDEO_VO_INBAND_CMD_TYPE_OBJ_PIC;
++		obj->header.size = sizeof(struct video_object);
++		obj->version = 0x72746B3F;
++
++		index = s->display_idx;
++		obj->context = index;
++		obj->pLock = rtk_fence->pLock_paddr+index;
++		obj->pReceived = rtk_fence->pReceived_paddr+index;
++		obj->PTSH = decObj->PTSH;
++		obj->PTSL = decObj->PTSL;
++		obj->RPTSH = decObj->RPTSH;
++		obj->RPTSL = decObj->RPTSL;
++
++		if(rtk_plane->rtk_fence->usePlock)
++			rtk_fence_set_buf_st(rtk_plane->rtk_fence, index, PLOCK_STATUS_QPEND);
++	}
+ 
+-		memset(obj, 0, sizeof(struct graphic_object));
+-		obj->header.type = VIDEO_GRAPHIC_INBAND_CMD_TYPE_PICTURE_OBJECT;
+-		obj->header.size = sizeof(struct graphic_object);
+-		obj->colorkey = -1;
+-		if (fb->format->format == DRM_FORMAT_XRGB8888) {
+-			flags |= eBuffer_USE_GLOBAL_ALPHA;
+-			obj->alpha = 0x3ff;
+-			obj->format = INBAND_CMD_GRAPHIC_FORMAT_ARGB8888_LITTLE;
+-		} else if (fb->format->format == DRM_FORMAT_ABGR8888) {
+-			obj->format = INBAND_CMD_GRAPHIC_FORMAT_RGBA8888;
+-		} else if (fb->format->format == DRM_FORMAT_ARGB8888) {
+-			obj->format = INBAND_CMD_GRAPHIC_FORMAT_ARGB8888_LITTLE;
+-		}
++	write_cmd_to_ringbuffer(rtk_plane, obj);
++	kfree(obj);
++	return 0;
++}
+ 
+-		if (fb->modifier & AFBC_FORMAT_MOD_YTR) {
+-			flags |= eBuffer_AFBC_Enable | eBuffer_AFBC_YUV_Transform;
+-		}
++static int rtk_plane_update_graphic_obj(struct drm_plane *plane)
++{
++	struct rtk_drm_plane *rtk_plane = to_rtk_plane(plane);
++	struct drm_framebuffer *fb = plane->state->fb;
++	struct drm_gem_object *gem[4];
++	struct rtk_gem_object *rtk_gem[4];
++	const struct drm_format_info *info;
++	unsigned int flags = 0;
++	int i;
+ 
+-		obj->context = rtk_plane->buflock_idx;
+-		obj->width = fb->width;
+-		obj->height = fb->height;
+-		obj->pitch = fb->pitches[0];
+-		obj->address = rtk_gem[0]->paddr;
+-		obj->picLayout = INBAND_CMD_GRAPHIC_2D_MODE;
+-		obj->afbc = (flags & eBuffer_AFBC_Enable)?1:0;
+-//		obj->afbc_block_split = (flags & eBuffer_AFBC_Split)?1:0;
+-		obj->afbc_yuv_transform = (flags & eBuffer_AFBC_YUV_Transform)?1:0;
++	struct graphic_object *obj = (struct graphic_object *)kzalloc(sizeof(struct graphic_object), GFP_KERNEL);
++	if(!obj) {
++		DRM_ERROR("rtk_plane_update_graphic_obj malloc graphic_object fail\n");
++		return -1;
++	}
+ 
+-		rtk_plane_queue_buflock(rtk_plane, fb);
++	info = drm_format_info(fb->format->format);
++	for (i = 0; i < info->num_planes; i++) {
++		gem[i] = rtk_fb_get_gem_obj(fb, i);
++		if (!gem[i])
++			gem[i] = gem[0];
++		rtk_gem[i] = to_rtk_gem_obj(gem[i]);
++	}
+ 
+-		write_cmd_to_ringbuffer(rtk_plane, obj);
+-		kfree(obj);
++	memset(obj, 0, sizeof(struct graphic_object));
++	obj->header.type = VIDEO_GRAPHIC_INBAND_CMD_TYPE_PICTURE_OBJECT;
++	obj->header.size = sizeof(struct graphic_object);
++
++	obj->colorkey = -1;
++	if (fb->format->format == DRM_FORMAT_XRGB8888) {
++		flags |= eBuffer_USE_GLOBAL_ALPHA;
++		obj->alpha = 0x3ff;
++		obj->format = INBAND_CMD_GRAPHIC_FORMAT_ARGB8888_LITTLE;
++	} else if (fb->format->format == DRM_FORMAT_ABGR8888) {
++		obj->format = INBAND_CMD_GRAPHIC_FORMAT_RGBA8888;
++	} else if (fb->format->format == DRM_FORMAT_ARGB8888) {
++		obj->format = INBAND_CMD_GRAPHIC_FORMAT_ARGB8888_LITTLE;
+ 	}
+ 
+-	rect.x = plane->state->crtc_x;
+-	rect.y = plane->state->crtc_y;
+-	rect.width = plane->state->crtc_w;
+-	rect.height = plane->state->crtc_h;
+-
+-	p_rect = &rtk_plane->disp_win.videoWin;
+-	if (p_rect->x != rect.x || p_rect->y != rect.y ||
+-		p_rect->width != rect.width || p_rect->height != rect.height) {
+-		rtk_plane->disp_win.videoPlane = videoplane;
+-		rtk_plane->disp_win.videoWin = rect;
+-		rtk_plane->disp_win.borderWin = rect;
+-		rtk_plane->disp_win.borderColor = blueBorder;
+-		rtk_plane->disp_win.enBorder = 0;
+-		if (rpc_video_config_disp_win(rpc_info, &rtk_plane->disp_win)) {
+-			DRM_ERROR("rpc_video_config_disp_win RPC fail\n");
+-			return -1;
+-		}
+-		rpc_video_display(rpc_info, &rtk_plane->info);
++	if (fb->modifier & AFBC_FORMAT_MOD_YTR) {
++		flags |= eBuffer_AFBC_Enable | eBuffer_AFBC_YUV_Transform;
+ 	}
+ 
++	obj->context = rtk_plane->buflock_idx;
++	obj->width = fb->width;
++	obj->height = fb->height;
++	obj->pitch = fb->pitches[0];
++	obj->address = rtk_gem[0]->paddr;
++	obj->picLayout = INBAND_CMD_GRAPHIC_2D_MODE;
++	obj->afbc = (flags & eBuffer_AFBC_Enable)?1:0;
++//     obj->afbc_block_split = (flags & eBuffer_AFBC_Split)?1:0;
++	obj->afbc_yuv_transform = (flags & eBuffer_AFBC_YUV_Transform)?1:0;
++
++	rtk_plane_queue_buflock(rtk_plane, fb);
++
++	write_cmd_to_ringbuffer(rtk_plane, obj);
++
++	kfree(obj);
+ 	return 0;
+ }
+ 
++
+ static int rtk_plane_rpc_init(struct rtk_drm_plane *rtk_plane,
+ 			      enum VO_VIDEO_PLANE layer_nr)
+ {
+@@ -812,7 +900,15 @@ static void rtk_plane_atomic_update(struct drm_plane *plane,
+ 	if (!crtc || WARN_ON(!fb))
+ 		return;
+ 
+-	queue_ring_buffer(plane);
++	if (plane->type == DRM_PLANE_TYPE_OVERLAY)
++		rtk_plane_update_video_obj(plane);
++	else
++		rtk_plane_update_graphic_obj(plane);
++
++	if (rtk_plane_update_scaling(plane)) {
++		DRM_ERROR("rtk_plane_update_scaling fail\n");
++		return;
++	}
+ }
+ 
+ static void rtk_plane_atomic_disable(struct drm_plane *plane,
+@@ -822,7 +918,7 @@ static void rtk_plane_atomic_disable(struct drm_plane *plane,
+ 	struct rtk_rpc_info *rpc_info = rtk_plane->rpc_info;
+ 	struct vo_rectangle rect;
+ 
+-	DRM_DEBUG_KMS("%d\n", __LINE__);
++	DRM_DEBUG_KMS("rtk_plane_atomic_disable plane type %d\n", plane->type);
+ 
+ 	rect.x = 0;
+ 	rect.y = 0;
+@@ -849,32 +945,45 @@ static int rtk_plane_atomic_async_check(struct drm_plane *plane,
+ static void rtk_plane_atomic_async_update(struct drm_plane *plane,
+             struct drm_atomic_state *state)
+ {
+-  struct drm_plane_state *old_plane_state, *new_plane_state;
+-  struct rtk_drm_plane_state *rtk_state;
+-  struct drm_crtc_commit *commit;
+-  int i = drm_plane_index(plane);
+-  new_plane_state = state->planes[i].new_state;
+-  old_plane_state = state->planes[i].old_state;
+-  commit = old_plane_state->commit;
+-  old_plane_state->state = state;
+-  new_plane_state->state = NULL;
+-  plane->state = new_plane_state;
+-  state->planes[i].state = old_plane_state;
+-  rtk_state = to_rtk_plane_state(old_plane_state);
+-  if (ktime_before(ktime_get(),
+-      ktime_add_ms(rtk_state->update_time, MIN_UPDATE_INTERVAL)))
+-    return;
+-  rtk_state = to_rtk_plane_state(plane->state);
+-  rtk_state->update_time = ktime_get();
+-  queue_ring_buffer(plane);
++	struct rtk_drm_plane *rtk_plane = to_rtk_plane(plane);
++	struct drm_plane_state *new_plane_state;
++
++	new_plane_state = drm_atomic_get_new_plane_state(state, plane);
++
++	plane->state->crtc_x = new_plane_state->crtc_x;
++	plane->state->crtc_y = new_plane_state->crtc_y;
++	plane->state->crtc_h = new_plane_state->crtc_h;
++	plane->state->crtc_w = new_plane_state->crtc_w;
++	plane->state->src_x  = new_plane_state->src_x;
++	plane->state->src_y  = new_plane_state->src_y;
++	plane->state->src_h  = new_plane_state->src_h;
++	plane->state->src_w  = new_plane_state->src_w;
++
++	swap(plane->state->fb, new_plane_state->fb);
++
++	if (ktime_before(ktime_get(),
++		ktime_add_ms(rtk_plane->update_time, MIN_UPDATE_INTERVAL)))
++		return;
++
++	rtk_plane->update_time = ktime_get();
++
++	if (plane->type == DRM_PLANE_TYPE_OVERLAY)
++		rtk_plane_update_video_obj(plane);
++	else
++		rtk_plane_update_graphic_obj(plane);
++
++	if (rtk_plane_update_scaling(plane)) {
++		DRM_ERROR("rtk_plane_update_scaling fail\n");
++		return;
++	}
+ }
+ 
+ static const struct drm_plane_helper_funcs rtk_plane_helper_funcs = {
+ 	.atomic_check = rtk_plane_atomic_check,
+ 	.atomic_update = rtk_plane_atomic_update,
+ 	.atomic_disable = rtk_plane_atomic_disable,
+-  .atomic_async_check = rtk_plane_atomic_async_check,
+-  .atomic_async_update = rtk_plane_atomic_async_update,
++	.atomic_async_check = rtk_plane_atomic_async_check,
++	.atomic_async_update = rtk_plane_atomic_async_update,
+ };
+ 
+ int rtk_plane_init(struct drm_device *drm, struct rtk_drm_plane *rtk_plane,
+diff --git a/drivers/gpu/drm/realtek/rtk_drm_rpc.h b/drivers/gpu/drm/realtek/rtk_drm_rpc.h
+index df4c683e4..0726aca2c 100644
+--- a/drivers/gpu/drm/realtek/rtk_drm_rpc.h
++++ b/drivers/gpu/drm/realtek/rtk_drm_rpc.h
+@@ -233,7 +233,7 @@ enum INBAND_CMD_TYPE {
+ 	VIDEO_DIVX3_INBAND_CMD_TYPE_RESOLUTION,
+ 
+ 	/*MPEG4 DivX4 detected In-band command*/
+-	VIDEO_MPEG4_INBAND_CMD_TYPE_DIVX4,
++	VIDEO_MPEG4_INBAND_CMD_TYPE_MP4,
+ 	/* Audio In-band Commands Start Here */
+ 
+ 	/* DV In-band Commands */
+@@ -334,6 +334,28 @@ enum INBAND_CMD_TYPE {
+ 
+ 	/* DvdPlayer tell RVSD video BS ring buffer is full */
+ 	VIDEO_DEC_INBAND_CMD_TYPE_BS_RINGBUF_FULL,
++
++	/* Frame Boundary In-band command */
++	VIDEO_INBAND_CMD_TYPE_FRAME_BOUNDARY = 100,
++
++	/* VO receive npp writeback buffers In-band Command */
++	VIDEO_NPP_INBAND_CMD_TYPE_WRITEBACK_BUFFER,
++	VIDEO_NPP_OUT_INBAND_CMD_TYPE_OBJ_PIC,
++
++	/* hevc encoder raw yuv data In-band Commnad */
++	VENC_INBAND_CMD_TYPE_RAWYUV,
++
++	/* hevc encoder ref yuv addr In-band Commnad */
++	VENC_INBAND_CMD_TYPE_REFYUV,
++
++	/* add frame info for user allocate */
++	VIDEO_FRAME_INBAND_ADD,
++
++	/* delete frame info for user allocate */
++	VIDEO_FRAME_INBAND_DELETE,
++
++	/* Add for ConfigureDisplayWindow RPC*/
++	VIDEO_VO_INBAND_CMD_TYPE_CONFIGUREDISPLAYWINDOW,
+ };
+ 
+ enum INBAND_CMD_GRAPHIC_FORMAT {
+@@ -834,6 +856,29 @@ enum VO_OSD_RGB_ORDER
+ 	VO_OSD_COLOR_BRG
+ };
+ 
++struct inband_vo_rectangle {
++	int x;
++	int y;
++	unsigned int width;
++	unsigned int height;
++};
++
++struct inband_vo_color {
++	unsigned char c1;
++	unsigned char c2;
++	unsigned char c3;
++	unsigned char isRGB;
++};
++
++struct inband_config_disp_win {
++	struct inband_cmd_pkg_header header;
++	unsigned int videoPlane;
++	struct inband_vo_rectangle videoWin;
++	struct inband_vo_rectangle borderWin;
++	struct inband_vo_color borderColor;
++	unsigned char enBorder;
++};
++
+ struct rpc_config_disp_win {
+ 	enum VO_VIDEO_PLANE videoPlane;
+ 	struct vo_rectangle videoWin;
+-- 
+2.34.1
+
