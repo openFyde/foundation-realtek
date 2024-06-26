@@ -6,4 +6,5 @@ cros_pre_src_prepare_remove_internal() {
 
 PATCHES=(
   ${CHIPSET_RTD1619B_BASHRC_FILESDIR}/001-disalbe-fieldtrial-testing-config.patch
+  ${CHIPSET_RTD1619B_BASHRC_FILESDIR}/002-add-support-for-av1.patch
 )
