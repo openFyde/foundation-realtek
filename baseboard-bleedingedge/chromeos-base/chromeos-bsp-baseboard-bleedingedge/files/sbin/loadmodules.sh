@@ -8,7 +8,6 @@ modules=(
   snd_soc_hifi_realtek
   snd_soc_realtek
   rtk_drm
-  governor_simpleondemand
   mali_kbase
   rtkve1
   rtkve2
