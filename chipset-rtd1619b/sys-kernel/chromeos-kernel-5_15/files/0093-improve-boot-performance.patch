@@ -1,3 +1,13 @@
+From cb439673b8f25724500bc5908fc07f06804e5470 Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Tue, 2 Jul 2024 13:06:31 +0800
+Subject: [PATCH] improve boot performance
+
+Change-Id: Idaede3e689d9c4eeada583a8c648d251c9a6047c
+---
+ .../chromeos/arm64/chromiumos-realtek.flavour.config       | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
 diff --git a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
 index d20aa2699406..f162baa41886 100644
 --- a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
@@ -31,3 +41,6 @@ index d20aa2699406..f162baa41886 100644
  CONFIG_REGULATOR_APW8886=y
  CONFIG_RTK_GIC_EXT=y
 +CONFIG_DEVFREQ_GOV_SIMPLE_ONDEMAND=y
+-- 
+2.45.2
+
