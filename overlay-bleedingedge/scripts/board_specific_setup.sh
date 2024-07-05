@@ -7,14 +7,12 @@ install_realtek_boot_scr() {
   local efi_offset=$((efi_offset_sectors * 512))
   local efi_size=$((efi_size_sectors * 512))
   local efi_dir=$(mktemp -d)
-	info "Copy u-boot for ${FLAGS_board}"
-	sudo dd if=${ROOT}/boot/${BOARD_UBOOT} of=$image seek=$((0x280)) conv=notrunc,fdatasync
-	if [ $? -ne 0 ]; then
-		die "failed to transfer ${BOARD_UBOOT} to ${image} offset:$((0x280))"
-  fi
   info "Mounting EFI partition"
   sudo mount -o loop,offset=${efi_offset},sizelimit=${efi_size} "$1" \
     "${efi_dir}"
+
+  info "Copy u-boot for ${FLAGS_board}"
+  sudo cp "${ROOT}/boot/${BOARD_UBOOT}" "${efi_dir}/"
 
   info "Copying /boot/boot.scr.uimg"
   if [ ! -d "${efi_dir}/boot" ]; then

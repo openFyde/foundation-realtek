@@ -2,7 +2,7 @@
 UBOOT_VER="2.0"
 ENV_UPDATE=/usr/bin/fw_setenv
 ENV_READ=/usr/bin/fw_printenv
-FW_BIN=/boot/rtd1619b_emmc_bind.bin
+FW_BIN=/boot/rtd1619b_emmc_bind_4gb.bin
 BOARD="bleeding-edge"
 
 updated_already() {
