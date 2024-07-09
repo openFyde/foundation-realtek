@@ -14,7 +14,6 @@ USE="${USE} native_gpu_memory_buffers video_capture_use_gpu_memory_buffer"
 USE="${USE} -coreboot -cros_ec -rgbkbd"
 USE="${USE} direncryption direncription_allow_v2"
 USE="${USE} -tpm tpm2 tpm2_simulator tpm_insecure_fallback vtpm_proxy"
-USE="${USE} update_uboot_spl"
 USE="${USE} kvm_host crosvm-gpu virtio_gpu"
 #switch gpu driver from mali to panfrost
 #USE="${USE} panfrost disable_explicit_dma_fences"

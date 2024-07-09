@@ -21,4 +21,5 @@ src_install() {
   insinto /boot
   doins u-boot.bin-rtd1619b_emmc
   doins rtd1619b_emmc_bind.bin
+  doins rtd1619b_emmc_bind_4gb.bin
 }
