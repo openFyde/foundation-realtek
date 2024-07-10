@@ -37,4 +37,6 @@ src_install() {
     doexe sbin/loadmodules.sh
   fi
   udev_dorules rules/50-media.rules
+  insinto /usr/share/alsa/ucm
+  doins -r ucm/*
 }

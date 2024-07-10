@@ -50,7 +50,7 @@ index 2960a5146..d1d633cec 100644
  
  /* GLOBAL */
 -static char *snd_pcm_id[] = {"Skip decoder normal/HDMI-RX",
-+static char *snd_pcm_id[] = {"HDMI/DP"/*"Skip decoder normal/HDMI-RX",*/,
++static char *snd_pcm_id[] = {"HDMI"/*"Skip decoder normal/HDMI-RX",*/,
  			     "Skip decoder mmap/I2S",
  			     "Skip decoder deepbuffer/non pcm",
  			     "With decoder/audio_aec_mix",
@@ -117,7 +117,7 @@ index 2960a5146..d1d633cec 100644
  	if (err)
  		pr_err("%s: unable to create sysfs entry\n", __func__);
  #endif
-+	err = snd_jack_new(card, "HDMI/DP Jack", SND_JACK_LINEOUT, &hdmi_jack, true, false);
++	err = snd_jack_new(card, "HDMI Jack", SND_JACK_LINEOUT, &hdmi_jack, true, false);
 +	if (err < 0)
 +		goto __nodev;
  
