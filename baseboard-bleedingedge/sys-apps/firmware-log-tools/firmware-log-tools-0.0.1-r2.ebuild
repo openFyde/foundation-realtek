@@ -24,4 +24,6 @@ src_unpack() {
 src_install() {
   exeinto /usr/bin
   doexe fwdbg
+  insinto /etc/init
+  doins ${FILESDIR}/rkfwlog-init.conf
 }
