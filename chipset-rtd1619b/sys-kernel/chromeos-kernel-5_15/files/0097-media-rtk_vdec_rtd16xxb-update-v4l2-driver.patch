@@ -1,0 +1,3212 @@
+From c2f21e87c65e1e9096bc3c4b853d2bdd7676e610 Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Fri, 12 Jul 2024 19:37:34 +0800
+Subject: [PATCH] media: rtk_vdec_rtd16xxb: update v4l2 driver
+
+internal v4l2 commit:
+11a46c7715d6641210c46146c3fb366abbd62cb5
+
+Change-Id: Ic334e78b1d52d130f4465b97dc33b115b6b515ad
+---
+ .../media/platform/rtk_vdec_rtd16xxb/drv_if.c |  25 +-
+ .../platform/rtk_vdec_rtd16xxb/ve1_decode.c   |  97 +-
+ .../platform/rtk_vdec_rtd16xxb/ve1_v4l2.c     | 200 +++--
+ .../platform/rtk_vdec_rtd16xxb/ve1_v4l2.h     |   4 +-
+ .../platform/rtk_vdec_rtd16xxb/ve1_wrapper.c  | 830 +++++++++++++-----
+ .../platform/rtk_vdec_rtd16xxb/ve1_wrapper.h  |  12 +-
+ .../media/platform/rtk_vdec_rtd16xxb/ve2.c    | 478 +++++-----
+ .../media/platform/rtk_vdec_rtd16xxb/ve2rpc.c | 473 +++++-----
+ .../media/platform/rtk_vdec_rtd16xxb/ve2rpc.h |  25 +-
+ .../media/platform/rtk_vdec_rtd16xxb/vpu.c    |  49 +-
+ .../media/platform/rtk_vdec_rtd16xxb/vpu.h    |   4 +-
+ 11 files changed, 1427 insertions(+), 770 deletions(-)
+
+diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/drv_if.c b/drivers/media/platform/rtk_vdec_rtd16xxb/drv_if.c
+index 754108aebcf9..ad7449d74be6 100644
+--- a/drivers/media/platform/rtk_vdec_rtd16xxb/drv_if.c
++++ b/drivers/media/platform/rtk_vdec_rtd16xxb/drv_if.c
+@@ -609,7 +609,7 @@ static int videc_decoder_cmd(struct file *file, void *fh,
+ 	struct videc_ctx *vid_ctx = file2ctx(file);
+ 	struct vpu_ctx *vpu_ctx = vid_ctx->vpu_ctx;
+ 	const struct vpu_fmt_ops *op = get_vpu_fmt_ops();
+-	int ret;
++	int ret = 0;
+ 
+ 	ret = videc_try_decoder_cmd(file, fh, dc);
+ 	if (ret < 0)
+@@ -621,16 +621,34 @@ static int videc_decoder_cmd(struct file *file, void *fh,
+ 	}
+ 
+ 	vpu_info("decoder cmd=%u", dc->cmd);
++
++	if (vpu_ctx->stop_cmd) {
++		// the drain sequence is initiated
++		if (!vpu_ctx->last_buf_done) {
++			// the drain sequence is in progress and is not completed
++			if ((dc->cmd == V4L2_DEC_CMD_STOP) || (dc->cmd == V4L2_DEC_CMD_START)) {
++				vpu_err("return -EBUSY when received cmd:%d while the drain sequence is in progress\n",dc->cmd);
++				return -EBUSY;
++			}
++		}
++	}
++
+ 	switch (dc->cmd) {
+ 	case V4L2_DEC_CMD_STOP:
+ 		/* Defer vpu stop */
+ 		vpu_ctx->stop_cmd = true;
+ 		break;
++	case V4L2_DEC_CMD_START:
++		vpu_ctx->stop_cmd = false;
++		vpu_ctx->last_buf_done = false;
++		vpu_ctx->miss_last_buf_done = false;
++		ret = op->vpu_start_cmd(fh);
++		break;
+ 	default:
+ 		break;
+ 	}
+ 
+-	return 0;
++	return ret;
+ }
+ 
+ static const struct v4l2_ioctl_ops vpu_ioctl_ops = {
+@@ -1033,9 +1051,12 @@ static int vpu_release(struct file *file)
+ {
+ 	struct videc_dev *dev = video_drvdata(file);
+ 	struct videc_ctx *ctx = file2ctx(file);
++	const struct vpu_fmt_ops *op = get_vpu_fmt_ops();
+ 
+ 	vpu_info("Releasing instance %p\n", ctx);
+ 
++	op->vpu_reset_resource(&ctx->fh);
++
+ 	v4l2_fh_del(&ctx->fh);
+ 	v4l2_fh_exit(&ctx->fh);
+ 	mutex_lock(&dev->dev_mutex);
+diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_decode.c b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_decode.c
+index ada3ce5116d0..b6b7053c8032 100644
+--- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_decode.c
++++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_decode.c
+@@ -59,6 +59,10 @@ int ve1_fill_bitstream(struct ve1_ctx *ctx, uint8_t *buf, uint32_t len,
+ 		ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG, "bPostponeUpBs.postpone fill bs\n");
+ 		return -ENOSPC;
+ 	}
++	if (ctx->dpbFull && (!ctx->bWaitNextField)) {
++		//ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG, "dpb full.postpone fill bs\n");
++		return -ENOSPC;
++	}
+ 
+ 	curBsWrPtr = ctx->bsWrPtr;
+ 
+@@ -69,7 +73,6 @@ int ve1_fill_bitstream(struct ve1_ctx *ctx, uint8_t *buf, uint32_t len,
+ 			ret, ctx, buf, len);
+ 		return -EFAULT;
+ 	} else {
+-		// PTS_HANDLE_STEP_1: add a meta info (sequence/timestamp/start/end) of this OUTPUT buffer to ctx->buffer_meta_list
+ 		meta = kmalloc(sizeof(*meta), GFP_KERNEL);
+ 		if (meta) {
+ 			meta->sequence = sequence;
+@@ -261,9 +264,64 @@ static int ve1_prepare_decode(struct ve1_ctx *ctx)
+ 	return 0;
+ }
+ 
++int rtkve1_get_meta(struct ve1_ctx *ctx, struct ve1_meta *result)
++{
++	int ret = 0;
++	struct ve1_meta *meta = NULL;
++	unsigned long flags;
++
++	if ((ctx == NULL) || (result == NULL)) {
++		ve1_err(VE1_LOGTAG, "ctx == NULL || result == NULL\n");
++		return -1;
++	}
++
++	spin_lock_irqsave(&ctx->buffer_meta_lock, flags);
++	if (!list_empty(&ctx->buffer_meta_list)) {
++		meta = list_first_entry(&ctx->buffer_meta_list,
++				struct ve1_meta, list);
++		list_del(&meta->list);
++		ctx->num_metas--;
++		*result = *meta;
++		ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
++			"timestamp:0x%lld.start:0x%x.end:0x%x.num_metas:%d\n",
++			meta->timestamp,
++			meta->start,
++			meta->end,
++			ctx->num_metas);
++		kfree(meta);
++
++		do {
++			// if new first entry has the same timestamp as result, take new first entry as result
++			meta = list_first_entry(&ctx->buffer_meta_list,
++					struct ve1_meta, list);
++			if (meta->timestamp == result->timestamp) {
++				list_del(&meta->list);
++				ctx->num_metas--;
++				*result = *meta;
++				ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
++					"timestamp:0x%lld.start:0x%x.end:0x%x.num_metas:%d\n",
++					meta->timestamp,
++					meta->start,
++					meta->end,
++					ctx->num_metas);
++				kfree(meta);
++			}
++			else {
++				break;
++			}
++		} while(1);
++	} else {
++		ve1_info(VE1_LOGTAG, "buffer_meta_list is empty\n");
++		ret = -1;
++	}
++	spin_unlock_irqrestore(&ctx->buffer_meta_lock, flags);
++
++	return ret;
++}
++
+ void rtkve1_add_displayble_frame_to_list(struct ve1_ctx *ctx)
+ {
+-	struct ve1_meta *meta;
++	struct ve1_meta meta;
+ 	unsigned long flags;
+ 	struct ve1_displayable_frame *frame;
+ 	int frameIndex = 0;
+@@ -301,10 +359,9 @@ void rtkve1_add_displayble_frame_to_list(struct ve1_ctx *ctx)
+ 			frame->dpb_paddr = framePhysAddr;
+ 			frame->vb2_v4l2_buf = dpb->vb2_v4l2_buf;
+ 			frame->size = frameSize;
+-			// PTS_HANDLE_STEP_3: get the corresponding meta info of this displayable frame and save it to struct ve1_displayable_frame
+-			meta = &ctx->frame_metas[frameIndex];
+-			frame->timestamp = meta->timestamp;
+-			frame->timecode = meta->timecode;
++			rtkve1_get_meta(ctx, &meta);
++			frame->timestamp = meta.timestamp;
++			frame->timecode = meta.timecode;
+ 			frame->sequenceNo = ctx->currSequenceNo;
+ 			ctx->cntAddToList++;
+ 			list_add_tail(&frame->list,
+@@ -384,8 +441,6 @@ EXPORT_SYMBOL(ve1_show_displayable_frame_list);
+ static int ve1_finish_decode(struct ve1_ctx *ctx)
+ {
+ 	int ret = 0;
+-	struct ve1_meta *meta;
+-	unsigned long flags;
+ 
+ 	ret = VE1_DecPicDone(ctx);
+ 	if (ret < 0) {
+@@ -394,32 +449,6 @@ static int ve1_finish_decode(struct ve1_ctx *ctx)
+ 	}
+ 
+ 	if (ctx->lastIndexFrameDecoded >= 0) {
+-		// PTS_HANDLE_STEP_2: when a frame decoded, get a meta info from ctx->buffer_meta_list and save it to the corresponding ctx->frame_metas[]
+-		spin_lock_irqsave(&ctx->buffer_meta_lock, flags);
+-		if (!list_empty(&ctx->buffer_meta_list)) {
+-			meta = list_first_entry(&ctx->buffer_meta_list,
+-						struct ve1_meta, list);
+-			list_del(&meta->list);
+-			ctx->num_metas--;
+-			ctx->frame_metas[ctx->lastIndexFrameDecoded] = *meta;
+-			ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
+-				"set frame_metas[%d](%d,%lld,%x,%x).num_metas:%d\n",
+-				ctx->lastIndexFrameDecoded,
+-				ctx->frame_metas[ctx->lastIndexFrameDecoded]
+-					.sequence,
+-				ctx->frame_metas[ctx->lastIndexFrameDecoded]
+-					.timestamp,
+-				ctx->frame_metas[ctx->lastIndexFrameDecoded]
+-					.start,
+-				ctx->frame_metas[ctx->lastIndexFrameDecoded].end,
+-				ctx->num_metas);
+-			kfree(meta);
+-		} else {
+-			memset(&ctx->frame_metas[ctx->lastIndexFrameDecoded], 0,
+-			       sizeof(struct ve1_meta));
+-		}
+-		spin_unlock_irqrestore(&ctx->buffer_meta_lock, flags);
+-
+ #ifdef VPU_GET_CC
+ 		if ((ctx->userDataEnable) && (ctx->pUserDataSrcBuf != NULL) &&
+ 		    (ctx->lastIndexFrameDecoded >= 0)) {
+diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_v4l2.c b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_v4l2.c
+index 2e3a2c3479c0..a29436866b2e 100644
+--- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_v4l2.c
++++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_v4l2.c
+@@ -25,6 +25,9 @@ extern void ProcessCC_Display(void *ctx, long long PTS, int display_index);
+ #endif
+ #define VENG_ID 1
+ 
++#define HAS_REG_DPBS(ctx) \
++		((((struct ve1_ctx *)ctx)->fbAllocInfo) != NULL)
++
+ /*
+  * Return vpu_ctx structure for a given struct v4l2_fh
+  */
+@@ -67,6 +70,12 @@ static void ve1_pic_run_work(struct work_struct *work)
+ 
+ 	ctx->cntExecPicRunWork++;
+ 
++	if (ctx->bFlush) {
++		ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
++			"do thing due to flushing\n");
++		goto out;
++	}
++
+ 	// RDK-1479, while entering ve1_pic_run_work(), maybe seq_end_work is already done and ve1DecState is VE1_STATE_DEC_UNINIT, it should not start to decode
+ 	if (ctx->ve1DecState < VE1_STATE_DEC_SEQ_INIT_DONE) {
+ 		ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
+@@ -79,31 +88,25 @@ static void ve1_pic_run_work(struct work_struct *work)
+ 	    (ctx->streamon_cap == 0)) {
+ 		ve1_info(VE1_LOGTAG, "seq int done but not streamon_cap\n");
+ 	}
+-	if ((ctx->ve1DecState == VE1_STATE_DEC_SEQ_INIT_DONE) &&
+-	    (ctx->streamon_cap == 1)) {
+-		if (ctx->cntCap2Dpb == 0) {
+-			ve1_err(VE1_LOGTAG, "no cap_qbuf yet\n");
+-			goto out;
+-		}
+-		ret = VE1_DecAllocateFrameBuffers(ctx);
++
++	if (!HAS_REG_DPBS(ctx) && (ctx->capReqBufsCnt != 0) && (ctx->regFbCount == 0)) {
++		ret = rtkve1_register_dpbs((void *)ctx);
+ 		if (ret < 0) {
+ 			ve1_err(VE1_LOGTAG,
+-				"VE1_DecAllocateFrameBuffers() fail\n");
++				"[-] rtkve1_register_dpbs() fail.ret:%d\n", ret);
+ 			goto out;
+ 		}
+ 		ctx->ve1DecState = VE1_STATE_DEC_SET_DPB;
+ 		ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG, "set ve1DecState:%d\n",
+-			ctx->ve1DecState);
+-		queueRet = queue_work(ctx->workqueue, &ctx->pic_run_work);
+-		if (queueRet)
+-			ctx->cntQueuePicRunWorkOk++;
+-		else
+-			ctx->cntQueuePicRunWorkFail++;
+-		ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
+-			"queue_work pic_run_work.cnt(%d,%d).ret:%d\n",
+-			ctx->cntQueuePicRunWorkOk, ctx->cntQueuePicRunWorkFail,
+-			queueRet);
++		ctx->ve1DecState);
++	}
++	else if (HAS_REG_DPBS(ctx)) {
++		ret = rtkve1_check_new_dpb((void *)ctx);
++		if (ret != 0) {
++			ve1_err(VE1_LOGTAG, "rtkve1_check_new_dpb() fail.ret:%d\n",ret);
++		}
+ 	}
++
+ 	if (ctx->ve1DecState < VE1_STATE_DEC_SET_DPB) {
+ 		ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
+ 			"exit ve1_pic_run_work due to ve1DecState:%d\n",
+@@ -165,7 +168,7 @@ static void ve1_pic_run_work(struct work_struct *work)
+ 		}
+ 	}
+ 
+-	if ((ctx->aborting || (!ctx->streamon_cap && !ctx->streamon_out)) &&
++	if (ctx->aborting &&
+ 	    ctx->ops->seq_end_work) {
+ 		ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG, "queue_work seq_end_work\n");
+ 		queue_work(ctx->workqueue, &ctx->seq_end_work);
+@@ -313,6 +316,11 @@ static int ve1_start_streaming(struct vb2_queue *q, uint32_t count,
+ 		ctx->streamon_out = 1;
+ 	} else {
+ 		if (ctx->seqInited) {
++			ctx->capReqBufsCnt = q->num_buffers;
++			ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
++				"capReqBufsCnt:%d\n",
++				ctx->capReqBufsCnt);
++
+ 			queueRet =
+ 				queue_work(ctx->workqueue, &ctx->pic_run_work);
+ 			if (queueRet)
+@@ -340,8 +348,13 @@ static int ve1_start_streaming(struct vb2_queue *q, uint32_t count,
+ 
+ static int ve1_stop_streaming(struct vb2_queue *q)
+ {
+-	bool stop;
+ 	struct ve1_ctx *ctx;
++	struct ve1_meta *meta;
++	struct ve1_displayable_frame *frame;
++	unsigned long flags;
++	//int i = 0;
++	//struct vb2_buffer *vb2 = NULL;
++	//dma_addr_t cap_buf_paddr;
+ 
+ 	ve1_dbg(VPU_DBG_INPUT, VE1_LOGTAG, "[+] type:%s\n",
+ 		V4L2_TYPE_TO_STR(q->type));
+@@ -356,35 +369,10 @@ static int ve1_stop_streaming(struct vb2_queue *q)
+ 		return -EINVAL;
+ 	}
+ 
+-	mutex_lock(&ctx->ve1_mutex);
+ 	if (V4L2_TYPE_IS_OUTPUT(q->type)) {
+-		ctx->streamon_out = 0;
+-		ctx->outbuf_sequence = 0;
+-	} else {
+-		rtkve1_make_undq_capbuf_done((void *)ctx);
+-		ctx->streamon_cap = 0;
+-		ctx->capbuf_sequence = 0;
+-	}
+-	mutex_unlock(&ctx->ve1_mutex);
++		rtkve1_flush_bitstream((void *)ctx);
+ 
+-	stop = !ctx->streamon_out && !ctx->streamon_cap;
+-	if (stop) {
+-		struct ve1_meta *meta;
+-		struct ve1_displayable_frame *frame;
+-		unsigned long flags;
+-
+-		if (ctx->ops->seq_end_work) {
+-			// queue seq_end_work on workqueue
+-			ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
+-				"queue_work seq_end_work\n");
+-			queue_work(ctx->workqueue, &ctx->seq_end_work);
+-			// Wait until seq_end_work has finished execution
+-			ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
+-				"flush_work seq_end_work\n");
+-			flush_work(&ctx->seq_end_work);
+-		}
+-
+-		// PTS_HANDLE_STEP_5: remove all meta info in ctx->buffer_meta_list
++		mutex_lock(&ctx->ve1_mutex);
+ 		spin_lock_irqsave(&ctx->buffer_meta_lock, flags);
+ 		while (!list_empty(&ctx->buffer_meta_list)) {
+ 			meta = list_first_entry(&ctx->buffer_meta_list,
+@@ -395,6 +383,23 @@ static int ve1_stop_streaming(struct vb2_queue *q)
+ 		ctx->num_metas = 0;
+ 		spin_unlock_irqrestore(&ctx->buffer_meta_lock, flags);
+ 
++		ctx->cntOutQbuf = 0;
++		ctx->streamon_out = 0;
++		ctx->outbuf_sequence = 0;
++		mutex_unlock(&ctx->ve1_mutex);
++	} else {
++		rtkve1_flush((void *)ctx);
++
++		/*for (i=0;i<q->num_buffers;i++) {
++			vb2 = q->bufs[i];
++			cap_buf_paddr = vb2_dma_contig_plane_dma_addr(vb2, 0);
++			ve1_dbg(VPU_DBG_OUTPUT, VE1_LOGTAG,
++				"cap_vb2[%d].index:%d.state:%d.paddr:0x%lx\n",i,
++				vb2->index,
++				vb2->state,
++				cap_buf_paddr);
++		}*/
++
+ 		// remove all displayable frame info in ctx->displayable_frame_list
+ 		spin_lock_irqsave(&ctx->displayable_frame_lock, flags);
+ 		while (!list_empty(&ctx->displayable_frame_list)) {
+@@ -405,27 +410,14 @@ static int ve1_stop_streaming(struct vb2_queue *q)
+ 			kfree(frame);
+ 		}
+ 		spin_unlock_irqrestore(&ctx->displayable_frame_lock, flags);
++		rtkve1_flush_dpbs((void *)ctx);
+ 
+ 		mutex_lock(&ctx->ve1_mutex);
+-		ctx->bsRdPtr = ctx->bsWrPtr;
+-		ctx->aborting = 0;
+-		ctx->lastFrameTimestamp = 0;
+-
+-		ctx->streamEnd = 0;
+-		ctx->handle_eos_by = VE1_HANDLE_EOS_BY_NONE;
+-		ctx->dpbFull = 0;
+-		ctx->decodedFrmNum = 0;
+-		ctx->displayFrmNum = 0;
+-		ctx->cntQueuePicRunWorkOk = 0;
+-		ctx->cntQueuePicRunWorkFail = 0;
+-		ctx->cntExecPicRunWork = 0;
+-		ctx->cntOutQbuf = 0;
+-		ctx->cntFrameDq = 0;
+-		ctx->cntCap2Dpb = 0;
+-		ctx->bLastFrmReportedAfFrmDq = false;
+-		ctx->lastInfoFrmStart = 0;
+-		ctx->lastInfoFrmEnd = 0;
+ 		ctx->cntAddToList = 0;
++		ctx->cntFrameDq = 0;
++		ctx->last_frame = 0;
++		ctx->streamon_cap = 0;
++		ctx->capbuf_sequence = 0;
+ 		mutex_unlock(&ctx->ve1_mutex);
+ 	}
+ 
+@@ -573,6 +565,7 @@ static int ve1_cap_qbuf(void *fh, struct vb2_buffer *vb)
+ 	dma_addr_t cap_buf_paddr;
+ 	struct vb2_v4l2_buffer *vb2_v4l2_buf = NULL;
+ 	struct vb2_v4l2_buffer *rm_vb2_v4l2_buf = NULL;
++	int ret = 0;
+ 
+ 	if (vb == NULL) {
+ 		ve1_err(VE1_LOGTAG, "vb is NULL\n");
+@@ -602,7 +595,9 @@ static int ve1_cap_qbuf(void *fh, struct vb2_buffer *vb)
+ 		if (ctx->streamEnd || !ctx->seqInited || !ctx->startDecode) {
+ 			ve1_start_work(fh, ctx);
+ 		}
++	}
+ 
++	if (HAS_REG_DPBS(ctx)) {
+ 		// print displayable_frame_list for debug
+ 		ve1_show_displayable_frame_list(ctx);
+ 
+@@ -643,14 +638,37 @@ static int ve1_cap_qbuf(void *fh, struct vb2_buffer *vb)
+ 					rm_vb2_v4l2_buf, vb2_v4l2_buf);
+ 			}
+ 			VE1_UpdateDPBStatus((void *)ctx, dpb_paddr, sequenceNo,
+-					    regIndex, RTKVE1_DPB_ST_VALID);
++								RTKVE1_DPB_ST_VALID);
+ 		} else {
+-			ve1_err(VE1_LOGTAG,
+-				"vb2_v4l2_buf:0x%px of cap_qbuf doesn't match any dpb\n",
++			cap_buf_size = vb2_plane_size(vb, 0);
++			if (cap_buf_size == 0) {
++				ve1_err(VE1_LOGTAG, "cap_buf_size is 0\n");
++				return -EINVAL;
++			}
++			cap_buf_paddr = vb2_dma_contig_plane_dma_addr(vb, 0);
++			ve1_dbg(VPU_DBG_OUTPUT, VE1_LOGTAG,
++				"cap_buf_paddr:0x%lx.cap_buf_size:%ld.vb2_v4l2_buf:0x%px\n",
++				(unsigned long)cap_buf_paddr, cap_buf_size,
+ 				vb2_v4l2_buf);
++
++			ret = VE1_UpdateDPBStatus((void *)ctx, cap_buf_paddr, ctx->currSequenceNo,
++										RTKVE1_DPB_ST_VALID);
++			if (ret < 0) {
++				rtkve1_add_capbuf_to_dpb((void *)ctx, cap_buf_size,
++										(unsigned long)cap_buf_paddr,
++										vb2_v4l2_buf);
++			}
++
++			rm_vb2_v4l2_buf = v4l2_m2m_dst_buf_remove(
++								((struct v4l2_fh *)fh)->m2m_ctx);
++			if (rm_vb2_v4l2_buf != vb2_v4l2_buf) {
++				ve1_err(VE1_LOGTAG,
++					"the vb2_v4l2_buf:0x%px from v4l2_m2m_dst_buf_remove() not equals to cap_qbuf:0x%px\n",
++					rm_vb2_v4l2_buf, vb2_v4l2_buf);
++			}
+ 		}
+ 
+-		// CXI-3663, queue_work pic_run_work after frame buffer is recycled (VE1_UpdateDPBStatus() => VE1_SetFrameBufReusable())
++		// CXI-3663, queue_work pic_run_work after frame buffer is recycled
+ 		if (ctx->dpbFull) {
+ 			queueRet =
+ 				queue_work(ctx->workqueue, &ctx->pic_run_work);
+@@ -675,8 +693,8 @@ static int ve1_cap_qbuf(void *fh, struct vb2_buffer *vb)
+ 			(unsigned long)cap_buf_paddr, cap_buf_size,
+ 			vb2_v4l2_buf);
+ 		rtkve1_add_capbuf_to_dpb((void *)ctx, cap_buf_size,
+-					 (unsigned long)cap_buf_paddr,
+-					 vb2_v4l2_buf);
++								(unsigned long)cap_buf_paddr,
++								vb2_v4l2_buf);
+ 		rm_vb2_v4l2_buf = v4l2_m2m_dst_buf_remove(
+ 			((struct v4l2_fh *)fh)->m2m_ctx);
+ 		if (rm_vb2_v4l2_buf != vb2_v4l2_buf) {
+@@ -728,7 +746,6 @@ static int ve1_cap_dqbuf(void *fh, uint8_t *buf, uint64_t *timestamp,
+ 				frame, &ctx->displayable_frame_list, list) {
+ 				if ((frame->vb2_v4l2_buf != NULL) &&
+ 				    (frame->isDequeued == 0)) {
+-					// PTS_HANDLE_STEP_4: fill timestamp to CAPTURE buffer
+ 					*timestamp = frame->timestamp;
+ 
+ 					if (frame->last_frame) {
+@@ -774,7 +791,7 @@ static int ve1_cap_dqbuf(void *fh, uint8_t *buf, uint64_t *timestamp,
+ 					  regIndex);
+ #endif
+ 			VE1_UpdateDPBStatus((void *)ctx, dpb_paddr, sequenceNo,
+-					    regIndex, RTKVE1_DPB_ST_DQ);
++								RTKVE1_DPB_ST_DQ);
+ 			ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG, "[-]\n");
+ 			ret = 0;
+ 		}
+@@ -807,16 +824,17 @@ static int ve1_abort(void *pCtx, int type)
+ 	return 0;
+ }
+ 
+-static void *ve1_alloc_context(struct file *file)
++static void *ve1_alloc_context(void *fh)
+ {
+ 	struct ve1_ctx *ctx = NULL;
++	struct videc_ctx *vid_ctx = container_of(fh, struct videc_ctx, fh);
+ 
+ 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
+ 	if (!ctx) {
+ 		ve1_err(VE1_LOGTAG, "Failed to allocate video engine\n");
+ 		return ctx;
+ 	}
+-	ctx->filp = file;
++	ctx->filp = vid_ctx->file;
+ 	ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG, "ctx:0x%px.filp:0x%px\n", ctx,
+ 		ctx->filp);
+ 
+@@ -923,17 +941,17 @@ static int ve1_stop_cmd(void *fh, int pixelformat)
+ 
+ 	if (fh == NULL) {
+ 		ve1_err(VE1_LOGTAG, "invalid parameters\n");
+-		goto out;
++		return -1;
+ 	}
+ 	ctx = fh_to_ve(fh);
+ 	if (ctx == NULL) {
+ 		ve1_err(VE1_LOGTAG, "ctx is NULL\n");
+-		goto out;
++		return -1;
+ 	}
+ 	vpu_ctx = fh_to_vpu(fh);
+ 	if (vpu_ctx == NULL) {
+ 		ve1_err(VE1_LOGTAG, "vpu_ctx is NULL\n");
+-		goto out;
++		return -1;
+ 	}
+ 
+ 	mutex_lock(&ctx->ve1_mutex);
+@@ -984,6 +1002,31 @@ static int ve1_stop_cmd(void *fh, int pixelformat)
+ 	return ret;
+ }
+ 
++static int ve1_start_cmd(void *fh)
++{
++	int ret = 0;
++	struct ve1_ctx *ctx = NULL;
++
++	if (fh == NULL) {
++		ve1_err(VE1_LOGTAG, "invalid parameters\n");
++		return -1;
++	}
++	ctx = fh_to_ve(fh);
++	if (ctx == NULL) {
++		ve1_err(VE1_LOGTAG, "ctx is NULL\n");
++		return -1;
++	}
++
++	mutex_lock(&ctx->ve1_mutex);
++	ve1_info(VE1_LOGTAG, "%s.%d\n",
++				__func__, __LINE__);
++	ctx->handle_eos_by = VE1_HANDLE_EOS_BY_NONE;
++	ctx->last_frame = 0;
++
++	mutex_unlock(&ctx->ve1_mutex);
++	return ret;
++}
++
+ static void ve1_get_info(void *fh, bool *eos, bool *no_frame)
+ {
+ 	struct ve1_ctx *ctx;
+@@ -1045,6 +1088,7 @@ static struct veng_ops ve_ops = {
+ 	.ve_stop_cmd = ve1_stop_cmd,
+ 	.ve_get_info = ve1_get_info,
+ 	.ve_get_undq_dispFrm_cnt = ve1_get_undq_dispFrm_cnt,
++	.ve_start_cmd = ve1_start_cmd,
+ };
+ 
+ static int __init ve1_init(void)
+diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_v4l2.h b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_v4l2.h
+index b0ab2d49e547..19996dde8f4c 100644
+--- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_v4l2.h
++++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_v4l2.h
+@@ -346,7 +346,6 @@ struct ve1_ctx {
+ 		bsRdPtr; // whether svp or non-svp, it always store physical address
+ 	unsigned long
+ 		bsWrPtr; // whether svp or non-svp, it always store physical address
+-	struct ve1_meta frame_metas[MAX_VE1_FRAME_BUFFERS];
+ 	struct list_head buffer_meta_list;
+ 	spinlock_t buffer_meta_lock;
+ 	struct list_head displayable_frame_list;
+@@ -375,7 +374,6 @@ struct ve1_ctx {
+ 	unsigned int decodedFrmNum;
+ 	unsigned int displayFrmNum;
+ 	unsigned int accuBsFeedBytes;
+-	bool bReceivedCmdStop;
+ 	int lastIndexFrameDecoded;
+ 	int lastIndexFrameDisplay;
+ 	PhysicalAddress lastDisplayFrmBufY;
+@@ -439,6 +437,8 @@ struct ve1_ctx {
+ 	PhysicalAddress lastInfoFrmStart;
+ 	PhysicalAddress lastInfoFrmEnd;
+ 	unsigned int cntAddToList;
++	unsigned int capReqBufsCnt;
++	bool bFlush;
+ };
+ 
+ static inline unsigned long ve1_ring_valid_data(unsigned long ring_base,
+diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_wrapper.c b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_wrapper.c
+index b60b802e7a9f..c99f7495d64f 100644
+--- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_wrapper.c
++++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_wrapper.c
+@@ -444,21 +444,21 @@ int ve1_md5_hash(unsigned char *result, int resultLen, char *data, int dataLen)
+ 		ret = -1;
+ 		goto out;
+ 	}
+-	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG, "crypto_shash_init() ok\n");
++	//ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG, "crypto_shash_init() ok\n");
+ 
+ 	if (crypto_shash_update(desc, data, dataLen) < 0) {
+ 		ve1_err(VE1_WRAPPER_TAG, "crypto_shash_update() fail\n");
+ 		ret = -1;
+ 		goto out;
+ 	}
+-	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG, "crypto_shash_update() ok\n");
++	//ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG, "crypto_shash_update() ok\n");
+ 
+ 	if (crypto_shash_final(desc, result) < 0) {
+ 		ve1_err(VE1_WRAPPER_TAG, "crypto_shash_final() fail\n");
+ 		ret = -1;
+ 		goto out;
+ 	}
+-	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG, "crypto_shash_final() ok\n");
++	//ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG, "crypto_shash_final() ok\n");
+ 
+ 	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
+ 		"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",
+@@ -558,7 +558,386 @@ int rtkve1_add_capbuf_to_dpb(void *pCtx, unsigned long size,
+ 	return ret;
+ }
+ 
+-void rtkve1_make_undq_capbuf_done(void *pCtx)
++void *rtkve1_find_dpb_unreg(void *pCtx)
++{
++	int i = 0;
++	struct ve1_ctx *ctx;
++
++	if (pCtx == NULL) {
++		ve1_err(VE1_WRAPPER_TAG, "pCtx == NULL\n");
++		return NULL;
++	}
++	ctx = (struct ve1_ctx *)pCtx;
++
++	for (i = 0; i < VE1_ION_STRUCT_NUM; i++) {
++		if (IS_RTKVE1_DPB_VALID(ctx->dpb[i].status) &&
++			!IS_RTKVE1_DPB_REG(ctx->dpb[i].status)) {
++				return (void *)&(ctx->dpb[i]);
++		}
++	}
++
++	return NULL;
++}
++
++void rtkve1_show_dpbs(struct ve1_ctx *ctx)
++{
++	int i = 0;
++
++	if (ctx == NULL) {
++		return;
++	}
++
++	for (i = 0; i < VE1_ION_STRUCT_NUM; i++) {
++		if (ctx->dpb[i].size == 0) {
++			continue;
++		}
++		ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++			"dpb[%d].status:0x%x.size:%d.phys_addr:0x%lx.vb2_v4l2_buf:0x%px.regIndex:%d\n",i,
++			ctx->dpb[i].status, ctx->dpb[i].size,
++			ctx->dpb[i].phys_addr,
++			ctx->dpb[i].vb2_v4l2_buf,
++			ctx->dpb[i].regIndex);
++	}
++}
++
++int rtkve1_register_dpbs(void *pCtx)
++{
++	RetCode ret = RETCODE_SUCCESS;
++	struct ve1_ctx *ctx;
++	int i = 0;
++	DecOpenParam *decOP;
++	DecInitialInfo *initialInfo;
++	int mapType = LINEAR_FRAME_MAP;
++	int fbHeight;
++	int fbStride;
++	FrameBufferFormat fbFormat;
++	FrameBufferFormat wtlFormat;
++	FrameBufferAllocInfo *fbAllocInfo;
++	FrameBuffer *fbUser;
++	struct rtkve1_dpb_t *dpb_unreg = NULL;
++	unsigned int dispFlag = 0;
++	unsigned int clearDispIndex = 0;
++
++	if (pCtx == NULL) {
++		ve1_err(VE1_WRAPPER_TAG,
++			"invalid parameters.pCtx:0x%px\n",
++			pCtx);
++		return -1;
++	}
++	ctx = (struct ve1_ctx *)pCtx;
++
++	if (ctx->decHandle == NULL) {
++		ve1_err(VE1_WRAPPER_TAG, "ctx->decHandle == NULL\n");
++		return -1;
++	}
++
++	if (ctx->fbAllocInfo == NULL) {
++		ctx->fbAllocInfo =
++			kzalloc(sizeof(FrameBufferAllocInfo), GFP_KERNEL);
++		if (ctx->fbAllocInfo == NULL) {
++			ve1_err(VE1_WRAPPER_TAG, "kzalloc fbAllocInfo fail\n");
++			return -1;
++		}
++	}
++
++	if (ctx->fbUser == NULL) {
++		ctx->fbUser = kzalloc(sizeof(FrameBuffer) * MAX_REG_FRAME,
++				      GFP_KERNEL);
++		if (ctx->fbUser == NULL) {
++			ve1_err(VE1_WRAPPER_TAG, "kzalloc fbUser fail\n");
++			return -1;
++		}
++	}
++
++	decOP = (DecOpenParam *)ctx->decOP;
++	initialInfo = (DecInitialInfo *)ctx->initialInfo;
++	fbAllocInfo = (FrameBufferAllocInfo *)ctx->fbAllocInfo;
++
++	fbFormat = FORMAT_420;
++	wtlFormat = FORMAT_420;
++
++	if ((mapType == TILED_FRAME_V_MAP) && (decOP->wtlEnable == 0) &&
++	    (decOP->tiled2LinearEnable == 0)) {
++		// trace VPU_GetFrameBufSize -> ProductCalculateFrameBufSize -> CalcLumaSize
++		// if TILED_FRAME_V_MAP and CODA980, VPU force use 64 align to calculate the frame buffer height (unit_size_ver_lum),
++		// it will influence the U_addr of YUV_STATE
++		fbHeight = VPU_ALIGN64(initialInfo->picHeight);
++	} else {
++		fbHeight = VPU_ALIGN32(initialInfo->picHeight);
++	}
++	fbStride = CalcStride(initialInfo->picWidth, initialInfo->picHeight,
++			      fbFormat, decOP->cbcrInterleave,
++			      (TiledMapType)mapType, 0);
++	ctx->framebufSize =
++		VPU_GetFrameBufSize(VE1_COREIDX, fbStride, fbHeight, mapType,
++				    fbFormat, decOP->cbcrInterleave, NULL);
++	ve1_info(
++		VE1_WRAPPER_TAG,
++		"af VPU_GetFrameBufSize().framebufSize:%d.fbStride:%d.fbHeight:%d.mapType:%d\n",
++		ctx->framebufSize, fbStride, fbHeight, mapType);
++
++	if (fbHeight == 0 || fbStride == 0 || ctx->framebufSize == 0) {
++		ve1_err(VE1_WRAPPER_TAG,
++			"incorrect fbHeight:%d.fbStride:%d.framebufSize:%d\n",
++			fbHeight, fbStride, ctx->framebufSize);
++		return -1;
++	}
++
++	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++		"cntCap2Dpb:%d.capReqBufsCnt:%d.regFbCount:%d\n",
++			ctx->cntCap2Dpb, ctx->capReqBufsCnt, ctx->regFbCount);
++
++	for (i = 0; i < VE1_ION_STRUCT_NUM; i++) {
++		if ((ctx->dpb[i].size > 0) &&
++			(!IS_RTKVE1_DPB_REG(ctx->dpb[i].status)) &&
++			(ctx->dpb[i].size < ctx->framebufSize)) {
++			ve1_err(VE1_WRAPPER_TAG,
++				"dpb[%d].size:%u < expected framebufSize:%d\n",
++				i,ctx->dpb[i].size,
++				ctx->framebufSize);
++			WARN_ON(1);
++			return -1;
++		}
++	}
++
++	fbAllocInfo->format = fbFormat;
++	fbAllocInfo->cbcrInterleave = decOP->cbcrInterleave;
++	fbAllocInfo->mapType = mapType;
++	fbAllocInfo->stride = fbStride;
++	fbAllocInfo->height = fbHeight;
++	fbAllocInfo->lumaBitDepth = initialInfo->lumaBitdepth;
++	fbAllocInfo->chromaBitDepth = initialInfo->chromaBitdepth;
++	fbAllocInfo->num = ctx->capReqBufsCnt;
++	fbAllocInfo->endian = decOP->frameEndian;
++	fbAllocInfo->type = FB_TYPE_CODEC;
++
++	mutex_lock(&ctx->ve1_dma_mutex);
++	for (i = 0; i < ctx->capReqBufsCnt; i++) {
++		dpb_unreg = (struct rtkve1_dpb_t *)rtkve1_find_dpb_unreg((void *)ctx);
++		if (dpb_unreg == NULL) {
++			break;
++		}
++		fbUser = ((FrameBuffer *)ctx->fbUser) + i;
++		dpb_unreg->regIndex = i;
++		dpb_unreg->status |= RTKVE1_DPB_ST_REG;
++		fbUser->size = dpb_unreg->size;
++		fbUser->bufY = dpb_unreg->phys_addr;
++		fbUser->bufCb = -1;
++		fbUser->bufCr = -1;
++		fbUser->updateFbInfo = TRUE;
++		ctx->regFbCount++;
++		clearDispIndex |= (1<<i);
++		dispFlag = ~clearDispIndex;
++		ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++			"regFbCount:%d.dispFlag:0x%x\n",
++			ctx->regFbCount,dispFlag);
++	}
++	mutex_unlock(&ctx->ve1_dma_mutex);
++
++	ret = VPU_DecAllocateFrameBuffer((DecHandle)ctx->decHandle,
++					 *((FrameBufferAllocInfo *)fbAllocInfo),
++					 (FrameBuffer *)ctx->fbUser);
++	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++		"af VPU_DecAllocateFrameBuffer.ret:%d\n", ret);
++	if (ret != RETCODE_SUCCESS) {
++		ve1_err(VE1_WRAPPER_TAG,
++			"VPU_DecAllocateFrameBuffer fail.ret:%d\n", ret);
++		return -1;
++	}
++	for (i = 0; i < ctx->capReqBufsCnt; i++) {
++		fbUser = ((FrameBuffer *)ctx->fbUser) + i;
++		ve1_info(
++			VE1_WRAPPER_TAG,
++			"fbUser[%d].bufY:0x%x.size:%d.myIndex:%d.stride:%d.h:%d.seqNo:%d\n",
++			i, fbUser->bufY, fbUser->size, fbUser->myIndex,
++			fbUser->stride, fbUser->height, ctx->currSequenceNo);
++	}
++
++	ret = VPU_DecRegisterFrameBuffer((DecHandle)ctx->decHandle,
++					 (FrameBuffer *)ctx->fbUser,
++					 ctx->capReqBufsCnt, fbStride, fbHeight,
++					 mapType);
++	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++		"af VPU_DecRegisterFrameBuffer.ret:%d\n", ret);
++	if (ret != RETCODE_SUCCESS) {
++		ve1_err(VE1_WRAPPER_TAG,
++			"VPU_DecRegisterFrameBuffer fail.ret:%d\n", ret);
++		return -1;
++	}
++
++	ret = VPU_DecSetDispFlag((DecHandle)ctx->decHandle, dispFlag);
++	if (ret != RETCODE_SUCCESS) {
++		ve1_err(VE1_WRAPPER_TAG,
++			"VPU_DecSetDispFlag fail.ret:%d\n", ret);
++		return -1;
++	}
++	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++		"VPU_DecSetDispFlag.dispFlag:0x%x\n", dispFlag);
++
++	return ret;
++}
++
++int rtkve1_register_new_dpb(void *pCtx, void* pDpb)
++{
++	int ret = 0;
++	struct ve1_ctx *ctx;
++	DecOpenParam *decOP;
++	DecInitialInfo *initialInfo;
++	int mapType = LINEAR_FRAME_MAP;
++	int fbHeight;
++	int fbStride;
++	FrameBufferFormat fbFormat;
++	FrameBufferFormat wtlFormat;
++	FrameBufferAllocInfo *fbAllocInfo;
++	FrameBuffer *fbUser;
++	struct rtkve1_dpb_t *dpb = NULL;
++	unsigned int clrDispFlagIndex = 0;
++	unsigned long clrDispFlagPhysAddr = 0;
++
++	if ((pCtx == NULL) || (pDpb == NULL)) {
++		ve1_err(VE1_WRAPPER_TAG,
++			"invalid parameters.pCtx:0x%px.pDpb:0x%px\n",
++			pCtx,pDpb);
++		return -1;
++	}
++	ctx = (struct ve1_ctx *)pCtx;
++	dpb = (struct rtkve1_dpb_t *)pDpb;
++
++	if ((ctx->decHandle == NULL) || (ctx->fbAllocInfo == NULL) || (ctx->fbUser == NULL)) {
++		ve1_err(VE1_WRAPPER_TAG,
++			"ctx->decHandle == NULL || ctx->fbAllocInfo == NULL || ctx->fbUser == NULL\n");
++		return -1;
++	}
++
++	decOP = (DecOpenParam *)ctx->decOP;
++	initialInfo = (DecInitialInfo *)ctx->initialInfo;
++	fbAllocInfo = (FrameBufferAllocInfo *)ctx->fbAllocInfo;
++
++	fbFormat = FORMAT_420;
++	wtlFormat = FORMAT_420;
++
++	if ((mapType == TILED_FRAME_V_MAP) && (decOP->wtlEnable == 0) &&
++		(decOP->tiled2LinearEnable == 0)) {
++		// trace VPU_GetFrameBufSize -> ProductCalculateFrameBufSize -> CalcLumaSize
++		// if TILED_FRAME_V_MAP and CODA980, VPU force use 64 align to calculate the frame buffer height (unit_size_ver_lum),
++		// it will influence the U_addr of YUV_STATE
++		fbHeight = VPU_ALIGN64(initialInfo->picHeight);
++	} else {
++		fbHeight = VPU_ALIGN32(initialInfo->picHeight);
++	}
++	fbStride = CalcStride(initialInfo->picWidth, initialInfo->picHeight,
++				fbFormat, decOP->cbcrInterleave,
++				(TiledMapType)mapType, 0);
++
++	if (fbHeight == 0 || fbStride == 0) {
++		ve1_err(VE1_WRAPPER_TAG,
++			"incorrect fbHeight:%d.fbStride:%d.framebufSize:%d\n",
++			fbHeight, fbStride, ctx->framebufSize);
++		return -1;
++	}
++
++	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++		"cntCap2Dpb:%d.capReqBufsCnt:%d.regFbCount:%d\n",
++		ctx->cntCap2Dpb, ctx->capReqBufsCnt, ctx->regFbCount);
++
++	if (dpb->size < ctx->framebufSize) {
++		ve1_err(VE1_WRAPPER_TAG,
++			"dpb.size:%u < expected framebufSize:%d\n",
++			dpb->size,
++			ctx->framebufSize);
++		WARN_ON(1);
++		return -1;
++	}
++
++	mutex_lock(&ctx->ve1_dma_mutex);
++	dpb->regIndex = ctx->regFbCount;
++	dpb->status |= RTKVE1_DPB_ST_REG;
++	fbUser = ((FrameBuffer *)ctx->fbUser) + ctx->regFbCount;
++	fbUser->size = dpb->size;
++	fbUser->bufY = dpb->phys_addr;
++	fbUser->bufCb = -1;
++	fbUser->bufCr = -1;
++	fbUser->updateFbInfo = TRUE;
++	clrDispFlagIndex = ctx->regFbCount;
++	clrDispFlagPhysAddr = dpb->phys_addr;
++	ctx->regFbCount++;
++	mutex_unlock(&ctx->ve1_dma_mutex);
++
++	ret = VPU_DecAllocateFrameBuffer((DecHandle)ctx->decHandle,
++			*((FrameBufferAllocInfo *)fbAllocInfo),
++			(FrameBuffer *)ctx->fbUser);
++	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++		"af VPU_DecAllocateFrameBuffer.ret:%d\n", ret);
++	if (ret != RETCODE_SUCCESS) {
++		ve1_err(VE1_WRAPPER_TAG,
++			"VPU_DecAllocateFrameBuffer fail.ret:%d\n", ret);
++		return -1;
++	}
++	ve1_info(
++		VE1_WRAPPER_TAG,
++		"fbUser[%d].bufY:0x%x.size:%d.myIndex:%d.stride:%d.h:%d.seqNo:%d\n",
++		(ctx->regFbCount-1), fbUser->bufY, fbUser->size, fbUser->myIndex,
++		fbUser->stride, fbUser->height, ctx->currSequenceNo);
++
++	ret = VPU_DecRegisterFrameBuffer((DecHandle)ctx->decHandle,
++			(FrameBuffer *)ctx->fbUser,
++			ctx->capReqBufsCnt, fbStride, fbHeight,
++			mapType);
++	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++		"af VPU_DecRegisterFrameBuffer.ret:%d\n", ret);
++	if (ret != RETCODE_SUCCESS) {
++		ve1_err(VE1_WRAPPER_TAG,
++			"VPU_DecRegisterFrameBuffer fail.ret:%d\n", ret);
++		return -1;
++	}
++
++	ret = VPU_DecClrDispFlag((DecHandle)ctx->decHandle, clrDispFlagIndex);
++	if (ret != RETCODE_SUCCESS) {
++		ve1_err(VE1_WRAPPER_TAG,
++			"VPU_DecClrDispFlag fail.ret:%d\n", ret);
++		return -1;
++	}
++	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++		"VPU_DecClrDispFlag(%d).phys_addr:0x%lx\n",
++		clrDispFlagIndex, clrDispFlagPhysAddr);
++
++	return ret;
++}
++
++int rtkve1_check_new_dpb(void *pCtx)
++{
++	int ret = 0;
++	struct ve1_ctx *ctx;
++	struct rtkve1_dpb_t *dpb_unreg = NULL;
++
++	if (pCtx == NULL) {
++		ve1_err(VE1_WRAPPER_TAG,
++			"invalid parameters.pCtx:0x%px\n",
++			pCtx);
++		return -1;
++	}
++	ctx = (struct ve1_ctx *)pCtx;
++
++	do {
++		mutex_lock(&ctx->ve1_dma_mutex);
++		dpb_unreg = (struct rtkve1_dpb_t *)rtkve1_find_dpb_unreg((void *)ctx);
++		mutex_unlock(&ctx->ve1_dma_mutex);
++		if (dpb_unreg == NULL) {
++			break;
++		}
++		ret = rtkve1_register_new_dpb(pCtx, dpb_unreg);
++		if (ret != 0) {
++			ve1_err(VE1_WRAPPER_TAG,
++				"rtkve1_register_new_dpb() fail.ret:%d\n",
++				ret);
++			break;
++		}
++	} while (1);
++
++	return ret;
++}
++
++void rtkve1_flush_dpbs(void *pCtx)
+ {
+ 	struct ve1_ctx *ctx;
+ 	int i = 0;
+@@ -571,7 +950,8 @@ void rtkve1_make_undq_capbuf_done(void *pCtx)
+ 	ctx = (struct ve1_ctx *)pCtx;
+ 
+ 	mutex_lock(&ctx->ve1_dma_mutex);
+-	for (i = 0; i < ctx->cntCap2Dpb; i++) {
++	//rtkve1_show_dpbs(ctx);
++	for (i = 0; i < VE1_ION_STRUCT_NUM; i++) {
+ 		if (!IS_RTKVE1_DPB_DQ(ctx->dpb[i].status) &&
+ 		    IS_RTKVE1_DPB_VALID(ctx->dpb[i].status)) {
+ 			ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
+@@ -582,7 +962,11 @@ void rtkve1_make_undq_capbuf_done(void *pCtx)
+ 						   *)(ctx->dpb[i].vb2_v4l2_buf),
+ 					  VB2_BUF_STATE_ERROR);
+ 		}
++		else if (IS_RTKVE1_DPB_DQ(ctx->dpb[i].status)) {
++			ctx->dpb[i].status &= ~RTKVE1_DPB_ST_DQ;
++		}
+ 	}
++	//rtkve1_show_dpbs(ctx);
+ 	mutex_unlock(&ctx->ve1_dma_mutex);
+ }
+ 
+@@ -1138,6 +1522,8 @@ int VE1_DecSeqInit(void *pCtx)
+ 	unsigned long long pts_unit = PTS_UNIT;
+ 	unsigned int fps;
+ 	unsigned long valid_data = 0;
++	SecAxiUse *secAxiUse;
++	MaverickCacheConfig *decCacheConfig;
+ 
+ 	if (pCtx == NULL) {
+ 		ve1_err(VE1_WRAPPER_TAG, "pCtx == NULL\n");
+@@ -1229,6 +1615,40 @@ int VE1_DecSeqInit(void *pCtx)
+ 					initialInfo->fRateNumerator,
+ 					initialInfo->fRateDenominator,
+ 					ctx->timeTick);
++
++				if (ctx->secAxiUse == NULL) {
++					ctx->secAxiUse = kzalloc(sizeof(SecAxiUse), GFP_KERNEL);
++					if (ctx->secAxiUse == NULL) {
++						ve1_err(VE1_WRAPPER_TAG, "kzalloc secAxiUse fail\n");
++						return -1;
++					}
++				}
++				secAxiUse = (SecAxiUse *)ctx->secAxiUse;
++				memset(secAxiUse, 0, sizeof(SecAxiUse));
++				secAxiUse->u.coda9.useBitEnable = USE_BIT_INTERNAL_BUF;
++				secAxiUse->u.coda9.useIpEnable = USE_IP_INTERNAL_BUF;
++				secAxiUse->u.coda9.useDbkYEnable = USE_DBKY_INTERNAL_BUF;
++				secAxiUse->u.coda9.useDbkCEnable = USE_DBKC_INTERNAL_BUF;
++				secAxiUse->u.coda9.useOvlEnable = USE_OVL_INTERNAL_BUF;
++				secAxiUse->u.coda9.useBtpEnable = USE_BTP_INTERNAL_BUF;
++				VPU_DecGiveCommand((DecHandle)ctx->decHandle, SET_SEC_AXI, secAxiUse);
++
++				if (ctx->decCacheConfig == NULL) {
++					ctx->decCacheConfig =
++						kzalloc(sizeof(MaverickCacheConfig), GFP_KERNEL);
++					if (ctx->decCacheConfig == NULL) {
++						ve1_err(VE1_WRAPPER_TAG,
++							"kzalloc decCacheConfig fail\n");
++						return -1;
++					}
++				}
++				decCacheConfig = (MaverickCacheConfig *)ctx->decCacheConfig;
++				MaverickCache2Config(decCacheConfig,
++							TRUE, // decoder
++							(BOOL)((DecOpenParam *)ctx->decOP)->cbcrInterleave, 0, 0, 3,
++							(TiledMapType)LINEAR_FRAME_MAP, 15);
++				VPU_DecGiveCommand((DecHandle)ctx->decHandle, SET_CACHE_CONFIG,
++						decCacheConfig);
+ 			}
+ 		}
+ 	} else {
+@@ -1332,211 +1752,6 @@ int VE1_DecSeqInit(void *pCtx)
+ 	return ret;
+ }
+ 
+-int VE1_DecAllocateFrameBuffers(void *pCtx)
+-{
+-	RetCode ret = RETCODE_SUCCESS;
+-	struct ve1_ctx *ctx;
+-	DecOpenParam *decOP;
+-	DecInitialInfo *initialInfo;
+-	int mapType = LINEAR_FRAME_MAP;
+-	int fbHeight;
+-	int fbStride;
+-	FrameBufferFormat fbFormat;
+-	FrameBufferFormat wtlFormat;
+-	FrameBufferAllocInfo *fbAllocInfo;
+-	FrameBuffer *fbUser;
+-	int i;
+-	SecAxiUse *secAxiUse;
+-	MaverickCacheConfig *decCacheConfig;
+-
+-	if (pCtx == NULL) {
+-		ve1_err(VE1_WRAPPER_TAG, "pCtx == NULL\n");
+-		return -1;
+-	}
+-	ctx = (struct ve1_ctx *)pCtx;
+-
+-	if (ctx->decHandle == NULL) {
+-		ve1_err(VE1_WRAPPER_TAG, "ctx->decHandle == NULL\n");
+-		return -1;
+-	}
+-
+-	if (ctx->fbAllocInfo == NULL) {
+-		ctx->fbAllocInfo =
+-			kzalloc(sizeof(FrameBufferAllocInfo), GFP_KERNEL);
+-		if (ctx->fbAllocInfo == NULL) {
+-			ve1_err(VE1_WRAPPER_TAG, "kzalloc fbAllocInfo fail\n");
+-			return -1;
+-		}
+-	}
+-
+-	if (ctx->fbUser == NULL) {
+-		ctx->fbUser = kzalloc(sizeof(FrameBuffer) * MAX_REG_FRAME,
+-				      GFP_KERNEL);
+-		if (ctx->fbUser == NULL) {
+-			ve1_err(VE1_WRAPPER_TAG, "kzalloc fbUser fail\n");
+-			return -1;
+-		}
+-	}
+-
+-	decOP = (DecOpenParam *)ctx->decOP;
+-	initialInfo = (DecInitialInfo *)ctx->initialInfo;
+-	fbAllocInfo = (FrameBufferAllocInfo *)ctx->fbAllocInfo;
+-
+-	fbFormat = FORMAT_420;
+-	wtlFormat = FORMAT_420;
+-
+-	if ((mapType == TILED_FRAME_V_MAP) && (decOP->wtlEnable == 0) &&
+-	    (decOP->tiled2LinearEnable == 0)) {
+-		// trace VPU_GetFrameBufSize -> ProductCalculateFrameBufSize -> CalcLumaSize
+-		// if TILED_FRAME_V_MAP and CODA980, VPU force use 64 align to calculate the frame buffer height (unit_size_ver_lum),
+-		// it will influence the U_addr of YUV_STATE
+-		fbHeight = VPU_ALIGN64(initialInfo->picHeight);
+-	} else {
+-		fbHeight = VPU_ALIGN32(initialInfo->picHeight);
+-	}
+-	fbStride = CalcStride(initialInfo->picWidth, initialInfo->picHeight,
+-			      fbFormat, decOP->cbcrInterleave,
+-			      (TiledMapType)mapType, 0);
+-	ctx->framebufSize =
+-		VPU_GetFrameBufSize(VE1_COREIDX, fbStride, fbHeight, mapType,
+-				    fbFormat, decOP->cbcrInterleave, NULL);
+-	ve1_info(
+-		VE1_WRAPPER_TAG,
+-		"af VPU_GetFrameBufSize().framebufSize:%d.fbStride:%d.fbHeight:%d.mapType:%d\n",
+-		ctx->framebufSize, fbStride, fbHeight, mapType);
+-
+-	if (fbHeight == 0 || fbStride == 0 || ctx->framebufSize == 0) {
+-		ve1_err(VE1_WRAPPER_TAG,
+-			"incorrect fbHeight:%d.fbStride:%d.framebufSize:%d\n",
+-			fbHeight, fbStride, ctx->framebufSize);
+-		return -1;
+-	}
+-
+-	if (ctx->cntCap2Dpb <
+-	    (initialInfo->minFrameBufferCount + EXTRA_DEC_PIC_BUF)) {
+-		ve1_err(VE1_WRAPPER_TAG,
+-			"cap_qbuf count:%d < expected dpb count:%d\n",
+-			ctx->cntCap2Dpb,
+-			(initialInfo->minFrameBufferCount + EXTRA_DEC_PIC_BUF));
+-		WARN_ON(1);
+-		return -1;
+-	}
+-	for (i = 0; i < ctx->cntCap2Dpb; i++) {
+-		if (ctx->dpb[i].size < ctx->framebufSize) {
+-			ve1_err(VE1_WRAPPER_TAG,
+-				"dpb[%d].size:%u < expected framebufSize:%d\n",
+-				i,ctx->dpb[i].size,
+-				ctx->framebufSize);
+-			WARN_ON(1);
+-			return -1;
+-		}
+-	}
+-	ctx->regFbCount = ctx->cntCap2Dpb;
+-
+-	fbAllocInfo->format = fbFormat;
+-	fbAllocInfo->cbcrInterleave = decOP->cbcrInterleave;
+-	fbAllocInfo->mapType = mapType;
+-	fbAllocInfo->stride = fbStride;
+-	fbAllocInfo->height = fbHeight;
+-	fbAllocInfo->lumaBitDepth = initialInfo->lumaBitdepth;
+-	fbAllocInfo->chromaBitDepth = initialInfo->chromaBitdepth;
+-	fbAllocInfo->num = ctx->regFbCount;
+-	fbAllocInfo->endian = decOP->frameEndian;
+-	fbAllocInfo->type = FB_TYPE_CODEC;
+-
+-	for (i = 0; i < ctx->regFbCount; i++) {
+-		fbUser = ((FrameBuffer *)ctx->fbUser) + i;
+-		ctx->dpb[i].regIndex = i;
+-		fbUser->size = ctx->dpb[i].size;
+-		fbUser->bufY = ctx->dpb[i].phys_addr;
+-		fbUser->bufCb = -1;
+-		fbUser->bufCr = -1;
+-		fbUser->updateFbInfo = TRUE;
+-	}
+-
+-	ret = VPU_DecAllocateFrameBuffer((DecHandle)ctx->decHandle,
+-					 *((FrameBufferAllocInfo *)fbAllocInfo),
+-					 (FrameBuffer *)ctx->fbUser);
+-	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
+-		"af VPU_DecAllocateFrameBuffer.ret:%d\n", ret);
+-	if (ret != RETCODE_SUCCESS) {
+-		ve1_err(VE1_WRAPPER_TAG,
+-			"VPU_DecAllocateFrameBuffer fail.ret:%d\n", ret);
+-		return -1;
+-	}
+-	for (i = 0; i < ctx->regFbCount; i++) {
+-		fbUser = ((FrameBuffer *)ctx->fbUser) + i;
+-		ve1_info(
+-			VE1_WRAPPER_TAG,
+-			"fbUser[%d].bufY:0x%x.size:%d.myIndex:%d.stride:%d.h:%d.seqNo:%d.tot:%d\n",
+-			i, fbUser->bufY, fbUser->size, fbUser->myIndex,
+-			fbUser->stride, fbUser->height, ctx->currSequenceNo,
+-			ctx->totIonAllocatedBytes);
+-	}
+-
+-	if (decOP->wtlEnable) {
+-		ve1_err(VE1_WRAPPER_TAG, "not support wtlEnable yet\n");
+-	}
+-
+-	if (ctx->secAxiUse == NULL) {
+-		ctx->secAxiUse = kzalloc(sizeof(SecAxiUse), GFP_KERNEL);
+-		if (ctx->secAxiUse == NULL) {
+-			ve1_err(VE1_WRAPPER_TAG, "kzalloc secAxiUse fail\n");
+-			return -1;
+-		}
+-	}
+-	secAxiUse = (SecAxiUse *)ctx->secAxiUse;
+-	memset(secAxiUse, 0, sizeof(SecAxiUse));
+-	secAxiUse->u.coda9.useBitEnable = USE_BIT_INTERNAL_BUF;
+-	secAxiUse->u.coda9.useIpEnable = USE_IP_INTERNAL_BUF;
+-	secAxiUse->u.coda9.useDbkYEnable = USE_DBKY_INTERNAL_BUF;
+-	secAxiUse->u.coda9.useDbkCEnable = USE_DBKC_INTERNAL_BUF;
+-	secAxiUse->u.coda9.useOvlEnable = USE_OVL_INTERNAL_BUF;
+-	secAxiUse->u.coda9.useBtpEnable = USE_BTP_INTERNAL_BUF;
+-	VPU_DecGiveCommand((DecHandle)ctx->decHandle, SET_SEC_AXI, secAxiUse);
+-
+-	if (ctx->decCacheConfig == NULL) {
+-		ctx->decCacheConfig =
+-			kzalloc(sizeof(MaverickCacheConfig), GFP_KERNEL);
+-		if (ctx->decCacheConfig == NULL) {
+-			ve1_err(VE1_WRAPPER_TAG,
+-				"kzalloc decCacheConfig fail\n");
+-			return -1;
+-		}
+-	}
+-	decCacheConfig = (MaverickCacheConfig *)ctx->decCacheConfig;
+-	MaverickCache2Config(decCacheConfig,
+-			     TRUE, // decoder
+-			     (BOOL)decOP->cbcrInterleave, 0, 0, 3,
+-			     (TiledMapType)mapType, 15);
+-	VPU_DecGiveCommand((DecHandle)ctx->decHandle, SET_CACHE_CONFIG,
+-			   decCacheConfig);
+-
+-	fbStride =
+-		CalcStride(initialInfo->picWidth, initialInfo->picHeight,
+-			   fbFormat, decOP->cbcrInterleave,
+-			   (decOP->wtlEnable == TRUE ? LINEAR_FRAME_MAP :
+-						       (TiledMapType)(mapType)),
+-			   0);
+-	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
+-		"fbStride:%d.fbFormat:%d.mapType:%d\n", fbStride, fbFormat,
+-		mapType);
+-
+-	ret = VPU_DecRegisterFrameBuffer((DecHandle)ctx->decHandle,
+-					 (FrameBuffer *)ctx->fbUser,
+-					 ctx->regFbCount, fbStride, fbHeight,
+-					 mapType);
+-	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
+-		"af VPU_DecRegisterFrameBuffer.ret:%d\n", ret);
+-	if (ret != RETCODE_SUCCESS) {
+-		ve1_err(VE1_WRAPPER_TAG,
+-			"VPU_DecRegisterFrameBuffer fail.ret:%d\n", ret);
+-		return -1;
+-	}
+-
+-	return ret;
+-}
+-
+ int VE1_DecStartDecode(void *pCtx)
+ {
+ 	RetCode ret = RETCODE_SUCCESS;
+@@ -1699,46 +1914,52 @@ void *rtkve1_find_dpb(void *pCtx, unsigned long dpb_paddr)
+ 	}
+ 	ctx = (struct ve1_ctx *)pCtx;
+ 
++	mutex_lock(&ctx->ve1_dma_mutex);
+ 	for (i = 0; i < VE1_ION_STRUCT_NUM; i++) {
+ 		if (IS_RTKVE1_DPB_VALID(ctx->dpb[i].status) &&
+ 		    (ctx->dpb[i].phys_addr == dpb_paddr)) {
++			mutex_unlock(&ctx->ve1_dma_mutex);
+ 			return (void *)&(ctx->dpb[i]);
+ 		}
+ 	}
+ 
++	mutex_unlock(&ctx->ve1_dma_mutex);
+ 	return NULL;
+ }
+ 
+-void VE1_UpdateDPBStatus(void *pCtx, unsigned int dpb_paddr,
+-			 unsigned int sequenceNo, unsigned int regIndex,
+-			 unsigned int status)
++int VE1_UpdateDPBStatus(void *pCtx, unsigned int dpb_paddr,
++			 unsigned int sequenceNo, unsigned int status)
+ {
++	int ret = 0;
+ 	struct ve1_ctx *ctx;
+ #if defined(VE1_ALLOC_FRAME_BUFFER_BY_VDI)
+ 	vpu_buffer_t vdb;
+ #endif
+ 	void *tmp_dpb = NULL;
+ 	struct rtkve1_dpb_t *dpb = NULL;
++	unsigned int regIndex = 0;
+ 
+ 	if (pCtx == NULL) {
+ 		ve1_err(VE1_WRAPPER_TAG, "pCtx == NULL\n");
+-		return;
++		return -1;
+ 	}
+ 	ctx = (struct ve1_ctx *)pCtx;
+ 
+ 	if (ctx->decHandle == NULL || ctx->decOP == NULL) {
+ 		ve1_err(VE1_WRAPPER_TAG,
+ 			"ctx->decHandle == NULL || ctx->decOP == NULL\n");
+-		return;
++		return -1;
+ 	}
+ 
+ 	tmp_dpb = rtkve1_find_dpb(pCtx, dpb_paddr);
+ 	if (!tmp_dpb) {
+ 		ve1_err(VE1_WRAPPER_TAG, "can't find dpb_paddr:0x%x in dpb[]\n",
+ 			dpb_paddr);
+-		return;
++		ret = -1;
++		goto out;
+ 	}
+ 	dpb = (struct rtkve1_dpb_t *)tmp_dpb;
++	regIndex = dpb->regIndex;
+ 
+ 	mutex_lock(&ctx->ve1_dma_mutex);
+ 	// recycle the frame buffer
+@@ -1790,7 +2011,10 @@ void VE1_UpdateDPBStatus(void *pCtx, unsigned int dpb_paddr,
+ 	} else {
+ 		ve1_err(VE1_WRAPPER_TAG, "invalid status:0x%x\n", status);
+ 	}
++
++out:
+ 	mutex_unlock(&ctx->ve1_dma_mutex);
++	return ret;
+ }
+ 
+ void ve1_seq_change_free_fb(struct ve1_ctx *ctx)
+@@ -2023,8 +2247,6 @@ int ve1_prepare_seq_change(void *pCtx)
+ 				"fail to continue decoding original sequence.ve1DecState:%d\n",
+ 				ctx->ve1DecState);
+ 		}
+-
+-		msleep(5);
+ 	}
+ 
+ 	for (i = 0; i < ctx->regFbCount; i++) {
+@@ -2104,8 +2326,8 @@ int ve1_prepare_seq_change(void *pCtx)
+ 	memset(ctx->fbUser, 0, sizeof(FrameBuffer) * MAX_REG_FRAME);
+ 
+ 	ctx->seqInited = 0;
+-	ctx->startDecode =
+-		0; // for trigger queue_work pic_run_work in ve1_out_qbuf()
++	// for trigger queue_work pic_run_work in ve1_out_qbuf()
++	ctx->startDecode = 0;
+ 	ctx->seqChangeDone = 1;
+ 
+ 	ve1_info(VE1_WRAPPER_TAG, "[-]\n");
+@@ -2249,6 +2471,27 @@ int VE1_DecPicDone(void *pCtx)
+ 
+ #if defined(VE1_CHECK_DFB_MD5_EN)
+ 	fbIndex = outputInfo->indexFrameDecoded;
++	if (fbIndex >= 0) {
++		fbUser = ((FrameBuffer *)ctx->fbUser) + fbIndex;
++		fb_phys_addr = fbUser->bufY;
++		tmp_dpb = rtkve1_find_dpb((void *)ctx, fb_phys_addr);
++		if (!tmp_dpb) {
++			ve1_err(VE1_WRAPPER_TAG,
++				"can't find framePhysAddr:0x%lx in dpb[]\n",
++				fb_phys_addr);
++			return VE1_DEC_RETURN_INVALID;
++		}
++		dpb = (struct rtkve1_dpb_t *)tmp_dpb;
++		vb2_v4l2_buf = (struct vb2_v4l2_buffer *)(dpb->vb2_v4l2_buf);
++		vb2_buf = &(vb2_v4l2_buf->vb2_buf);
++		fb_virt_addr = vb2_plane_vaddr(vb2_buf, 0);
++		ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++			"dpb.index:%d.virt:0x%px.phys:0x%lx.vb2_v4l2_buf:0x%px.vb2_buf:0x%px.size:%u\n",
++			fbIndex, fb_virt_addr, fb_phys_addr,
++			(void *)vb2_v4l2_buf, (void *)vb2_buf, dpb->size);
++		ve1_md5_hash(ve1_md5_digest, VE1_MD5_DIGEST_SIZE,
++			(char *)fb_virt_addr, dpb->size);
++	}
+ #endif
+ 
+ #if defined(VE1_TEST_DUMP_YUV_EN)
+@@ -2330,6 +2573,17 @@ int VE1_DecPicDone(void *pCtx)
+ 		return ret;
+ 	}
+ 
++	if ((outputInfo->indexFrameDisplay == -1) && ctx->streamEnd) {
++		ret = VPU_DecUpdateBitstreamBuffer((DecHandle)ctx->decHandle,
++											STREAM_END_CLEAR_FLAG);
++		ve1_dbg(VPU_DBG_VE1_UP_BS, VE1_WRAPPER_TAG,
++			"af VPU_DecUpdateBitstreamBuffer.ret:%d.size:%d\n",
++			ret, STREAM_END_CLEAR_FLAG);
++		VE1_DecGetRdWrPtr(ctx);
++		ctx->streamEnd = 0;
++		ctx->handle_eos_by = VE1_HANDLE_EOS_BY_NONE;
++	}
++
+ 	return VE1_DEC_RETURN_OK;
+ }
+ 
+@@ -2351,7 +2605,7 @@ int VE1_DecCheckComplete(void *pCtx)
+ 		return -1;
+ 	}
+ 
+-	if ((((DecOpenParam *)ctx->decOP)->bitstreamMode = BS_MODE_INTERRUPT) &&
++	if ((((DecOpenParam *)ctx->decOP)->bitstreamMode == BS_MODE_INTERRUPT) &&
+ 	    (ctx->ve1DecState == VE1_STATE_DEC_START_DEC_ISSUED)) {
+ 		ret = VPU_DecUpdateBitstreamBuffer((DecHandle)ctx->decHandle,
+ 						   STREAM_END_SET_FLAG);
+@@ -3410,3 +3664,137 @@ int VE1_DecUpdateBS(void *pCtx, uint8_t *buf, uint32_t size)
+ 
+ 	return 0;
+ }
++
++int rtkve1_flush_bitstream(void *pCtx)
++{
++	int ret = 0;
++	struct ve1_ctx *ctx;
++	DecHandle decHandle = NULL;
++
++	if (pCtx == NULL) {
++		ve1_err(VE1_WRAPPER_TAG, "pCtx == NULL\n");
++		return -1;
++	}
++	ctx = (struct ve1_ctx *)pCtx;
++
++	if (ctx->decHandle == NULL) {
++		ve1_err(VE1_WRAPPER_TAG, "decHandle == NULL\n");
++		return -1;
++	}
++	decHandle = (DecHandle)ctx->decHandle;
++
++	mutex_lock(&ctx->ve1_mutex);
++	ctx->accuBsFeedBytes = 0;
++	ctx->bsRdPtr = ctx->bsWrPtr;
++	ret = VPU_DecSetRdPtr(decHandle, ctx->bsWrPtr, 1);
++	if (ret != RETCODE_SUCCESS) {
++		ve1_err(VE1_WRAPPER_TAG,
++			"VPU_DecSetRdPtr fail.ret:%d\n", ret);
++		ret = -1;
++		goto out;
++	}
++	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++		"VPU_DecSetRdPtr(0x%x, 1)\n",
++		(unsigned int)ctx->bsWrPtr);
++	VE1_DecGetRdWrPtr(pCtx);
++
++	if (ctx->streamEnd) {
++		ret = VPU_DecUpdateBitstreamBuffer((DecHandle)ctx->decHandle,
++											STREAM_END_CLEAR_FLAG);
++		ve1_dbg(VPU_DBG_VE1_UP_BS, VE1_WRAPPER_TAG,
++			"af VPU_DecUpdateBitstreamBuffer.ret:%d.size:%d\n",
++			ret, STREAM_END_CLEAR_FLAG);
++		VE1_DecGetRdWrPtr(ctx);
++		ctx->streamEnd = 0;
++	}
++	ctx->handle_eos_by = VE1_HANDLE_EOS_BY_NONE;
++
++out:
++	mutex_unlock(&ctx->ve1_mutex);
++	return ret;
++}
++
++int rtkve1_flush(void *pCtx)
++{
++	int ret = 0;
++	struct ve1_ctx *ctx;
++	DecHandle decHandle = NULL;
++    int vpu_timeout_cnt = 1000;
++	unsigned int dispFlag = 0xffffffff;
++
++	if (pCtx == NULL) {
++		ve1_err(VE1_WRAPPER_TAG, "pCtx == NULL\n");
++		return -1;
++	}
++	ctx = (struct ve1_ctx *)pCtx;
++
++	if (ctx->decHandle == NULL) {
++		ve1_err(VE1_WRAPPER_TAG, "decHandle == NULL\n");
++		return -1;
++	}
++	decHandle = (DecHandle)ctx->decHandle;
++
++	mutex_lock(&ctx->ve1_mutex);
++	ctx->bFlush = true;
++	mutex_unlock(&ctx->ve1_mutex);
++
++	ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
++		"bf flush_work pic_run_work\n");
++	flush_work(&ctx->pic_run_work);
++	ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
++		"af flush_work pic_run_work\n");
++
++	mutex_lock(&ctx->ve1_mutex);
++	ctx->bFlush = false;
++	ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
++		"VE1_DecCheckComplete\n");
++	VE1_DecCheckComplete(ctx);
++
++    if (VPU_IsBusy(VE1_COREIDX)) {
++        VPU_DecUpdateBitstreamBuffer(decHandle, STREAM_END_SET_FLAG);
++		ve1_dbg(VPU_DBG_VE1_UP_BS, VE1_WRAPPER_TAG,
++			"af VPU_DecUpdateBitstreamBuffer.ret:%d.size:%d\n",
++			ret, STREAM_END_SET_FLAG);
++		VE1_DecGetRdWrPtr(pCtx);
++        while (VPU_IsBusy(VE1_COREIDX) && vpu_timeout_cnt > 0) {
++            vpu_timeout_cnt --;
++            usleep_range(1000, 1000);
++        }
++        VPU_DecUpdateBitstreamBuffer(decHandle, STREAM_END_CLEAR_FLAG);
++		ve1_dbg(VPU_DBG_VE1_UP_BS, VE1_WRAPPER_TAG,
++			"af VPU_DecUpdateBitstreamBuffer.ret:%d.size:%d\n",
++			ret, STREAM_END_CLEAR_FLAG);
++		VE1_DecGetRdWrPtr(pCtx);
++		ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
++			"vpu_timeout_cnt:%d\n",vpu_timeout_cnt);
++    }
++	ret = VPU_DecFrameBufferFlush(decHandle, NULL, NULL);
++	if (ret != RETCODE_SUCCESS) {
++		ve1_err(VE1_WRAPPER_TAG,
++			"VPU_DecFrameBufferFlush fail.ret:%d\n", ret);
++		ret = -1;
++		goto out;
++	}
++
++	ret = VPU_DecSetDispFlag(decHandle, dispFlag);
++	if (ret != RETCODE_SUCCESS) {
++		ve1_err(VE1_WRAPPER_TAG,
++			"VPU_DecSetDispFlag fail.ret:%d\n", ret);
++		ret = -1;
++		goto out;
++	}
++	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++		"VPU_DecSetDispFlag.dispFlag:0x%x\n", dispFlag);
++
++	ctx->dpbFull = 0;
++	ctx->outputinfoSN = 0;
++	ctx->decodedFrmNum = 0;
++	ctx->displayFrmNum = 0;
++	ctx->lastInfoFrmStart = 0;
++	ctx->lastInfoFrmEnd = 0;
++
++	ret = 0;
++out:
++	mutex_unlock(&ctx->ve1_mutex);
++	return ret;
++}
+\ No newline at end of file
+diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_wrapper.h b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_wrapper.h
+index 446b8c0e19cb..77e8540cb2cf 100644
+--- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_wrapper.h
++++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve1_wrapper.h
+@@ -43,12 +43,10 @@ int VE1_DecOpen(void *pCtx, void *pParam);
+ int VE1_DecGetRdWrPtr(void *pCtx);
+ int VE1_SetStreamEnd(void *pCtx);
+ int VE1_DecSeqInit(void *pCtx);
+-int VE1_DecAllocateFrameBuffers(void *pCtx);
+ int VE1_DecStartDecode(void *pCtx);
+ int VE1_DecWaitPicDone(void *pCtx);
+-void VE1_UpdateDPBStatus(void *pCtx, unsigned int dpb_paddr,
+-			 unsigned int sequenceNo, unsigned int regIndex,
+-			 unsigned int status);
++int VE1_UpdateDPBStatus(void *pCtx, unsigned int dpb_paddr,
++			 unsigned int sequenceNo, unsigned int status);
+ /**
+ * @brief Do original sequence remain decoding and flush, prepare for new sequence
+ * @return VE1_DEC_RETURN_VALUE
+@@ -74,5 +72,9 @@ int VE1_DecUpdateBS(void *pCtx, uint8_t *buf, uint32_t size);
+ void *rtkve1_find_dpb(void *pCtx, unsigned long dpb_paddr);
+ int rtkve1_add_capbuf_to_dpb(void *pCtx, unsigned long size,
+ 			     unsigned long phys_addr, void *vb2_v4l2_buf);
+-void rtkve1_make_undq_capbuf_done(void *pCtx);
++int rtkve1_register_dpbs(void *pCtx);
++int rtkve1_check_new_dpb(void *pCtx);
++void rtkve1_flush_dpbs(void *pCtx);
++int rtkve1_flush_bitstream(void *pCtx);
++int rtkve1_flush(void *pCtx);
+ #endif // #define __VE1_WRAPPER_H__
+diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve2.c b/drivers/media/platform/rtk_vdec_rtd16xxb/ve2.c
+index 85b325029201..3acff06a58ea 100644
+--- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve2.c
++++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve2.c
+@@ -56,6 +56,7 @@ struct ve2_ctx {
+ 	bool streamon_cap;
+ 	bool streamoff_out;
+ 	bool streamoff_cap;
++	bool is_run;
+ 	int32_t internal_buf_cnt;
+ };
+ 
+@@ -96,11 +97,9 @@ int ve2_start_streaming(struct vb2_queue *q, uint32_t count, int pixelformat)
+ {
+ 	struct ve2_ctx *ctx = vq_to_ve(q);
+ 	struct videc_ctx *vid_ctx = vb2_get_drv_priv(q);
+-	struct v4l2_fh *fh = &vid_ctx->fh;
+ 	struct vpu_ctx *v_ctx = (struct vpu_ctx *)vid_ctx->vpu_ctx;
+-	int ret;
+ 	int type = q->type;
+-	VIDEO_STREAM_TYPE eStreamType;
++	int ret;
+ 
+ 	if(!ctx) {
+ 		vpu_err("%s ctx is NULL\n", __func__);
+@@ -126,77 +125,7 @@ int ve2_start_streaming(struct vb2_queue *q, uint32_t count, int pixelformat)
+ 		return -EPERM;
+ 	}
+ 
+-	if ((!ctx->streamon_out) && (!ctx->streamon_cap)) {
+-		ret = ve2rpc_init_cap_handle(q->dev, &ctx->cap_hndl,
+-					     vid_ctx->params.is_secure,
+-					     fh);
+-		if (ret) {
+-			vpu_err("ve2rpc_init_handle cap fail\n");
+-			return ret;
+-		}
+-
+-		ret = ve2rpc_init_out_handle(q->dev, &ctx->out_hndl,
+-					     vid_ctx->params.is_secure,
+-					     fh);
+-		if (ret) {
+-			vpu_err("ve2rpc_init_handle out fail\n");
+-			return ret;
+-		}
+-
+-		ctx->cap_hndl->is_adaptive_playback =
+-			vid_ctx->params.dec_params.is_adaptive_playback;
+-		ctx->out_hndl->is_adaptive_playback =
+-			vid_ctx->params.dec_params.is_adaptive_playback;
+-
+-		INIT_LIST_HEAD(&ctx->pts_list);
+-		ctx->cap_hndl->pts_queue = &ctx->pts_list;
+-		ctx->out_hndl->pts_queue = &ctx->pts_list;
+-
+-		if (!ctx->out_hndl || !ctx->cap_hndl) {
+-			vpu_err("ve2rpc_init_handle fail\n");
+-			return -EPERM;
+-		}
+-
+-		ret = ve2rpc_connect(ctx->out_hndl, ctx->cap_hndl);
+-		if (ret) {
+-			vpu_err("ve2rpc_connect fail\n");
+-			return ret;
+-		}
+-
+-#ifdef ENABLE_TEE_DRM_FLOW
+-		ret = ta_TEEapi_init(
+-			(struct tee_context **)&ctx->out_hndl->teeapi_ctx,
+-			&ctx->out_hndl->teeapi_tee_session);
+-		if (ret < 0) {
+-			vpu_err("%s ta_TEEapi_init() fail, ret:%d\n", __func__,
+-				ret);
+-			return -EPERM;
+-		}
+-
+-		ctx->out_hndl->main_rb.teeapi_ctx = ctx->out_hndl->teeapi_ctx;
+-		ctx->out_hndl->main_rb.teeapi_tee_session =
+-			ctx->out_hndl->teeapi_tee_session;
+-#endif
+-		ctx->out_hndl->main_rb.memory = q->memory;
+-
+-		if (pixelformat == V4L2_PIX_FMT_HEVC)
+-			eStreamType = VIDEO_STREAM_H265;
+-		else if (pixelformat == V4L2_PIX_FMT_VP9)
+-			eStreamType = VIDEO_STREAM_VP9;
+-		else if (pixelformat == V4L2_PIX_FMT_AV1)
+-			eStreamType = VIDEO_STREAM_AV1;
+-		else {
+-			eStreamType = VIDEO_STREAM_H265;
+-			vpu_err("unsupport codec! %p4cc\n", &pixelformat);
+-		}
+-
+-		ctx->out_hndl->vType = eStreamType;
+-		ret = ve2rpc_setRole(ctx->out_hndl, eStreamType);
+-		if (ret) {
+-			vpu_err("ve2rpc_setRole fail %p4cc\n", &pixelformat);
+-			return ret;
+-		}
+-
++	if (V4L2_TYPE_IS_OUTPUT(type)) {
+ #ifdef VPU_GET_CC
+ 		ret = ve2rpc_setDecoderCCBypass(ctx->out_hndl,
+ 						VIDEODECODER_CC_CALLBACK);
+@@ -217,18 +146,6 @@ int ve2_start_streaming(struct vb2_queue *q, uint32_t count, int pixelformat)
+ 			return ret;
+ 		}
+ 
+-		ret = ve2rpc_set_cmprs(ctx->out_hndl, 0);
+-		if (ret) {
+-			vpu_err("ve2rpc fail to set cmprs\n");
+-			return -EPERM;
+-		}
+-
+-		ret = ve2rpc_set_res_info(ctx->out_hndl);
+-		if (ret) {
+-			vpu_err("ve2rpc fail to set res info\n");
+-			return -EPERM;
+-		}
+-	} else { /*Second time stream on */
+ 		ret = ve2rpc_run(ctx->cap_hndl);
+ 		if (ret) {
+ 			vpu_err("ve2rpc_run cap_hndl fail\n");
+@@ -240,6 +157,7 @@ int ve2_start_streaming(struct vb2_queue *q, uint32_t count, int pixelformat)
+ 			vpu_err("ve2rpc_run out_hndl fail\n");
+ 			return ret;
+ 		}
++		ctx->is_run = true;
+ #ifdef VPU_GET_CC
+ 		ret = ve2rpc_SetRingBuffer(ctx->out_hndl, &ctx->out_hndl->cc_rb,
+ 					   0x100000 /* 1MB */, RINGBUFFER_DTVCC,
+@@ -256,9 +174,9 @@ int ve2_start_streaming(struct vb2_queue *q, uint32_t count, int pixelformat)
+ 			ctx->cap_hndl->main_rb.pRBH->reserve3 = htonl(
+ 				v_ctx->cap_fmt.misc.ori_width << 16 |
+ 				v_ctx->cap_fmt.misc.ori_height);
+-	}
+ 
+-	if (V4L2_TYPE_IS_OUTPUT(type)) {
++		ctx->out_hndl->main_rb.memory = q->memory;
++
+ 		ctx->streamon_out = 1;
+ 		ctx->streamoff_out = 0;
+ 		ctx->out_hndl->type = type;
+@@ -291,12 +209,18 @@ static void ve2_make_undq_capbuf_done(struct ve2_ctx *ctx)
+ 
+ 	cap_hndl = ctx->cap_hndl;
+ 	mutex_lock(&cap_hndl->dpb_mutex);
+-	for (i = 0; i < VE2_MAX_DPB_NUM; i++)
+-		if (cap_hndl->dpb[i].status == RTKVE2_DPB_ST_VALID)
++	for (i = 0; i < VE2_MAX_DPB_NUM; i++) {
++		struct vb2_v4l2_buffer *vb2_v4l2_buf =
++			(struct vb2_v4l2_buffer *)cap_hndl->dpb[i].vb2_v4l2_buf;
++
++		if (cap_hndl->dpb[i].status == RTKVE2_DPB_ST_VALID &&
++			vb2_v4l2_buf->vb2_buf.state == VB2_BUF_STATE_ACTIVE) {
+ 			v4l2_m2m_buf_done(
+ 				(struct vb2_v4l2_buffer
+ 					 *)(cap_hndl->dpb[i].vb2_v4l2_buf),
+ 				VB2_BUF_STATE_ERROR);
++		}
++	}
+ 
+ 	mutex_unlock(&cap_hndl->dpb_mutex);
+ }
+@@ -304,162 +228,111 @@ static void ve2_make_undq_capbuf_done(struct ve2_ctx *ctx)
+ int ve2_stop_streaming(struct vb2_queue *q)
+ {
+ 	struct ve2_ctx *ctx = vq_to_ve(q);
+-	int ret;
+ 	int type = q->type;
+ 	struct ve2rpc *hndl;
++	int ret = 0;
+ 
+ 	if(!ctx) {
+ 		vpu_err("%s ctx is NULL\n", __func__);
+-		return 0;
++		goto exit;
+ 	}
+ 
+ 	if (V4L2_TYPE_IS_OUTPUT(type)) {
+ 		if (!ctx->streamon_out) {
+ 			vpu_err("No out stream on !!!\n");
+-			return (-EPERM);
++			ret = (-EPERM);
++			goto exit;
+ 		}
+ 		hndl = ctx->out_hndl;
+ 	} else {
+ 		if (!ctx->streamon_cap) {
+ 			vpu_err("No cap stream on !!!\n");
+-			return (-EPERM);
++			ret = (-EPERM);
++			goto exit;
+ 		}
+ 		hndl = ctx->cap_hndl;
+-		ve2_make_undq_capbuf_done(ctx);
+ 	}
+ 
+ 	if (!hndl) {
+ 		vpu_err("ve2_stop_streaming %s hnd is NULL\n",
+ 			V4L2_TYPE_TO_STR(q->type));
+-		return 0;
++		goto exit;
+ 	}
+ 
+ 	if (!ctx->streamon_out && !ctx->streamon_cap) {
+ 		vpu_err("No streamon can't streamoff !!!\n");
+-		return (-EPERM);
++		ret = (-EPERM);
++		goto exit;
+ 	}
+ 
+ 	if (ctx->streamoff_out && ctx->streamoff_cap) {
+ 		vpu_err("Streamoff return directly\n");
+-		return 0;
++		goto exit;
+ 	}
+ 
+-	if ((!ctx->streamoff_out) && (!ctx->streamoff_cap) &&
+-	    ctx->streamon_out && ctx->streamon_cap) {
+-		ret = ve2rpc_pause(ctx->cap_hndl);
+-		if (ret) {
+-			vpu_err("cap ve2rpc_pause fail\n");
+-			return ret;
+-		}
+-
++	if (V4L2_TYPE_IS_OUTPUT(q->type)) {
+ 		ret = ve2rpc_pause(ctx->out_hndl);
+ 		if (ret) {
+ 			vpu_err("out ve2rpc_pause fail\n");
+-			return ret;
+-		}
+-
+-		ret = ve2rpc_flush(ctx->cap_hndl);
+-		if (ret) {
+-			vpu_err("cap ve2rpc_fluse fail\n");
+-			return ret;
++			goto exit;
+ 		}
+ 
+ 		ret = ve2rpc_flush(ctx->out_hndl);
+ 		if (ret) {
+ 			vpu_err("out ve2rpc_fluse fail\n");
+-			return ret;
++			goto exit;
+ 		}
+ 
+-		ret = ve2rpc_stop(ctx->cap_hndl);
++		ret = ve2rpc_reset_bs_ring_rwptr(ctx->out_hndl);
+ 		if (ret) {
+-			vpu_err("cap ve2rpc_stop fail\n");
+-			return ret;
++			vpu_err("reset bs_ringbuffer_rwptr fail\n");
++			goto exit;
+ 		}
+ 
+-		ret = ve2rpc_stop(ctx->out_hndl);
++		ctx->internal_buf_cnt = 0;
++		ctx->streamoff_out = 1;
++		ctx->streamon_out = 0;
++	} else {
++		ret = ve2rpc_pause(ctx->cap_hndl);
+ 		if (ret) {
+-			vpu_err("out ve2rpc_stop fail\n");
+-			return ret;
+-		}
+-
+-#ifdef ENABLE_TEE_DRM_FLOW
+-		ret = ta_TEEapi_deinit(
+-			(struct tee_context *)ctx->out_hndl->teeapi_ctx,
+-			ctx->out_hndl->teeapi_tee_session);
+-		if (ret < 0) {
+-			vpu_err("%s ta_TEEapi_deinit() fail, ret:%d\n",
+-				__func__, ret);
+-			return -EPERM;
++			vpu_err("cap ve2rpc_pause fail\n");
++			goto exit;
+ 		}
+-#endif
+-	}
+-
+-	if (((ctx->streamon_out && ctx->streamon_cap) &&
+-	     (ctx->streamoff_out ^ ctx->streamoff_cap)) ||
+-	    ((ctx->streamon_out ^ ctx->streamon_cap) &&
+-	     (!ctx->streamoff_out && !ctx->streamoff_cap))) {
+-		ret = ve2rpc_free_travel_frame(ctx->cap_hndl);
++		ret = ve2rpc_flush(ctx->cap_hndl);
+ 		if (ret) {
+-			vpu_err("ve2rpc_free_travel_frame fail\n");
+-			return ret;
++			vpu_err("cap ve2rpc_fluse fail\n");
++			goto exit;
+ 		}
+ 
+-		ret = ve2rpc_free_pts(ctx->cap_hndl);
++		ret = ve2rpc_reset_output_ring_rwptr(ctx->cap_hndl);
+ 		if (ret) {
+-			vpu_err("ve2rpc_free_pts fail\n");
+-			return ret;
++			vpu_err("reset frm_ringbuffer_rwptr fail\n");
++			goto exit;
+ 		}
+ 
+-		ret = ve2rpc_reset_buflock(ctx->cap_hndl);
++		ret = ve2rpc_reset_buflock(ctx->cap_hndl, false);
+ 		if (ret) {
+ 			vpu_err("ve2rpc_reset_buflock fail\n");
+-			return ret;
+-		}
+-
+-		ret = ve2rpc_close(ctx->cap_hndl);
+-		if (ret) {
+-			vpu_err("cap ve2rpc_close fail\n");
+-			return ret;
+-		}
+-
+-		ret = ve2rpc_close(ctx->out_hndl);
+-		if (ret) {
+-			vpu_err("out ve2rpc_close fail\n");
+-			return ret;
++			goto exit;
+ 		}
+ 
+-		ve2rpc_del_capbuf_from_dpb(ctx->out_hndl, ctx->cap_hndl);
+-
+-		ret = ve2rpc_uninit_handle(ctx->out_hndl);
+-		if (ret) {
+-			vpu_err("ve2rpc_uninit_handle fail out\n");
+-			return ret;
+-		}
+-		ctx->out_hndl = NULL;
++		ve2_make_undq_capbuf_done(ctx);
+ 
+-		ret = ve2rpc_uninit_handle(ctx->cap_hndl);
+-		if (ret) {
+-			vpu_err("ve2rpc_uninit_handle fail out\n");
+-			return ret;
+-		}
+-		ctx->cap_hndl = NULL;
+-		ctx->streamon_out = 0;
++		ctx->internal_buf_cnt = 0;
++		ctx->cap_hndl->pre_pts = 0;
++		ctx->streamoff_cap = 1;
+ 		ctx->streamon_cap = 0;
+ 	}
+ 
+-	if (V4L2_TYPE_IS_OUTPUT(type))
+-		ctx->streamoff_out = 1;
+-	else
+-		ctx->streamoff_cap = 1;
+-
+ 	if (ctx->streamoff_out && ctx->streamoff_cap) {
+-		mutex_destroy(&hndl->pts_mutex);
+-#ifdef VPU_GET_CC
+-		cc_data_channel_exit();
+-#endif
++		ret = ve2rpc_free_pts(ctx->out_hndl);
++		if (ret) {
++			vpu_err("ve2rpc_free_pts fail\n");
++			goto exit;
++		}
+ 	}
+-
+-	return 0;
++exit:
++	return ret;
+ }
+ 
+ static int ve2_out_qbuf(void *fh, uint8_t *buf, uint32_t len, uint64_t pts,
+@@ -583,7 +456,7 @@ static int ve2_cap_qbuf(void *fh, struct vb2_buffer *vb)
+ 			rm_vb2_v4l2_buf, vb2_v4l2_buf);
+ 	}
+ 
+-	ret = ve2rpc_qframe(ctx->cap_hndl, cap_buf_paddr, vb->index, 0);
++	ret = ve2rpc_qframe(ctx->cap_hndl, cap_buf_paddr, vb->index);
+ 	if (ret) {
+ 		vpu_err("ve2rpc_qframe fail, ret %d\n", ret);
+ 		goto exit;
+@@ -757,20 +630,195 @@ int ve2_cap_dqbuf(void *fh, uint8_t *buf, uint64_t *pts,
+ 	return 0;
+ }
+ 
+-static void *ve2_alloc_context(struct file *file)
++static void *ve2_alloc_context(void *fh)
+ {
++	struct videc_ctx *vid_ctx = container_of(fh, struct videc_ctx, fh);
++	struct vpu_ctx *vpu_ctx = fh_to_vpu(fh);
+ 	struct ve2_ctx *ctx = NULL;
++	VIDEO_STREAM_TYPE eStreamType = VIDEO_STREAM_H265;
++	int pixelformat = vpu_ctx->out_fmt.spec.fmt.pix_mp.pixelformat;
++	int ret = 0;
+ 
+ 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
+-	if (!ctx)
++	if (!ctx) {
+ 		vpu_err("Failed to allocate video engine\n");
++		goto error;
++	}
++
++	ret = ve2rpc_init_cap_handle(vid_ctx->dev->dev, &ctx->cap_hndl,
++				     vid_ctx->params.is_secure,
++				     fh);
++	if (ret) {
++		vpu_err("ve2rpc_init_handle cap fail\n");
++		goto error;
++	}
++
++	ret = ve2rpc_init_out_handle(vid_ctx->dev->dev, &ctx->out_hndl,
++				     vid_ctx->params.is_secure,
++				     fh);
++	if (ret) {
++		vpu_err("ve2rpc_init_handle out fail\n");
++		goto error;
++	}
++
++	ctx->cap_hndl->is_adaptive_playback =
++		vid_ctx->params.dec_params.is_adaptive_playback;
++	ctx->out_hndl->is_adaptive_playback =
++		vid_ctx->params.dec_params.is_adaptive_playback;
++
++	INIT_LIST_HEAD(&ctx->pts_list);
++	ctx->cap_hndl->pts_queue = &ctx->pts_list;
++	ctx->out_hndl->pts_queue = &ctx->pts_list;
++
++	if (!ctx->out_hndl || !ctx->cap_hndl) {
++		vpu_err("ve2rpc_init_handle fail\n");
++		goto error;
++	}
++
++	ret = ve2rpc_connect(ctx->out_hndl, ctx->cap_hndl);
++	if (ret) {
++		vpu_err("ve2rpc_connect fail\n");
++		goto error;
++	}
++
++#ifdef ENABLE_TEE_DRM_FLOW
++	ret = ta_TEEapi_init(
++		(struct tee_context **)&ctx->out_hndl->teeapi_ctx,
++		&ctx->out_hndl->teeapi_tee_session);
++	if (ret < 0) {
++		vpu_err("%s ta_TEEapi_init() fail, ret:%d\n", __func__,
++			ret);
++		goto error;
++	}
++
++	ctx->out_hndl->main_rb.teeapi_ctx = ctx->out_hndl->teeapi_ctx;
++	ctx->out_hndl->main_rb.teeapi_tee_session =
++		ctx->out_hndl->teeapi_tee_session;
++#endif
++
++
++	if (pixelformat == V4L2_PIX_FMT_HEVC)
++		eStreamType = VIDEO_STREAM_H265;
++	else if (pixelformat == V4L2_PIX_FMT_VP9)
++		eStreamType = VIDEO_STREAM_VP9;
++	else if (pixelformat == V4L2_PIX_FMT_AV1)
++		eStreamType = VIDEO_STREAM_AV1;
++	else {
++		vpu_err("unsupport codec! %p4cc\n", &pixelformat);
++	}
++
++	ctx->out_hndl->vType = eStreamType;
++	ret = ve2rpc_setRole(ctx->out_hndl, eStreamType);
++	if (ret) {
++		vpu_err("ve2rpc_setRole fail %p4cc\n", &pixelformat);
++		goto error;
++	}
++
++	ret = ve2rpc_set_cmprs(ctx->out_hndl, 0);
++	if (ret) {
++		vpu_err("ve2rpc fail to set cmprs\n");
++		goto error;
++	}
++
++	ret = ve2rpc_enable_drop_cnt(ctx->out_hndl);
++	if (ret) {
++		vpu_err("ve2rpc fail to report drop cnt\n");
++		goto error;
++	}
+ 
+ 	return ctx;
++error:
++	if (ctx)
++		kfree(ctx);
++
++	return NULL;
+ }
+ 
+-static void ve2_free_context(void *ctx)
++static void ve2_free_context(void *ve_ctx)
+ {
+-	kfree(ctx);
++	struct ve2_ctx *ctx = (struct ve2_ctx *)ve_ctx;
++	int ret = 0;
++
++	if (!ctx)
++		goto exit;
++
++	if ( !ctx->cap_hndl || !ctx->out_hndl)
++		goto exit;
++
++	if (ctx->is_run) {
++		ret = ve2rpc_stop(ctx->cap_hndl);
++		if (ret) {
++			vpu_err("cap ve2rpc_stop fail\n");
++			goto exit;
++		}
++
++		ret = ve2rpc_stop(ctx->out_hndl);
++		if (ret) {
++			vpu_err("out ve2rpc_stop fail\n");
++			goto exit;
++		}
++
++		ret = ve2rpc_free_travel_frame(ctx->cap_hndl);
++		if (ret) {
++			vpu_err("ve2rpc_free_travel_frame fail\n");
++			goto exit;
++		}
++
++		ret = ve2rpc_reset_buflock(ctx->cap_hndl, true);
++		if (ret) {
++			vpu_err("ve2rpc_reset_buflock fail\n");
++			goto exit;
++		}
++		ctx->is_run = false;
++	}
++
++	ret = ve2rpc_close(ctx->cap_hndl);
++	if (ret) {
++		vpu_err("cap ve2rpc_close fail\n");
++		goto exit;
++	}
++
++	ret = ve2rpc_close(ctx->out_hndl);
++	if (ret) {
++		vpu_err("out ve2rpc_close fail\n");
++		goto exit;
++	}
++	ret = ve2rpc_del_capbuf_from_dpb(ctx->out_hndl, ctx->cap_hndl);
++	if (ret) {
++		vpu_err("out del_capbuf_from_dpb fail\n");
++		goto exit;
++	}
++
++#ifdef ENABLE_TEE_DRM_FLOW
++	ret = ta_TEEapi_deinit(
++		(struct tee_context *)ctx->out_hndl->teeapi_ctx,
++		ctx->out_hndl->teeapi_tee_session);
++	if (ret < 0) {
++		vpu_err("%s ta_TEEapi_deinit() fail, ret:%d\n",
++			__func__, ret);
++		goto exit;
++	}
++#endif
++
++	mutex_destroy(&ctx->cap_hndl->pts_mutex);
++
++	ret = ve2rpc_uninit_handle(ctx->out_hndl);
++	if (ret) {
++		vpu_err("ve2rpc_uninit_handle fail out\n");
++		goto exit;
++	}
++	ctx->out_hndl = NULL;
++
++	ret = ve2rpc_uninit_handle(ctx->cap_hndl);
++	if (ret) {
++		vpu_err("ve2rpc_uninit_handle fail out\n");
++		goto exit;
++	}
++	ctx->cap_hndl = NULL;
++
++exit:
++	if (ctx)
++		kfree(ctx);
+ }
+ 
+ static int ve2_stop_cmd(void *fh, int pixelformat)
+@@ -818,6 +866,26 @@ static int ve2_stop_cmd(void *fh, int pixelformat)
+ 	return ret;
+ }
+ 
++static int ve2_start_cmd(void *fh)
++{
++	struct ve2_ctx *ctx = NULL;
++	int ret = 0;
++
++	if (!fh) {
++		vpu_err("%s invalid parameters\n", __func__);
++		goto out;
++	}
++	ctx = fh_to_ve(fh);
++	if (!ctx) {
++		vpu_err("%s ctx is NULL\n", __func__);
++		goto out;
++	}
++
++	ctx->eosEvent = 0;
++out:
++	return ret;
++}
++
+ static void ve2_get_info(void *fh, bool *eos, bool *no_frame)
+ {
+ 	struct ve2_ctx *ctx = fh_to_ve(fh);
+@@ -849,6 +917,7 @@ static int ve2_pasre_header(void *fh, struct vb2_buffer *vb, uint32_t *width,
+ {
+ 	struct videc_ctx *vid_ctx = container_of(fh, struct videc_ctx, fh);
+ 	struct vpu_ctx *v_ctx = (struct vpu_ctx *)vid_ctx->vpu_ctx;
++	struct ve2_ctx *ctx = fh_to_ve(fh);
+ 	struct vb2_v4l2_buffer *v4l2_buf;
+ 	struct vpu_fmt vpu_fmt;
+ 	uint32_t size = 0;
+@@ -884,21 +953,27 @@ static int ve2_pasre_header(void *fh, struct vb2_buffer *vb, uint32_t *width,
+ 		goto exit;
+ 	}
+ 
+-#if 1
+ 	vpu_get_cap_fmt(fh, (void *)&vpu_fmt);
+-	vpu_fmt.spec.fmt.pix_mp.width = *width;
+-	vpu_fmt.spec.fmt.pix_mp.height = *height;
+-	vpu_fmt.spec.fmt.pix_mp.plane_fmt[0].bytesperline = *width;
+-	vpu_fmt.misc.bufcnt = *min_reqbuf;
+-	v_ctx->bit_depth = (*bit_depth == 0)?8:10;
+-	v_ctx->ddr_width = ddr_width;
+-	v_ctx->ddr_height = ddr_height;
+-	v_ctx->is_bs_error = false;
+-
+-	vpu_update_cap_fmt(fh, (void *)&vpu_fmt);
+-	vpu_notify_event_resolution_change(fh);
+-#endif
++	if (vpu_fmt.misc.ori_width != *width ||
++			vpu_fmt.misc.ori_height != *height ||
++			vpu_fmt.misc.bufcnt != *min_reqbuf ||
++			v_ctx->bit_depth != ((*bit_depth == 0)?8:10) ||
++			v_ctx->ddr_width != ddr_width ||
++			v_ctx->ddr_height != ddr_height) {
++		vpu_fmt.spec.fmt.pix_mp.width = *width;
++		vpu_fmt.spec.fmt.pix_mp.height = *height;
++		vpu_fmt.spec.fmt.pix_mp.plane_fmt[0].bytesperline = *width;
++		vpu_fmt.misc.bufcnt = *min_reqbuf;
++		v_ctx->bit_depth = (*bit_depth == 0)?8:10;
++		v_ctx->ddr_width = ddr_width;
++		v_ctx->ddr_height = ddr_height;
++
++		vpu_update_cap_fmt(fh, (void *)&vpu_fmt);
++		vpu_notify_event_resolution_change(fh);
++	}
+ 
++	v_ctx->is_bs_error = false;
++	ctx->internal_buf_cnt = 0;
+ exit:
+ 	return ret;
+ }
+@@ -916,6 +991,7 @@ static struct veng_ops ve_ops = {
+ 	.ve_get_info = ve2_get_info,
+ 	.ve_get_undq_dispFrm_cnt = ve2_get_undq_dispFrm_cnt,
+ 	.ve_out_pre_parse = ve2_pasre_header,
++	.ve_start_cmd = ve2_start_cmd,
+ };
+ 
+ static int __init ve2_init(void)
+diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.c b/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.c
+index 9ce1d87262c7..f18773bebf46 100644
+--- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.c
++++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.c
+@@ -36,11 +36,7 @@ struct ve2rpc_qframe_st {
+ 	volatile ve2rpc_flash_frame_info_t *frame;
+ 	volatile uint8_t *buflock_va;
+ 	uint32_t buflock_pa;
+-	uint32_t vb2_q_idx;
+-	uint32_t UserData;
+-	uint8_t free_travel_frame;
+ 	struct mutex *buflock_mutex;
+-	struct mutex *travel_mutex;
+ 	struct mutex *mainrb_mutex;
+ 	uint32_t frm_idx;
+ 	struct ve2rpc *hndl;
+@@ -953,7 +949,7 @@ int ve2rpc_set_cmprs(struct ve2rpc *hndl, uint8_t enable)
+ 	return 0;
+ }
+ 
+-int ve2rpc_set_res_info(struct ve2rpc *hndl)
++int ve2rpc_enable_drop_cnt(struct ve2rpc *hndl)
+ {
+ 	VIDEO_RPC_RESOURCE_INFO info;
+ 	int ret;
+@@ -965,11 +961,6 @@ int ve2rpc_set_res_info(struct ve2rpc *hndl)
+ 	memset(&info, 0, sizeof(info));
+ 
+ 	info.instanceID = htonl(hndl->instanceID);
+-	info.max_width = htonl(4096);
+-	info.max_height = htonl(2304);
+-	info.width = htonl(3840);
+-	info.height = htonl(2160);
+-	info.framerate = htonl(60);
+ 	info.resource_ctrl_sets = htonl(0x80);
+ 
+ 	ret = _ve2rpc_shuttle(hndl, VIDEO_RPC_ToAgent_SetResourceInfo, &info,
+@@ -1039,6 +1030,8 @@ int ve2rpc_get_bs_info(struct device *dev, void *fh, uint32_t codec,
+ 	*bit_depth = htonl(output.bit_depth);
+ 	*min_reqbuf = htonl(output.DPB_size);
+ 
++	vpu_input_dbg("ve2rpc_get_bs_info width %d, height %d, ddr_width %d, ddr_height %d, bit_depth %d, min_reqbuf %d", *width, *height, *ddr_width, *ddr_height, *bit_depth, *min_reqbuf);
++
+ 	_ve2rpc_ion_free(hndl, bs_buf);
+ 	krpc_info_deinit(hndl->vcpu_ept_info);
+ 	krpc_ept_info_put(hndl->vcpu_ept_info);
+@@ -1456,6 +1449,9 @@ int ve2rpc_inband_eos_event(struct ve2rpc_ringbuf_t *ringbuf,
+ 
+ 	ret = _ve2rpc_write(ringbuf, RINGBUFFER_COMMAND, (uint8_t *)&cmd,
+ 			    sizeof(EOS));
++
++	vpu_input_dbg("Send EOS event\n");
++
+ 	return ret;
+ }
+ 
+@@ -1570,24 +1566,19 @@ static uint8_t *_get_buflock_va(struct ve2rpc_ion_object *buflock,
+ 	return NULL;
+ }
+ 
+-static void __maybe_unused _dump_buflock(struct ve2rpc *cap_hndl)
++void __maybe_unused dump_buflock(struct ve2rpc *cap_hndl)
+ {
+-	uint32_t i, buflock_pa;
+-	volatile ve2rpc_flash_frame_info_t *frame;
+ 	struct ve2rpc_ion_object *buflock;
+-	uint8_t *buflock_va;
++	volatile uint8_t *buflock_va;
++	int i = 0;
+ 
+ 	buflock = (struct ve2rpc_ion_object *)cap_hndl->buflock;
+-	frame = (volatile ve2rpc_flash_frame_info_t *)
+-			cap_hndl->main_rb.buf_uncached;
+ 
+ 	for (i = 0; i < VE2_MAX_DPB_NUM; i++) {
+-		buflock_pa = htonl(frame[i].nBufLockPhysicalAddr);
+-		buflock_va = _get_buflock_va(buflock, buflock_pa);
+-		if (buflock_va)
+-			vpu_input_dbg("idx %d, state %d, %p, %x\n", i,
+-				      *buflock_va, buflock_va, buflock_pa);
+-		else
++		buflock_va = cap_hndl->buflock_info[i].buflock_va;
++		if (buflock_va) {
++			pr_err("buflock_va %d) 0x%x, %d, used %d", i, cap_hndl->buflock_info[i].buflock_pa, *buflock_va, cap_hndl->buflock_info[i].is_used);
++		} else
+ 			vpu_input_dbg("idx %d, state unknow, NULL, 0\n", i);
+ 	}
+ }
+@@ -1682,40 +1673,6 @@ int ve2rpc_add_travel_entry(struct ve2rpc *cap_hndl,
+ 	return ret;
+ }
+ 
+-int ve2rpc_free_travel_entry(struct ve2rpc *cap_hndl,
+-	uint32_t buflock_pa, uint32_t vb2_q_idx, uint8_t no_lock)
+-{
+-	struct traveling_frame_st *tentry;
+-	struct traveling_frame_st *tmp_tentry = NULL;
+-
+-	if (!cap_hndl) {
+-		vpu_err("cap isn't ready\n");
+-		return -EPERM;
+-	}
+-
+-	if(!no_lock)
+-		mutex_lock(&cap_hndl->travel_mutex);
+-
+-	list_for_each_entry_safe (tentry, tmp_tentry,
+-				  &cap_hndl->qframe.tlist, list) {
+-		if (tentry->buflock_phy_addr == buflock_pa &&
+-			tentry->vb2_q_idx == vb2_q_idx) {
+-			tentry->phy_addr = 0;
+-			tentry->vb2_q_idx = -1;
+-			tentry->vb2_v4l2_buf = NULL;
+-			list_del(&tentry->list);
+-			kfree(tentry);
+-
+-			break;
+-		}
+-	}
+-
+-	if(!no_lock)
+-		mutex_unlock(&cap_hndl->travel_mutex);
+-
+-	return 0;
+-}
+-
+ int ve2rpc_add_capbuf_to_dpb(struct ve2rpc *out_hndl, struct ve2rpc *cap_hndl,
+ 			     struct rtkve2_reg_dpb_t dpb)
+ {
+@@ -1759,11 +1716,6 @@ int ve2rpc_add_capbuf_to_dpb(struct ve2rpc *out_hndl, struct ve2rpc *cap_hndl,
+ 
+ 	ret = ve2rpc_inband_add_buf(&out_hndl->dpb_rb, dpb,
+ 				    cmprs_hdr_lu, cmprs_hdr_ch);
+-	if (!ret) {
+-		ret = ve2rpc_add_travel_entry(cap_hndl,
+-			 cap_hndl->dpb[i].y_phy_addr, cap_hndl->buflockPhy[i],
+-			 cap_hndl->dpb[i].vb2_v4l2_buf, cap_hndl->dpb[i].idx);
+-	}
+ exit:
+ 	return ret;
+ }
+@@ -1798,15 +1750,66 @@ int ve2rpc_del_capbuf_from_dpb(struct ve2rpc *out_hndl, struct ve2rpc *cap_hndl)
+ 	return ret;
+ }
+ 
++struct rtkve2_buflock_t *ve2rpc_get_unused_buflock(struct ve2rpc *cap_hndl)
++{
++	int i = 0;
++	struct rtkve2_buflock_t *buflock = NULL;
++	volatile uint8_t *buflock_va;
++
++	if (!cap_hndl) {
++		vpu_err("%s cap isn't ready\n", __func__);
++		return 0;
++	}
++	mutex_lock(&cap_hndl->buflock_mutex);
++	for (i = 0; i < VE2_MAX_DPB_NUM; i++) {
++		buflock_va = cap_hndl->buflock_info[i].buflock_va;
++		if (cap_hndl->buflock_info[i].is_used == 0 &&
++			*buflock_va == E_BUFLOCK_ST_NORMAL) {
++			buflock = &cap_hndl->buflock_info[i];
++			cap_hndl->buflock_info[i].is_used = 1;
++			break;
++		}
++	}
++	mutex_unlock(&cap_hndl->buflock_mutex);
++
++	return buflock;
++}
++
++int ve2rpc_add_to_buflock_clear_q(struct ve2rpc *cap_hndl, uint32_t buflock_pa,
++	volatile uint8_t *buflock_va)
++{
++	struct ve2rpc_qframe_st *re_qframe;
++
++	re_qframe = kmalloc(sizeof(struct ve2rpc_qframe_st),
++			GFP_KERNEL | __GFP_ZERO);
++	if (!re_qframe) {
++		vpu_err("kmalloc ve2rpc_qframe_st fail\n");
++		return -ENOMEM;
++	}
++	INIT_LIST_HEAD(&re_qframe->list);
++	re_qframe->buflock_va = buflock_va;
++	re_qframe->buflock_pa = buflock_pa;
++	re_qframe->hndl = cap_hndl;
++
++	mutex_lock(&cap_hndl->qframe.lock);
++	list_add_tail(&re_qframe->list, &cap_hndl->qframe.list);
++	mutex_unlock(&cap_hndl->qframe.lock);
++
++	queue_delayed_work(cap_hndl->qframe.wq, &cap_hndl->qframe.work,
++			   msecs_to_jiffies(2));
++
++	return 0;
++}
++
+ int ve2rpc_qframe(struct ve2rpc *cap_hndl, dma_addr_t phy_addr,
+-		  uint32_t vb2_q_idx, uint8_t free_travel_frame)
++		  uint32_t vb2_q_idx)
+ {
+ 	volatile ve2rpc_flash_frame_info_t *frame;
+ 	struct ve2rpc_ion_object *buflock;
+ 	struct ve2rpc_ringbuf_t *prb;
++	struct rtkve2_buflock_t * buflock_info = NULL;
+ 	uint32_t buflock_pa = 0;
+ 	volatile uint8_t *buflock_va;
+-	uint8_t isInitial = 0;
+ 	uint32_t frm_idx = 0;
+ 	struct traveling_frame_st *tentry;
+ 	struct traveling_frame_st *tmp_tentry = NULL;
+@@ -1826,50 +1829,52 @@ int ve2rpc_qframe(struct ve2rpc *cap_hndl, dma_addr_t phy_addr,
+ 		return -EPERM;
+ 	}
+ 
+-	if(!free_travel_frame)
+-		mutex_lock(&cap_hndl->travel_mutex);
++	mutex_lock(&cap_hndl->travel_mutex);
+ 
+ 	list_for_each_entry_safe (tentry, tmp_tentry,
+ 		&cap_hndl->qframe.tlist, list) {
+ 		if ((tentry->phy_addr == phy_addr) &&
+ 			(tentry->vb2_q_idx == vb2_q_idx)) {
+-				tentry->phy_addr = 0;
+ 				buflock_pa = tentry->buflock_phy_addr;
++				tentry->phy_addr = 0;
++				tentry->vb2_q_idx = -1;
++				tentry->vb2_v4l2_buf = NULL;
++				list_del(&tentry->list);
++				kfree(tentry);
+ 				break;
+ 			}
+ 		}
+ 
+-	if(!free_travel_frame)
+-		mutex_unlock(&cap_hndl->travel_mutex);
++	mutex_unlock(&cap_hndl->travel_mutex);
+ 
+ 	buflock = (struct ve2rpc_ion_object *)cap_hndl->buflock;
+-	buflock_va = _get_buflock_va(buflock, buflock_pa);
+-	if (!buflock_va) {
+-		vpu_err("can't find buflock_va by buflock_pa %x, buflock %p\n",
+-			buflock_pa, buflock);
+-		return -EINVAL;
+-	}
++	if (buflock_pa) {
++		buflock_va = _get_buflock_va(buflock, buflock_pa);
++		if (!buflock_va) {
++			vpu_err("can't find buflock_va by buflock_pa %x, buflock %p\n",
++				buflock_pa, buflock);
++			return -EINVAL;
++		}
+ 
+-	mutex_lock(&cap_hndl->buflock_mutex);
+-	if (*buflock_va == E_BUFLOCK_ST_LOCK) {
+-		/*For any operation to read/write (volatile ve2rpc_flash_frame_info_t *) is prohibited after seting *buflock_va = E_BUFLOCK_ST_UNLOCK;*/
+-		*buflock_va = E_BUFLOCK_ST_UNLOCK;
+-		dsb(sy);
+-	} else if (*buflock_va == E_BUFLOCK_ST_NORMAL) {
+-		isInitial = 1;
+-	} else if (free_travel_frame &&
+-		   ((*buflock_va == E_BUFLOCK_ST_RELEASE) ||
+-		    (*buflock_va == E_BUFLOCK_ST_UNLOCK))) {
+-		vpu_output_dbg("Free travel frame\n");
+-	} else {
+-		vpu_err("incorrect state buflock_va %d, should be %d or %d, frm_idx %d, buflock PA %x, VA %px\n",
+-			*buflock_va, E_BUFLOCK_ST_NORMAL, E_BUFLOCK_ST_LOCK,
+-			frm_idx, buflock_pa, buflock_va);
++		mutex_lock(&cap_hndl->buflock_mutex);
++		if (*buflock_va == E_BUFLOCK_ST_LOCK) {
++			*buflock_va = E_BUFLOCK_ST_UNLOCK;
++			dsb(sy);
++		}
+ 		mutex_unlock(&cap_hndl->buflock_mutex);
++
++		ret = ve2rpc_add_to_buflock_clear_q(cap_hndl, buflock_pa, buflock_va);
++		if (ret)
++			return ret;
++	}
++
++	buflock_info = ve2rpc_get_unused_buflock(cap_hndl);
++	if (!buflock_info) {
++		vpu_err("can't find buflock_pa\n");
+ 		return -EINVAL;
+ 	}
+ 
+-	mutex_unlock(&cap_hndl->buflock_mutex);
++	buflock_va = buflock_info->buflock_va;
+ 
+ 	frm_idx = cap_hndl->outputRingIdx++;
+ 	if (cap_hndl->outputRingIdx >= VE2_MAX_DPB_NUM)
+@@ -1877,87 +1882,46 @@ int ve2rpc_qframe(struct ve2rpc *cap_hndl, dma_addr_t phy_addr,
+ 
+ 	frame = (volatile ve2rpc_flash_frame_info_t *)cap_hndl->frame[frm_idx];
+ 
+-	if (isInitial) {
+-		mutex_lock(&prb->lock);
+-		memset_volatile(frame, 0, sizeof(ve2rpc_flash_frame_info_t));
+-		frame->nPicFlags = 0;
+-		frame->nPicWidth = PIC_SIZE_INVALID;
+-		frame->nPicHeight = PIC_SIZE_INVALID;
+-		frame->nClkTimeHigh = -1;
+-		frame->nClkTimeLow = -1;
+-		frame->nBufLockPhysicalAddr = htonl(buflock_pa);
+-		dsb(sy);
+-		frame->pUserData = htonl((uint32_t)phy_addr);
+-		dsb(sy);
+-		mutex_unlock(&prb->lock);
+-
+-		ret = ve2rpc_free_travel_entry(cap_hndl, buflock_pa, vb2_q_idx,
+-			free_travel_frame);
+-	} else {
+-		struct ve2rpc_qframe_st *re_qframe =
+-			kmalloc(sizeof(struct ve2rpc_qframe_st),
+-				GFP_KERNEL | __GFP_ZERO);
+-		unsigned long delay = 0;
+-		if (!re_qframe) {
+-			vpu_err("kmalloc ve2rpc_qframe_st fail\n");
+-			return -ENOMEM;
+-		}
+-		INIT_LIST_HEAD(&re_qframe->list);
+-		re_qframe->frame = frame;
+-		re_qframe->buflock_va = buflock_va;
+-		re_qframe->buflock_pa = buflock_pa;
+-		re_qframe->vb2_q_idx = vb2_q_idx;
+-		re_qframe->frm_idx = frm_idx;
+-		re_qframe->UserData = phy_addr;
+-		re_qframe->free_travel_frame = free_travel_frame;
+-		re_qframe->buflock_mutex = &cap_hndl->buflock_mutex;
+-		re_qframe->travel_mutex = &cap_hndl->travel_mutex;
+-		re_qframe->mainrb_mutex = &prb->lock;
+-		re_qframe->hndl = cap_hndl;
+-
+-		mutex_lock(&cap_hndl->qframe.lock);
+-		list_add_tail(&re_qframe->list, &cap_hndl->qframe.list);
+-		mutex_unlock(&cap_hndl->qframe.lock);
+-		if (!free_travel_frame)
+-			delay = msecs_to_jiffies(2);
+-
+-		queue_delayed_work(cap_hndl->qframe.wq, &cap_hndl->qframe.work,
+-				   delay);
+-	}
++	mutex_lock(&prb->lock);
++	memset_volatile(frame, 0, sizeof(ve2rpc_flash_frame_info_t));
++	frame->nPicFlags = 0;
++	frame->nPicWidth = PIC_SIZE_INVALID;
++	frame->nPicHeight = PIC_SIZE_INVALID;
++	frame->nClkTimeHigh = -1;
++	frame->nClkTimeLow = -1;
++	frame->nBufLockPhysicalAddr = htonl(buflock_info->buflock_pa);
++	frame->pUserData = htonl((uint32_t)phy_addr);
++	dsb(sy);
++	mutex_unlock(&prb->lock);
+ 
+ 	return ret;
+ }
+ 
+-void ve2rpc_re_qframe(struct work_struct *work)
++void ve2rpc_clear_buflock_wq(struct work_struct *work)
+ {
+ 	struct ve2rpc_qframe_wq *wq = container_of(
+ 		to_delayed_work(work), struct ve2rpc_qframe_wq, work);
+ 	struct ve2rpc_qframe_st *entry = NULL;
+ 	struct ve2rpc_qframe_st *tmp_entry = NULL;
+-	uint32_t vb2_q_idx;
+-	uint32_t frm_idx;
+-	uint32_t UserData;
+ 	uint32_t buflock_pa;
+-	struct mutex *travel_mutex;
+ 	struct ve2rpc *hndl;
+-	uint8_t bNeedFree = 0;
++	int i = 0;
+ 
+ 	list_for_each_entry_safe (entry, tmp_entry, &wq->list, list) {
+ 		mutex_lock(&wq->lock);
+ 		if (entry) {
+-			vb2_q_idx = entry->vb2_q_idx;
+-			frm_idx = entry->frm_idx;
+-			UserData = entry->UserData;
+ 			buflock_pa = entry->buflock_pa;
+-			travel_mutex = entry->travel_mutex;
+ 			hndl = entry->hndl;
+-			mutex_lock(entry->buflock_mutex);
+-			if (!entry->free_travel_frame &&
+-			    ((*entry->buflock_va) != E_BUFLOCK_ST_RELEASE)) {
+-				mutex_unlock(entry->buflock_mutex);
++			if (hndl->buflock_reset) {
++				mutex_unlock(&wq->lock);
++				return;
++			}
++			mutex_lock(&hndl->buflock_mutex);
++			if ((*entry->buflock_va) != E_BUFLOCK_ST_RELEASE) {
++				mutex_unlock(&hndl->buflock_mutex);
+ 				vpu_output_dbg(
+-					"re_qframe %d) buflock(%d) wait to RELEASE\n",
+-					frm_idx, (*entry->buflock_va));
++					"re_qframe buflock(%d) wait to RELEASE\n",
++					(*entry->buflock_va));
+ 				queue_delayed_work(wq->wq, &wq->work,
+ 						   msecs_to_jiffies(1));
+ 
+@@ -1966,41 +1930,17 @@ void ve2rpc_re_qframe(struct work_struct *work)
+ 			}
+ 
+ 			/* DO NOT CHANGE THE ORDER START*/
+-			if (!entry->free_travel_frame) {
+-				*entry->buflock_va = E_BUFLOCK_ST_NORMAL;
+-				dsb(sy);
+-			} else {
+-				*entry->buflock_va = E_BUFLOCK_ST_UNLOCK;
+-				dsb(sy);
++			*entry->buflock_va = E_BUFLOCK_ST_NORMAL;
++			for (i = 0; i < VE2_MAX_DPB_NUM; i++) {
++				if (buflock_pa == hndl->buflock_info[i].buflock_pa)
++					hndl->buflock_info[i].is_used = 0;
+ 			}
+-			mutex_unlock(entry->buflock_mutex);
+-			mutex_lock(entry->mainrb_mutex);
+-			memset_volatile(entry->frame, 0,
+-					sizeof(ve2rpc_flash_frame_info_t));
+-			entry->frame->nPicFlags = 0;
+-			entry->frame->nPicWidth = PIC_SIZE_INVALID;
+-			entry->frame->nPicHeight = PIC_SIZE_INVALID;
+-			entry->frame->nClkTimeHigh = -1;
+-			entry->frame->nClkTimeLow = -1;
+-			entry->frame->nBufLockPhysicalAddr =
+-				htonl(entry->buflock_pa);
+-			dsb(sy);
+-			entry->frame->pUserData = htonl(UserData);
+-			dsb(sy);
+-			mutex_unlock(entry->mainrb_mutex);
+-			/* DO NOT CHANGE THE ORDER END*/
++			mutex_unlock(&hndl->buflock_mutex);
+ 
+ 			list_del(&entry->list);
+ 			kfree(entry);
+-
+-			bNeedFree = 1;
+ 		}
+ 		mutex_unlock(&wq->lock);
+-
+-		if (bNeedFree) {
+-			ve2rpc_free_travel_entry(hndl, buflock_pa, vb2_q_idx, 0);
+-			bNeedFree = 0;
+-		}
+ 	}
+ }
+ 
+@@ -2169,7 +2109,9 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
+ 		}
+ 	} else {
+ 		for (i = VE2_MAX_DPB_NUM - 1; i >= 0; i--) {
+-			if (cap_hndl->dpb[i].status == RTKVE2_DPB_ST_VALID) {
++			struct vb2_v4l2_buffer *buf = (struct vb2_v4l2_buffer *)cap_hndl->dpb[i].vb2_v4l2_buf;
++			if (cap_hndl->dpb[i].status == RTKVE2_DPB_ST_VALID &&
++					buf->vb2_buf.state == VB2_BUF_STATE_ACTIVE) {
+ 				*disp_buf = cap_hndl->dpb[i].vb2_v4l2_buf;
+ 				idx = cap_hndl->dpb[i].idx;
+ 				break;
+@@ -2278,49 +2220,139 @@ int ve2rpc_free_travel_frame(struct ve2rpc *cap_hndl)
+ 	list_for_each_entry_safe (tentry, tmp_tentry, &cap_hndl->qframe.tlist,
+ 				  list) {
+ 		if (tentry) {
+-			if (tentry->vb2_q_idx >= 0) {
+-				int ret;
+-				vpu_output_dbg(
+-					"free the traveling frame tentry = %p, work_idx = %d\n",
+-					tentry, tentry->vb2_q_idx);
+-				ret = ve2rpc_qframe(cap_hndl, tentry->phy_addr,
+-						    tentry->vb2_q_idx, 1);
+-				if (ret)
+-					vpu_err("fail to free travel_frame\n");
+-			} else {
+-				vpu_err("can't find the traveling frame paddr = 0x%x, work_idx = %d\n",
+-					tentry->phy_addr, tentry->vb2_q_idx);
+-			}
++			tentry->phy_addr = 0;
++			tentry->phy_addr = 0;
++			tentry->vb2_q_idx = -1;
++			tentry->vb2_v4l2_buf = NULL;
++			list_del(&tentry->list);
++			kfree(tentry);
+ 		} else {
+ 			vpu_err("tentry is NULL\n");
+ 		}
+ 	}
+ 	mutex_unlock(&cap_hndl->travel_mutex);
+-	flush_workqueue(cap_hndl->qframe.wq);
+ 
+ 	return 0;
+ }
+ 
+-int ve2rpc_reset_buflock(struct ve2rpc *cap_hndl)
++int ve2rpc_reset_bs_ring_rwptr(struct ve2rpc *out_hndl)
++{
++	struct ve2rpc_ringbuf_t *prb;
++	int ret = 0;
++
++	if (!out_hndl) {
++		vpu_err("out isn't ready\n");
++		ret = -EPERM;
++		goto exit;
++	}
++
++	prb = &out_hndl->main_rb;
++	if (!prb) {
++		vpu_err("%s ringbuffer isn't ready\n", __func__);
++		ret = -EPERM;
++		goto exit;
++	}
++
++	mutex_lock(&prb->lock);
++
++	if (prb->pRBH)
++		prb->pRBH->readPtr[0] = prb->pRBH->writePtr;
++
++	mutex_unlock(&prb->lock);
++exit:
++	return ret;
++}
++
++int ve2rpc_reset_output_ring_rwptr(struct ve2rpc *cap_hndl)
+ {
+ 	volatile ve2rpc_flash_frame_info_t *frame;
+-	int i = 0;
+-	struct ve2rpc_ion_object *buflock;
+-	uint32_t buflock_pa;
++	volatile uint32_t rptr = 0;
++	struct ve2rpc_ringbuf_t *prb;
++	int ret = 0;
++
++	if (!cap_hndl) {
++		vpu_err("cap isn't ready\n");
++		ret = -EPERM;
++		goto exit;
++	}
++
++	prb = &cap_hndl->main_rb;
++	if (!prb) {
++		vpu_err("%s ringbuffer isn't ready\n", __func__);
++		ret = -EPERM;
++		goto exit;
++	}
++
++	mutex_lock(&prb->lock);
++
++	while (prb->pRBH->readPtr[0] != prb->pRBH->writePtr) {
++		rptr = (htonl(prb->pRBH->readPtr[0]) -
++					  htonl(prb->pRBH->beginAddr)) /
++					 sizeof(ve2rpc_flash_frame_info_t);
++		frame = (volatile ve2rpc_flash_frame_info_t *)cap_hndl->frame[rptr];
++		frame->pUserData = 0;
++		rptr = htonl(prb->pRBH->beginAddr) +
++			  ((rptr + 1) % VE2_MAX_DPB_NUM) *
++				  sizeof(ve2rpc_flash_frame_info_t);
++		prb->pRBH->readPtr[0] = htonl(rptr);
++		dsb(sy);
++	}
++
++	cap_hndl->outputRingIdx = (htonl(prb->pRBH->writePtr) -
++				  htonl(prb->pRBH->beginAddr)) /
++				 sizeof(ve2rpc_flash_frame_info_t);
++
++	mutex_unlock(&prb->lock);
++exit:
++	return ret;
++}
++
++int ve2rpc_reset_buflock(struct ve2rpc *cap_hndl, bool reset_all)
++{
+ 	volatile uint8_t *buflock_va;
++	int i = 0;
++
++	if (reset_all) {
++		cap_hndl->buflock_reset = 1;
++		flush_workqueue(cap_hndl->qframe.wq);
++		cap_hndl->buflock_reset = 0;
++	}
++
+ 	for (i = 0; i < VE2_MAX_DPB_NUM; i++) {
+-		frame = (volatile ve2rpc_flash_frame_info_t *)cap_hndl->frame[i];
+-		buflock = (struct ve2rpc_ion_object *)cap_hndl->buflock;
+-		buflock_pa = htonl(frame->nBufLockPhysicalAddr);
+-		buflock_va = _get_buflock_va(buflock, buflock_pa);
++		int add_to_wait_q = 0;
++
++		buflock_va = cap_hndl->buflock_info[i].buflock_va;
+ 		mutex_lock(&cap_hndl->buflock_mutex);
+-		if (*buflock_va != E_BUFLOCK_ST_UNLOCK &&
+-		    *buflock_va != E_BUFLOCK_ST_RELEASE) {
++		if (reset_all) {
+ 			*buflock_va = E_BUFLOCK_ST_UNLOCK;
+-			dsb(sy);
++			cap_hndl->buflock_info[i].is_used = 0;
++			add_to_wait_q = 1;
++		}
++		else {
++			if (*buflock_va == E_BUFLOCK_ST_NORMAL) {
++				cap_hndl->buflock_info[i].is_used = 0;
++			} else if (*buflock_va == E_BUFLOCK_ST_TOUCH) {
++				*buflock_va = E_BUFLOCK_ST_UNLOCK;
++				add_to_wait_q = 1;
++				cap_hndl->buflock_info[i].is_used = 0;
++			} if (*buflock_va == E_BUFLOCK_ST_RELEASE) {
++				*buflock_va = E_BUFLOCK_ST_NORMAL;
++				cap_hndl->buflock_info[i].is_used = 0;
++			}
+ 		}
++		dsb(sy);
+ 		mutex_unlock(&cap_hndl->buflock_mutex);
++
++		if (add_to_wait_q) {
++			int ret = 0;
++			ret = ve2rpc_add_to_buflock_clear_q(cap_hndl,
++				cap_hndl->buflock_info[i].buflock_pa,
++				cap_hndl->buflock_info[i].buflock_va);
++			if (ret)
++				vpu_err("%s add to buflock wq fail, ret %d", __func__, ret);
++		}
+ 	}
++
+ 	return 0;
+ }
+ 
+@@ -2448,8 +2480,8 @@ int ve2rpc_init_cap_handle(struct device *dev, struct ve2rpc **handle,
+ 	mutex_unlock(&hndl->buflock_mutex);
+ 
+ 	hndl->frame = kzalloc(sizeof(uintptr_t) * VE2_MAX_DPB_NUM, GFP_KERNEL);
+-	hndl->buflockPhy =
+-		kzalloc(sizeof(uintptr_t) * VE2_MAX_DPB_NUM, GFP_KERNEL);
++	hndl->buflock_info =
++		kzalloc(sizeof(struct rtkve2_buflock_t) * VE2_MAX_DPB_NUM, GFP_KERNEL);
+ 	frame = (volatile ve2rpc_flash_frame_info_t *)
+ 			hndl->main_rb.rbinfo.buf_uncached;
+ 
+@@ -2458,13 +2490,15 @@ int ve2rpc_init_cap_handle(struct device *dev, struct ve2rpc **handle,
+ 	hndl->col_matrix.matrix_coefficients = COLOR_MATRIX_COEF_DEFAULT;
+ 	for (i = 0; i < VE2_MAX_DPB_NUM; i++) {
+ 		hndl->frame[i] = (uintptr_t)&frame[i];
++		hndl->buflock_info[i].buflock_pa = buflock_pa + i * sizeof(uintptr_t);
++		hndl->buflock_info[i].buflock_va = buflock_va + i * sizeof(uintptr_t);
++		hndl->buflock_info[i].idx = i;
+ 		/* DO NOT CHANGE THE ORDER BEGIN*/
+ 		mutex_lock(&hndl->buflock_mutex);
+ 		buflock_va[i * sizeof(uintptr_t)] = E_BUFLOCK_ST_NORMAL;
+ 		dsb(sy);
+ 		mutex_unlock(&hndl->buflock_mutex);
+-		hndl->buflockPhy[i] = buflock_pa + i * sizeof(uintptr_t);
+-		frame[i].nBufLockPhysicalAddr = htonl(hndl->buflockPhy[i]);
++		frame[i].nBufLockPhysicalAddr = htonl(hndl->buflock_info[i].buflock_pa);
+ 		dsb(sy);
+ 		frame[i].nClkTimeHigh = -1;
+ 		frame[i].nClkTimeLow = -1;
+@@ -2478,7 +2512,7 @@ int ve2rpc_init_cap_handle(struct device *dev, struct ve2rpc **handle,
+ 		/* DO NOT CHANGE THE ORDER END*/
+ 	}
+ 	hndl->qframe.wq = create_workqueue("ve2rpc_qframe_wq");
+-	INIT_DELAYED_WORK(&hndl->qframe.work, ve2rpc_re_qframe);
++	INIT_DELAYED_WORK(&hndl->qframe.work, ve2rpc_clear_buflock_wq);
+ 	INIT_LIST_HEAD(&hndl->qframe.list);
+ 	INIT_LIST_HEAD(&hndl->qframe.tlist);
+ 	mutex_init(&hndl->qframe.lock);
+@@ -2497,8 +2531,11 @@ int ve2rpc_uninit_handle(struct ve2rpc *hndl)
+ 	}
+ 
+ 	if (V4L2_TYPE_IS_CAPTURE(hndl->type)) {
+-		flush_workqueue(hndl->qframe.wq);
+-		destroy_workqueue(hndl->qframe.wq);
++		hndl->buflock_reset = 1;
++		if (hndl->qframe.wq) {
++			flush_workqueue(hndl->qframe.wq);
++			destroy_workqueue(hndl->qframe.wq);
++		}
+ 		mutex_destroy(&hndl->qframe.lock);
+ 		mutex_destroy(&hndl->travel_mutex);
+ 		mutex_destroy(&hndl->dpb_mutex);
+@@ -2515,9 +2552,9 @@ int ve2rpc_uninit_handle(struct ve2rpc *hndl)
+ 
+ 	hndl->type = -1;
+ 
+-	if (hndl->buflockPhy) {
+-		kfree(hndl->buflockPhy);
+-		hndl->buflockPhy = NULL;
++	if (hndl->buflock_info) {
++		kfree(hndl->buflock_info);
++		hndl->buflock_info = NULL;
+ 	}
+ 
+ 	if (hndl->buflock) {
+diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.h b/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.h
+index 9e6b6b26e929..ac3ce46cb241 100644
+--- a/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.h
++++ b/drivers/media/platform/rtk_vdec_rtd16xxb/ve2rpc.h
+@@ -29,7 +29,7 @@ int ext_rtk_ion_close_fd(struct files_struct *files, unsigned fd);
+ 
+ #define COLOR_MATRIX_COEF_DEFAULT (-1)
+ #define MAX_VE2_FRAME_BUFFERS 20
+-#define VE2_MAX_DPB_NUM 32
++#define VE2_MAX_DPB_NUM 64
+ 
+ typedef enum {
+ 	VE2RPC_MEMORY_NONE = 0,
+@@ -173,6 +173,13 @@ struct rtkve2_dpb_t {
+ 	enum dpb_st status;
+ };
+ 
++struct rtkve2_buflock_t {
++	volatile uint8_t *buflock_va;
++	uint32_t buflock_pa;
++	uint32_t idx;
++	bool is_used;
++};
++
+ struct ve2rpc {
+ 	int type;
+ 	struct ve2rpc_ringbuf_t main_rb;
+@@ -183,6 +190,8 @@ struct ve2rpc {
+ 	uint32_t instanceID;
+ 	struct mutex buflock_mutex;
+ 	void *buflock;
++	struct rtkve2_buflock_t *buflock_info;
++	bool buflock_reset;
+ 	uintptr_t *frame;
+ 	struct ve2rpc_qframe_wq qframe;
+ 	struct mutex lock;
+@@ -194,7 +203,6 @@ struct ve2rpc {
+ 	struct rtk_krpc_ept_info *vcpu_ept_info;
+ 	struct v4l2_fh *fh;
+ 	struct mutex travel_mutex;
+-	uintptr_t *buflockPhy;
+ 	uint32_t outputRingIdx;
+ 	struct device *dev;
+ #ifdef ENABLE_TEE_DRM_FLOW
+@@ -220,7 +228,7 @@ struct pts_queue {
+ int ve2rpc_dqframe(struct ve2rpc *cap_hndl, void *disp_buf, uint64_t *pts,
+ 		   bool *eos, bool *no_frame, uint32_t *no_show_frm_cnt);
+ int ve2rpc_qframe(struct ve2rpc *cap_hndl, dma_addr_t phy_addr,
+-		  uint32_t work_idx, uint8_t free_travel_frame);
++		  uint32_t work_idx);
+ int ve2rpc_write_bs(struct ve2rpc *hndl, uint8_t *buf, uint32_t len,
+ 		    uint64_t pts, uint32_t sequence);
+ int ve2rpc_inband_decode(struct ve2rpc *vout_hndl, DECODE_MODE mode);
+@@ -238,7 +246,10 @@ int ve2rpc_init_cap_handle(struct device *dev, struct ve2rpc **handle,
+ int ve2rpc_uninit_handle(struct ve2rpc *hndl);
+ int ve2rpc_free_pts(struct ve2rpc *cap_hndl);
+ int ve2rpc_free_travel_frame(struct ve2rpc *cap_hndl);
+-int ve2rpc_reset_buflock(struct ve2rpc *cap_hndl);
++int ve2rpc_add_travel_entry(struct ve2rpc *cap_hndl,
++	uint32_t y_phy_addr, uint32_t buflock_phy_addr,
++	void *vb2_v4l2_buf, uint32_t idx);
++int ve2rpc_reset_buflock(struct ve2rpc *cap_hndl, bool reset_all);
+ int ve2rpc_run(struct ve2rpc *hndl);
+ int ve2rpc_get_info(struct ve2rpc *cap_hndl, uint32_t *info);
+ int ve2rpc_inband_eos_event(struct ve2rpc_ringbuf_t *ringbuf,
+@@ -268,5 +279,9 @@ int ve2rpc_get_bs_info(struct device *dev, void *fh, uint32_t codec,
+ 		       uint32_t *height, uint32_t *ddr_width,
+ 		       uint32_t *ddr_height, uint32_t *min_reqbuf,
+ 		       uint32_t *bit_depth);
+-int ve2rpc_set_res_info(struct ve2rpc *hndl);
++int ve2rpc_enable_drop_cnt(struct ve2rpc *hndl);
++int ve2rpc_reset_output_ring_rwptr(struct ve2rpc *cap_hndl);
++int ve2rpc_reset_bs_ring_rwptr(struct ve2rpc *out_hndl);
++void __maybe_unused dump_buflock(struct ve2rpc *cap_hndl);
++
+ #endif
+diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/vpu.c b/drivers/media/platform/rtk_vdec_rtd16xxb/vpu.c
+index 53f1d1a313e4..976f4d61abc3 100644
+--- a/drivers/media/platform/rtk_vdec_rtd16xxb/vpu.c
++++ b/drivers/media/platform/rtk_vdec_rtd16xxb/vpu.c
+@@ -379,6 +379,7 @@ static int vpu_buf_done(struct v4l2_fh *fh, struct vb2_v4l2_buffer *v4l2_buf,
+ 		vb2_set_plane_payload(&v4l2_buf->vb2_buf, 0, 0);
+ 		v4l2_m2m_last_buffer_done(fh->m2m_ctx, v4l2_buf);
+ 		v4l2_event_queue_fh(fh, &eos_event);
++		ctx->last_buf_done = true;
+ 	} else {
+ 		v4l2_m2m_buf_done(v4l2_buf, VB2_BUF_STATE_DONE);
+ 		if (eos) {
+@@ -823,7 +824,7 @@ static int vpu_s_fmt_out(struct v4l2_fh *fh, struct v4l2_format *f)
+ 	/* Allocate video engine context */
+ 	if (!vid_ctx->ve_ctx) {
+ 		vid_ctx->ve_ctx =
+-			ctx->veng_ops->ve_alloc_context(vid_ctx->file);
++			ctx->veng_ops->ve_alloc_context(fh);
+ 		if (!vid_ctx->ve_ctx) {
+ 			ret = -EINVAL;
+ 			pr_err("JJJ %s, %d", __func__, __LINE__);
+@@ -953,7 +954,10 @@ int vpu_stop_streaming(struct vb2_queue *q)
+ 	struct videc_ctx *vid_ctx = vb2_get_drv_priv(q);
+ 	struct vpu_ctx *ctx = vid_ctx->vpu_ctx;
+ 	int ret = 0;
+-
++	int num_src_bufs_ready = 0;
++	struct vb2_v4l2_buffer *v4l2_buf = NULL;
++	//int i = 0;
++	//struct vb2_buffer *vb2 = NULL;
+ 
+ 	if (!ctx->veng_ops)
+ 		return -EINVAL;
+@@ -968,6 +972,30 @@ int vpu_stop_streaming(struct vb2_queue *q)
+ 			kthread_stop(ctx->thread_cap);
+ 	}
+ 
++	if (V4L2_TYPE_IS_OUTPUT(q->type)) {
++		num_src_bufs_ready = v4l2_m2m_num_src_bufs_ready(vid_ctx->fh.m2m_ctx);
++		vpu_info("%d.%s.num_src_bufs_ready:%d\n",
++					__LINE__, __func__, num_src_bufs_ready);
++		if (num_src_bufs_ready) {
++			do {
++				v4l2_buf = v4l2_m2m_next_src_buf(vid_ctx->fh.m2m_ctx);
++				if (!v4l2_buf) {
++					break;
++				}
++				v4l2_buf = v4l2_m2m_src_buf_remove(vid_ctx->fh.m2m_ctx);
++				v4l2_m2m_buf_done(v4l2_buf, VB2_BUF_STATE_ERROR);
++			} while (1);
++		}
++		/*for (i=0;i<q->num_buffers;i++) {
++			vb2 = q->bufs[i];
++			vpu_info("%d.%s.out_vb2[%d].index:%d.state:%d.vb2:0x%px\n",
++				__LINE__, __func__, i,
++				vb2->index,
++				vb2->state,
++				vb2);
++		}*/
++	}
++
+ 	mutex_lock(&ctx->vpu_mutex);
+ 	ret = ctx->veng_ops->ve_stop_streaming(q);
+ 	if (ret) {
+@@ -980,6 +1008,7 @@ int vpu_stop_streaming(struct vb2_queue *q)
+ 		ctx->is_cap_started = 0;
+ 	if (!ctx->is_cap_started && !ctx->is_out_started) {
+ 		reinit_completion(&ctx->bs_parsing_comp);
++		ctx->parse_header_done = 0;
+ 	}
+ 
+ 	mutex_unlock(&ctx->vpu_mutex);
+@@ -1073,7 +1102,6 @@ static int vpu_g_crop(void *fh, struct v4l2_rect *rect)
+ 
+ static int vpu_stop_cmd(void *fh)
+ {
+-	/* G_SELECTION */
+ 	struct vpu_ctx *ctx = fh_to_vpu(fh);
+ 	int ret = 0;
+ 
+@@ -1087,6 +1115,20 @@ static int vpu_stop_cmd(void *fh)
+ 	return ret;
+ }
+ 
++static int vpu_start_cmd(void *fh)
++{
++	struct vpu_ctx *ctx = fh_to_vpu(fh);
++	int ret = 0;
++
++	if (!ctx->veng_ops)
++		return -EINVAL;
++
++	if (ctx->veng_ops->ve_start_cmd)
++		ret = ctx->veng_ops->ve_start_cmd(fh);
++
++	return ret;
++}
++
+ static int vpu_reset_resource(void *fh)
+ {
+ 	struct videc_ctx *vid_ctx = container_of(fh, struct videc_ctx, fh);
+@@ -1224,6 +1266,7 @@ const static struct vpu_fmt_ops ops = {
+ 	.vpu_g_crop = vpu_g_crop,
+ 	.vpu_stop_cmd = vpu_stop_cmd,
+ 	.vpu_reset_resource = vpu_reset_resource,
++	.vpu_start_cmd = vpu_start_cmd,
+ };
+ 
+ const struct vpu_fmt_ops *get_vpu_fmt_ops(void)
+diff --git a/drivers/media/platform/rtk_vdec_rtd16xxb/vpu.h b/drivers/media/platform/rtk_vdec_rtd16xxb/vpu.h
+index 0e0da610733d..666fd788ed9f 100644
+--- a/drivers/media/platform/rtk_vdec_rtd16xxb/vpu.h
++++ b/drivers/media/platform/rtk_vdec_rtd16xxb/vpu.h
+@@ -80,6 +80,7 @@ struct vpu_fmt_ops {
+ 	int (*vpu_g_crop)(void *fh, struct v4l2_rect *rect);
+ 	int (*vpu_stop_cmd)(void *fh);
+ 	int (*vpu_reset_resource)(void *fh);
++	int (*vpu_start_cmd)(void *fh);
+ };
+ 
+ const struct vpu_fmt_ops *get_vpu_fmt_ops(void);
+@@ -97,7 +98,7 @@ struct veng_ops {
+ 	int (*ve_cap_dqbuf)(void *fh, uint8_t *buf, uint64_t *timestamp,
+ 			    struct vb2_v4l2_buffer **disp_buf);
+ 	int (*ve_abort)(void *ctx, int type);
+-	void *(*ve_alloc_context)(struct file *file);
++	void *(*ve_alloc_context)(void *fh);
+ 	void (*ve_free_context)(void *ctx);
+ 	int (*ve_stop_cmd)(void *fh, int pixelformat);
+ 	void (*ve_get_info)(void *fh, bool *eos, bool *no_frame);
+@@ -107,6 +108,7 @@ struct veng_ops {
+ 				uint32_t *minBufCnt, uint32_t *bitrate);
+ 	int (*ve_get_request_buf_info)(void *fh,
+ 				uint32_t *ddr_width, uint32_t *ddr_height);
++	int (*ve_start_cmd)(void *fh);
+ };
+ 
+ /**
+-- 
+2.45.2
+
