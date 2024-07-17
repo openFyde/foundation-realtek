@@ -1,0 +1,103 @@
+From ce2e526fd52b247c45796462c786f9de32f102ba Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Wed, 17 Jul 2024 09:19:36 +0800
+Subject: [PATCH 1/6] realtek vpu framework
+
+Change-Id: Ife4a543e0b76e34f8a85324b6c04fc768ca49f86
+---
+ drivers/media/platform/Kconfig                |  2 ++
+ drivers/media/platform/Makefile               |  2 ++
+ drivers/media/platform/realtek/vpu/Kconfig    | 25 +++++++++++++++++++
+ drivers/media/platform/realtek/vpu/Makefile   |  2 ++
+ .../platform/realtek/vpu/stateless/Makefile   | 12 +++++++++
+ 5 files changed, 43 insertions(+)
+ create mode 100644 drivers/media/platform/realtek/vpu/Kconfig
+ create mode 100644 drivers/media/platform/realtek/vpu/Makefile
+ create mode 100644 drivers/media/platform/realtek/vpu/stateless/Makefile
+
+diff --git a/drivers/media/platform/Kconfig b/drivers/media/platform/Kconfig
+index 5c8123d4425a..f3eceed21606 100644
+--- a/drivers/media/platform/Kconfig
++++ b/drivers/media/platform/Kconfig
+@@ -43,6 +43,8 @@ source "drivers/media/platform/mediatek/vpu/Kconfig"
+ 
+ source "drivers/media/platform/omap/Kconfig"
+ 
++source "drivers/media/platform/realtek/vpu/Kconfig"
++
+ config VIDEO_ASPEED
+ 	tristate "Aspeed AST2400 and AST2500 Video Engine driver"
+ 	depends on VIDEO_V4L2
+diff --git a/drivers/media/platform/Makefile b/drivers/media/platform/Makefile
+index a643c4789689..6353dd652082 100644
+--- a/drivers/media/platform/Makefile
++++ b/drivers/media/platform/Makefile
+@@ -85,6 +85,8 @@ obj-$(CONFIG_VIDEO_QCOM_CAMSS)		+= qcom/camss/
+ 
+ obj-$(CONFIG_VIDEO_QCOM_VENUS)		+= qcom/venus/
+ 
++obj-$(CONFIG_VIDEO_REALTEK)		+= realtek/vpu/
++
+ obj-$(CONFIG_RTK_HDMI_CEC)		+= rtk-cec/
+ 
+ obj-y					+= sunxi/
+diff --git a/drivers/media/platform/realtek/vpu/Kconfig b/drivers/media/platform/realtek/vpu/Kconfig
+new file mode 100644
+index 000000000000..eb3f1c90ff0b
+--- /dev/null
++++ b/drivers/media/platform/realtek/vpu/Kconfig
+@@ -0,0 +1,25 @@
++# SPDX-License-Identifier: GPL-2.0-only
++
++comment "Realtek media platform drivers"
++
++config VIDEO_REALTEK
++	tristate "Realtek VPU driver"
++	depends on ARCH_REALTEK || COMPILE_TEST
++	depends on V4L_MEM2MEM_DRIVERS
++	depends on VIDEO_DEV
++	select MEDIA_CONTROLLER
++	select MEDIA_CONTROLLER_REQUEST_API
++	select VIDEOBUF2_DMA_CONTIG
++	select VIDEOBUF2_VMALLOC
++	select V4L2_MEM2MEM_DEV
++	select V4L2_H264
++	select V4L2_VP9
++	help
++	  Realtek video codec driver HW capability to decode.
++
++config VIDEO_RTK_CODA
++	tristate "Realtek CODA support"
++	depends on VIDEO_REALTEK
++	depends on ARCH_REALTEK || COMPILE_TEST
++	help
++	  Enable support for Realtek SoC CODA decoder.
+diff --git a/drivers/media/platform/realtek/vpu/Makefile b/drivers/media/platform/realtek/vpu/Makefile
+new file mode 100644
+index 000000000000..d224ab35036f
+--- /dev/null
++++ b/drivers/media/platform/realtek/vpu/Makefile
+@@ -0,0 +1,2 @@
++# SPDX-License-Identifier: GPL-2.0
++obj-y += stateless/
+diff --git a/drivers/media/platform/realtek/vpu/stateless/Makefile b/drivers/media/platform/realtek/vpu/stateless/Makefile
+new file mode 100644
+index 000000000000..4899d1fa6cd6
+--- /dev/null
++++ b/drivers/media/platform/realtek/vpu/stateless/Makefile
+@@ -0,0 +1,12 @@
++# SPDX-License-Identifier: GPL-2.0
++
++obj-$(CONFIG_VIDEO_RTK_CODA) += coda9.o
++
++coda9-y += \
++	coda-hw.o \
++	coda-vdi.o \
++	coda-vpu-v4l2.o \
++	coda-stateless-vpu-dec.o \
++	vpu.o
++
++EXTRA_CFLAGS += -Wframe-larger-than=4096
+-- 
+2.45.2
+
