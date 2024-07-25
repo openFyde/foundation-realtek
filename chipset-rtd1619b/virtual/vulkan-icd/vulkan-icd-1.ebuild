@@ -14,7 +14,7 @@ SRC_URI=""
 LICENSE="metapackage"
 SLOT="0"
 KEYWORDS="*"
-IUSE=""
+IUSE="panfrost"
 
 # Include the Vulkan loader as a dependency because an ICD is typically not
 # useful without it. A Vulkan client can use an ICD directly, without a loader,
@@ -22,6 +22,5 @@ IUSE=""
 # don't) or (b) the client itself implements the loader interface.
 RDEPEND="
 	media-libs/vulkan-loader
-	media-libs/rtd1619b-mali-bin[vulkan]
 "
 DEPEND=""
