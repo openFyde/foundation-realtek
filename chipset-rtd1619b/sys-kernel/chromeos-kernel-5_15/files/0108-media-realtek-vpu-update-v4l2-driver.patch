@@ -1,0 +1,886 @@
+From 7b332c40697d1fd554a900923bec420a1778fe68 Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Fri, 26 Jul 2024 21:21:01 +0800
+Subject: [PATCH] media: realtek: vpu: update v4l2 driver
+
+internal v4l2 commit:
+9f396a3 (HEAD -> topic/va_v4l2-stark-k5.15_chromium, origin/topic/va_v4l2-stark-k5.15_chromium) [DEV_FIX] SW-8158, add dump outbuf, capbuf code in vpu.c
+
+Change-Id: I6763d16c6add6da9037c2ac8d04af010143cd592
+---
+ .../realtek/vpu/stateful/ve1_decode.c         |  29 ++-
+ .../platform/realtek/vpu/stateful/ve1_v4l2.c  |  10 +-
+ .../platform/realtek/vpu/stateful/ve1_v4l2.h  |  12 +-
+ .../realtek/vpu/stateful/ve1_wrapper.c        | 230 ++++++++++++------
+ .../media/platform/realtek/vpu/stateful/ve2.c |  13 +-
+ .../platform/realtek/vpu/stateful/ve2rpc.c    |   2 +
+ .../media/platform/realtek/vpu/stateful/vpu.c | 149 +++++++++++-
+ .../media/platform/realtek/vpu/stateful/vpu.h |   8 +
+ 8 files changed, 351 insertions(+), 102 deletions(-)
+
+diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_decode.c b/drivers/media/platform/realtek/vpu/stateful/ve1_decode.c
+index b6b7053c8032..f34be97aa59c 100644
+--- a/drivers/media/platform/realtek/vpu/stateful/ve1_decode.c
++++ b/drivers/media/platform/realtek/vpu/stateful/ve1_decode.c
+@@ -264,7 +264,7 @@ static int ve1_prepare_decode(struct ve1_ctx *ctx)
+ 	return 0;
+ }
+ 
+-int rtkve1_get_meta(struct ve1_ctx *ctx, struct ve1_meta *result)
++static int rtkve1_get_meta(struct ve1_ctx *ctx, struct ve1_meta *result)
+ {
+ 	int ret = 0;
+ 	struct ve1_meta *meta = NULL;
+@@ -279,7 +279,6 @@ int rtkve1_get_meta(struct ve1_ctx *ctx, struct ve1_meta *result)
+ 	if (!list_empty(&ctx->buffer_meta_list)) {
+ 		meta = list_first_entry(&ctx->buffer_meta_list,
+ 				struct ve1_meta, list);
+-		list_del(&meta->list);
+ 		ctx->num_metas--;
+ 		*result = *meta;
+ 		ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
+@@ -288,14 +287,15 @@ int rtkve1_get_meta(struct ve1_ctx *ctx, struct ve1_meta *result)
+ 			meta->start,
+ 			meta->end,
+ 			ctx->num_metas);
++		list_del(&meta->list);
+ 		kfree(meta);
++		meta = NULL;
+ 
+-		do {
++		while(!list_empty(&ctx->buffer_meta_list)) {
+ 			// if new first entry has the same timestamp as result, take new first entry as result
+ 			meta = list_first_entry(&ctx->buffer_meta_list,
+ 					struct ve1_meta, list);
+ 			if (meta->timestamp == result->timestamp) {
+-				list_del(&meta->list);
+ 				ctx->num_metas--;
+ 				*result = *meta;
+ 				ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
+@@ -304,12 +304,14 @@ int rtkve1_get_meta(struct ve1_ctx *ctx, struct ve1_meta *result)
+ 					meta->start,
+ 					meta->end,
+ 					ctx->num_metas);
++				list_del(&meta->list);
+ 				kfree(meta);
++				meta = NULL;
+ 			}
+ 			else {
+ 				break;
+ 			}
+-		} while(1);
++		}
+ 	} else {
+ 		ve1_info(VE1_LOGTAG, "buffer_meta_list is empty\n");
+ 		ret = -1;
+@@ -321,7 +323,6 @@ int rtkve1_get_meta(struct ve1_ctx *ctx, struct ve1_meta *result)
+ 
+ void rtkve1_add_displayble_frame_to_list(struct ve1_ctx *ctx)
+ {
+-	struct ve1_meta meta;
+ 	unsigned long flags;
+ 	struct ve1_displayable_frame *frame;
+ 	int frameIndex = 0;
+@@ -359,19 +360,20 @@ void rtkve1_add_displayble_frame_to_list(struct ve1_ctx *ctx)
+ 			frame->dpb_paddr = framePhysAddr;
+ 			frame->vb2_v4l2_buf = dpb->vb2_v4l2_buf;
+ 			frame->size = frameSize;
+-			rtkve1_get_meta(ctx, &meta);
+-			frame->timestamp = meta.timestamp;
+-			frame->timecode = meta.timecode;
++			frame->timestamp = ctx->frame_metas[frameIndex].timestamp;
++			frame->timecode = ctx->frame_metas[frameIndex].timecode;
++			memset(&frame->timecode, 0, sizeof(struct v4l2_timecode));
+ 			frame->sequenceNo = ctx->currSequenceNo;
+ 			ctx->cntAddToList++;
+ 			list_add_tail(&frame->list,
+ 				      &ctx->displayable_frame_list);
+ 			ve1_dbg(VPU_DBG_VE1_DIS, VE1_LOGTAG,
+-				"add displayable_frame_list.regIndex:%d.dpb_paddr:0x%x.vb2_v4l2_buf:0x%px.size:%ld.timestamp:%lld.last_frame:%d.sequenceNo:%d.cnt:%u\n",
++				"add displayable_frame_list.regIndex:%d.dpb_paddr:0x%x.vb2_v4l2_buf:0x%px.size:%ld.timestamp:%lld.POC:%d.last_frame:%d.sequenceNo:%d.cnt:%u\n",
+ 				frameIndex, frame->dpb_paddr,
+ 				frame->vb2_v4l2_buf, frame->size,
+-				frame->timestamp, frame->last_frame,
+-				frame->sequenceNo, ctx->cntAddToList);
++				frame->timestamp, frame->POC,
++				frame->last_frame, frame->sequenceNo,
++				ctx->cntAddToList);
+ 
+ 			// check if timestame back track
+ 			if ((frame->timestamp <= ctx->lastFrameTimestamp) &&
+@@ -441,6 +443,7 @@ EXPORT_SYMBOL(ve1_show_displayable_frame_list);
+ static int ve1_finish_decode(struct ve1_ctx *ctx)
+ {
+ 	int ret = 0;
++	struct ve1_meta meta;
+ 
+ 	ret = VE1_DecPicDone(ctx);
+ 	if (ret < 0) {
+@@ -449,6 +452,8 @@ static int ve1_finish_decode(struct ve1_ctx *ctx)
+ 	}
+ 
+ 	if (ctx->lastIndexFrameDecoded >= 0) {
++		rtkve1_get_meta(ctx, &meta);
++		ctx->frame_metas[ctx->lastIndexFrameDecoded] = meta;
+ #ifdef VPU_GET_CC
+ 		if ((ctx->userDataEnable) && (ctx->pUserDataSrcBuf != NULL) &&
+ 		    (ctx->lastIndexFrameDecoded >= 0)) {
+diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.c b/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.c
+index a29436866b2e..2fcf1a9daa03 100644
+--- a/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.c
++++ b/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.c
+@@ -314,6 +314,7 @@ static int ve1_start_streaming(struct vb2_queue *q, uint32_t count,
+ 		}
+ 
+ 		ctx->streamon_out = 1;
++		ctx->bNewBsDumpFile = 1; // #if defined(RTKVE1_DUMP_BS_EN) in ve1_wrapper.c
+ 	} else {
+ 		if (ctx->seqInited) {
+ 			ctx->capReqBufsCnt = q->num_buffers;
+@@ -336,6 +337,7 @@ static int ve1_start_streaming(struct vb2_queue *q, uint32_t count,
+ 				 "streamon_cap but not seq init done\n");
+ 		}
+ 		ctx->streamon_cap = 1;
++		ctx->bNewYuvDumpFile = 1; // #if defined(RTKVE1_DUMP_YUV_EN) in ve1_wrapper.c
+ 	}
+ 	mutex_unlock(&ctx->ve1_mutex);
+ 	ve1_dbg(VPU_DBG_INPUT, VE1_LOGTAG, "[-] type:%s\n",
+@@ -756,12 +758,13 @@ static int ve1_cap_dqbuf(void *fh, uint8_t *buf, uint64_t *timestamp,
+ 					}
+ 					ctx->cntFrameDq++;
+ 					ve1_dbg(VPU_DBG_OUTPUT, VE1_LOGTAG,
+-						"dq vb2_v4l2_buf:0x%px.regIndex:%d.dpb_paddr:0x%x.isDequeued:%d.timestamp:%lld.last_frame:%d.cnt:%d\n",
++						"dq vb2_v4l2_buf:0x%px.regIndex:%d.dpb_paddr:0x%x.isDequeued:%d.timestamp:%lld.POC:%d.last_frame:%d.cnt:%d\n",
+ 						frame->vb2_v4l2_buf,
+ 						frame->regIndex,
+ 						frame->dpb_paddr,
+ 						frame->isDequeued,
+ 						frame->timestamp,
++						frame->POC,
+ 						ctx->last_frame,
+ 						ctx->cntFrameDq);
+ 					frame->isDequeued = 1;
+@@ -770,6 +773,11 @@ static int ve1_cap_dqbuf(void *fh, uint8_t *buf, uint64_t *timestamp,
+ 					regIndex = frame->regIndex;
+ 					sequenceNo = frame->sequenceNo;
+ 					bFillFrameInfo = true;
++					if ((frame->POC != 0) && (frame->POC < ctx->lastDispPOC)) {
++						ve1_dbg(VPU_DBG_OUTPUT, VE1_LOGTAG,
++							"incorrect POC.curr:%d.last:%d\n",frame->POC,ctx->lastDispPOC);
++					}
++					ctx->lastDispPOC = frame->POC;
+ 					break;
+ 				}
+ 			}
+diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.h b/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.h
+index 19996dde8f4c..5a9593fe3a05 100644
+--- a/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.h
++++ b/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.h
+@@ -257,6 +257,7 @@ struct ve1_displayable_frame {
+ 	unsigned int video_full_range_flag; // H264 vui_parameters
+ 	unsigned int transfer_characteristics; // H264 vui_parameters
+ 	unsigned int matrix_coefficients; // H264 vui_parameters
++	int POC;
+ };
+ 
+ typedef enum {
+@@ -346,6 +347,7 @@ struct ve1_ctx {
+ 		bsRdPtr; // whether svp or non-svp, it always store physical address
+ 	unsigned long
+ 		bsWrPtr; // whether svp or non-svp, it always store physical address
++	struct ve1_meta frame_metas[MAX_VE1_FRAME_BUFFERS];
+ 	struct list_head buffer_meta_list;
+ 	spinlock_t buffer_meta_lock;
+ 	struct list_head displayable_frame_list;
+@@ -395,8 +397,9 @@ struct ve1_ctx {
+ 	struct ve1_decoded_frame frameQueue[MAX_VE1_FRAME_BUFFERS];
+ 	unsigned long long timeTick; // 90KHz
+ 	struct rtkve1_dpb_t dpb[VE1_ION_STRUCT_NUM];
+-	int bIsOpenYuvDumpFile;
+-	void *yuvDumpFile;
++	int bNewYuvDumpFile;	// #if defined(RTKVE1_DUMP_YUV_EN) in ve1_wrapper.c
++	void *yuvDumpFile;		// #if defined(RTKVE1_DUMP_YUV_EN) in ve1_wrapper.c
++	unsigned char yuvDumpFileName[256]; // #if defined(RTKVE1_DUMP_YUV_EN) in ve1_wrapper.c
+ 
+ 	// info
+ 	int cntQueuePicRunWorkOk;
+@@ -439,6 +442,11 @@ struct ve1_ctx {
+ 	unsigned int cntAddToList;
+ 	unsigned int capReqBufsCnt;
+ 	bool bFlush;
++	unsigned int lastDispPOC;
++
++	int bNewBsDumpFile;		// #if defined(RTKVE1_DUMP_BS_EN) in ve1_wrapper.c
++	void *bsDumpFile;		// #if defined(RTKVE1_DUMP_BS_EN) in ve1_wrapper.c
++	unsigned char bsDumpFileName[256]; // #if defined(RTKVE1_DUMP_BS_EN) ve1_wrapper.c
+ };
+ 
+ static inline unsigned long ve1_ring_valid_data(unsigned long ring_base,
+diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.c b/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.c
+index 635cc248a059..8b80d695ba02 100644
+--- a/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.c
++++ b/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.c
+@@ -27,10 +27,15 @@
+ static unsigned char ve1_md5_digest[VE1_MD5_DIGEST_SIZE];
+ #endif
+ 
+-//#define VE1_TEST_DUMP_YUV_EN
+-#if defined(VE1_TEST_DUMP_YUV_EN)
+-#define VE1_TEST_DUMP_YUV_FILENAME "/root/1.yuv"
+-#define VE1_TEST_DUMP_YUV_FRAME_NUM 30
++//#define RTKVE1_DUMP_BS_EN
++#if defined(RTKVE1_DUMP_BS_EN)
++static int gBsDumpSerial = 0;
++#endif
++
++//#define RTKVE1_DUMP_YUV_EN
++#if defined(RTKVE1_DUMP_YUV_EN)
++//#define VE1_TEST_DUMP_YUV_FRAME_NUM 30
++static int gYuvDumpSerial = 0;
+ #endif
+ 
+ #include <linux/dma-map-ops.h>
+@@ -2343,12 +2348,95 @@ int ve1_prepare_seq_change(void *pCtx)
+ 	return VE1_DEC_RETURN_SEQ_CHANGE;
+ }
+ 
++static int rtkve1_dump_yuv(void *pCtx, int fbIndex)
++{
++#if defined(RTKVE1_DUMP_YUV_EN)
++	struct ve1_ctx *ctx;
++	unsigned long fb_phys_addr = 0;
++	void *fb_virt_addr = NULL;
++	FrameBuffer *fbUser = NULL;
++	void *tmp_dpb = NULL;
++	struct rtkve1_dpb_t *dpb = NULL;
++	struct vb2_v4l2_buffer *vb2_v4l2_buf = NULL;
++	struct vb2_buffer *vb2_buf = NULL;
++	int filp_open_flags;
++	ssize_t bytes = 0;
++	loff_t pos = 0;
++
++	if ((pCtx == NULL) || (fbIndex < 0)) {
++		return -1;
++	}
++	ctx = (struct ve1_ctx *)pCtx;
++
++	//if ((fbIndex >= 0) &&
++	//    (ctx->displayFrmNum == 300)) {
++	if (fbIndex >= 0) {
++		fbUser = ((FrameBuffer *)ctx->fbUser) + fbIndex;
++		fb_phys_addr = fbUser->bufY;
++		tmp_dpb = rtkve1_find_dpb((void *)ctx, fb_phys_addr);
++		if (!tmp_dpb) {
++			ve1_err(VE1_WRAPPER_TAG,
++					"can't find framePhysAddr:0x%lx in dpb[]\n",
++					fb_phys_addr);
++			return -1;
++		}
++		dpb = (struct rtkve1_dpb_t *)tmp_dpb;
++		vb2_v4l2_buf = (struct vb2_v4l2_buffer *)(dpb->vb2_v4l2_buf);
++		vb2_buf = &(vb2_v4l2_buf->vb2_buf);
++		fb_virt_addr = vb2_plane_vaddr(vb2_buf, 0);
++		ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++				"dpb.index:%d.virt:0x%px.phys:0x%lx.vb2_v4l2_buf:0x%px.vb2_buf:0x%px.size:%u\n",
++				fbIndex, fb_virt_addr, fb_phys_addr,
++				(void *)vb2_v4l2_buf, (void *)vb2_buf, dpb->size);
++
++		if ((fb_virt_addr != NULL) && (dpb->size > 0)) {
++			if (ctx->bNewYuvDumpFile == 1) {
++				ctx->bNewYuvDumpFile = 0;
++				filp_open_flags = O_CREAT | O_WRONLY;
++				memset(ctx->yuvDumpFileName, 0, sizeof(unsigned char)*256);
++				snprintf(ctx->yuvDumpFileName, 256,
++						"/media/removable/32G_BLACK/ve1yuv_%d.yuv",
++						gYuvDumpSerial);
++				gYuvDumpSerial++;
++				vpu_info("%d.%s.create new ve1yuv dump:%s\n",__LINE__,__func__,
++						ctx->yuvDumpFileName);
++			} else {
++				filp_open_flags = O_APPEND | O_WRONLY;
++			}
++			ctx->yuvDumpFile =
++				(void *)filp_open(ctx->yuvDumpFileName, filp_open_flags, 0);
++			if (IS_ERR((struct file *)ctx->bsDumpFile)) {
++				ve1_err(VE1_WRAPPER_TAG, "filp_open %s fail\n",
++						ctx->yuvDumpFileName);
++			} else {
++				//ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++				//	"filp_open %s ok\n",
++				//	ctx->yuvDumpFileName);
++				bytes =
++					kernel_write((struct file *)(ctx->yuvDumpFile),
++								(void *)fb_virt_addr, (size_t)dpb->size, &pos);
++				ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++						"kernel_write bytes:%ld.pos:%lld\n", bytes, pos);
++				filp_close((struct file *)(ctx->yuvDumpFile), NULL);
++				//ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++				//		"filp_close %s\n",
++				//		ctx->yuvDumpFileName);
++				ctx->yuvDumpFile = NULL;
++			}
++		}
++	}
++	return 0;
++#else
++	return -1;
++#endif
++}
++
+ int VE1_DecPicDone(void *pCtx)
+ {
+ 	RetCode ret = RETCODE_SUCCESS;
+ 	struct ve1_ctx *ctx;
+ 	DecOutputInfo *outputInfo;
+-#if defined(VE1_CHECK_DFB_MD5_EN) || defined(VE1_TEST_DUMP_YUV_EN)
++#if defined(VE1_CHECK_DFB_MD5_EN)
+ 	int fbIndex = 0;
+ 	unsigned long fb_phys_addr = 0;
+ 	void *fb_virt_addr = NULL;
+@@ -2358,12 +2446,6 @@ int VE1_DecPicDone(void *pCtx)
+ 	struct vb2_v4l2_buffer *vb2_v4l2_buf = NULL;
+ 	struct vb2_buffer *vb2_buf = NULL;
+ #endif
+-#if defined(VE1_TEST_DUMP_YUV_EN)
+-	mm_segment_t old_fs;
+-	loff_t pos = 0;
+-	ssize_t bytes = 0;
+-	int filp_open_flags;
+-#endif
+ 
+ 	if (pCtx == NULL) {
+ 		ve1_err(VE1_WRAPPER_TAG, "pCtx == NULL\n");
+@@ -2502,74 +2584,7 @@ int VE1_DecPicDone(void *pCtx)
+ 	}
+ #endif
+ 
+-#if defined(VE1_TEST_DUMP_YUV_EN)
+-	if ((outputInfo->indexFrameDisplay >= 0) &&
+-	    (ctx->displayFrmNum == 300)) {
+-		fbUser = ((FrameBuffer *)ctx->fbUser) +
+-			 outputInfo->indexFrameDisplay;
+-		ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
+-			"mmap virt_addr:0x%px.phys_addr:0x%x\n", fb_virt_addr,
+-			outputInfo->dispFrame.bufY);
+-		pYuv = (unsigned char *)kmalloc(fbUser->size, GFP_KERNEL);
+-
+-		if (fb_virt_addr && fbUser && pYuv) {
+-			if (ctx->bIsOpenYuvDumpFile == 0) {
+-				ctx->bIsOpenYuvDumpFile = 1;
+-				filp_open_flags = O_CREAT | O_WRONLY;
+-			} else {
+-				filp_open_flags = O_APPEND | O_WRONLY;
+-			}
+-			ctx->yuvDumpFile = (void *)filp_open(
+-				VE1_TEST_DUMP_YUV_FILENAME, filp_open_flags, 0);
+-			if (IS_ERR((struct file *)ctx->yuvDumpFile)) {
+-				kfree(pYuv);
+-				pYuv = NULL;
+-				fb_virt_addr = NULL;
+-				ve1_err(VE1_WRAPPER_TAG, "filp_open %s fail\n",
+-					VE1_TEST_DUMP_YUV_FILENAME);
+-			} else {
+-				ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
+-					"filp_open %s ok\n",
+-					VE1_TEST_DUMP_YUV_FILENAME);
+-				old_fs = get_fs();
+-				set_fs(KERNEL_DS);
+-				if (ctx->is_svp) {
+-					VPU_DBG_DUMP_SDATA(
+-						ctx->decHandle,
+-						outputInfo->dispFrame.bufY,
+-						pYuv, fbUser->size);
+-				} else {
+-					osal_memcpy((void *)pYuv,
+-						    (void *)fb_virt_addr,
+-						    fbUser->size);
+-				}
+-				bytes = vfs_write(
+-					(struct file *)ctx->yuvDumpFile, pYuv,
+-					fbUser->size, &pos);
+-				ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
+-					"vfs_write bytes:%d.pos:%lld\n", bytes,
+-					pos);
+-
+-				set_fs(old_fs);
+-				filp_close(ctx->yuvDumpFile, NULL);
+-				ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
+-					"filp_close %s\n",
+-					VE1_TEST_DUMP_YUV_FILENAME);
+-				ctx->yuvDumpFile = NULL;
+-				kfree(pYuv);
+-				pYuv = NULL;
+-				fb_virt_addr = NULL;
+-			}
+-		}
+-		if (pYuv) {
+-			kfree(pYuv);
+-			pYuv = NULL;
+-		}
+-		if (fb_virt_addr) {
+-			fb_virt_addr = NULL;
+-		}
+-	}
+-#endif // #if VE1_TEST_DUMP_YUV_EN
++	rtkve1_dump_yuv((void *)ctx, outputInfo->indexFrameDisplay);
+ 
+ 	if (((outputInfo->decodingSuccess & 0x1) != 0) &&
+ 	    (outputInfo->sequenceChanged)) {
+@@ -2894,14 +2909,15 @@ void VE1_GetDisplayFrameInfo(void *pCtx, void *displayFrameInfo)
+ 	frame->video_full_range_flag = frmInfo->video_full_range_flag;
+ 	frame->transfer_characteristics = frmInfo->transfer_characteristics;
+ 	frame->matrix_coefficients = frmInfo->matrix_coefficients;
++	frame->POC = frmInfo->POC;
+ 	ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
+-		"idx:%d.0x%x,0x%x.%d,%d,%d,%d.(%d,%d,%d,%d).%d.%d.%lld.avcvui(%d,%d,%d)\n",
++		"idx:%d.0x%x,0x%x.%d,%d,%d,%d.(%d,%d,%d,%d).%d.%d.%lld.avcvui(%d,%d,%d).POC:%d\n",
+ 		frame->frameBufIndex, frame->Y_addr, frame->U_addr,
+ 		frame->bufStride, frame->bufHeight, frame->picWidth,
+ 		frame->picHeight, frame->rectLeft, frame->rectTop,
+ 		frame->rectRight, frame->rectBottom, frame->bitDepth,
+ 		frame->mode, frame->timeTick, frame->video_full_range_flag,
+-		frame->transfer_characteristics, frame->matrix_coefficients);
++		frame->transfer_characteristics, frame->matrix_coefficients, frame->POC);
+ }
+ 
+ int VE1_AllocateBitstreamBuffer(struct device *dev, unsigned long *phys_addr,
+@@ -3238,6 +3254,56 @@ void VE1_UpdateFrameQueueInfo(void *pCtx)
+ 	}
+ }
+ 
++static void rtkve1_dump_bs(struct ve1_ctx *ctx, uint8_t *buf,
++					uint32_t size)
++{
++#if defined(RTKVE1_DUMP_BS_EN)
++	int filp_open_flags;
++	ssize_t bytes = 0;
++	loff_t pos = 0;
++
++	if (ctx == NULL) {
++		return;
++	}
++
++	if ((buf != NULL) && (size != 0)) {
++		if (ctx->bNewBsDumpFile == 1) {
++			ctx->bNewBsDumpFile = 0;
++			filp_open_flags = O_CREAT | O_WRONLY;
++			memset(ctx->bsDumpFileName, 0, sizeof(unsigned char)*256);
++			snprintf(ctx->bsDumpFileName, 256,
++					"/media/removable/32G_BLACK/ve1bs_%d.es",
++					gBsDumpSerial);
++			gBsDumpSerial++;
++			vpu_info("%d.%s.create new ve1bs dump:%s\n",__LINE__,__func__,
++					ctx->bsDumpFileName);
++		} else {
++			filp_open_flags = O_APPEND | O_WRONLY;
++		}
++		ctx->bsDumpFile =
++			(void *)filp_open(ctx->bsDumpFileName, filp_open_flags, 0);
++		if (IS_ERR((struct file *)ctx->bsDumpFile)) {
++			ve1_err(VE1_WRAPPER_TAG, "filp_open %s fail\n",
++					ctx->bsDumpFileName);
++		} else {
++			//ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++			//		"filp_open %s ok\n",
++			//		ctx->bsDumpFileName);
++			bytes =
++				kernel_write((struct file *)(ctx->bsDumpFile),
++							(void *)buf, (size_t)size, &pos);
++			ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++					"kernel_write bytes:%ld.pos:%lld\n", bytes, pos);
++			filp_close((struct file *)(ctx->bsDumpFile), NULL);
++			//ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++			//		"filp_close %s\n",
++			//		ctx->bsDumpFileName);
++			ctx->bsDumpFile = NULL;
++		}
++	}
++#endif
++}
++
+ void rtkve1_copy_to_bitstream_buffer(struct ve1_ctx *ctx, uint8_t *buf,
+ 				     uint32_t size)
+ {
+@@ -3247,6 +3313,8 @@ void rtkve1_copy_to_bitstream_buffer(struct ve1_ctx *ctx, uint8_t *buf,
+ 	int size0 = 0;
+ 	int size1 = 0;
+ 
++	rtkve1_dump_bs(ctx, buf, size);
++
+ 	bsEndAddr = ctx->bitstream.paddr + ctx->bitstream.size;
+ 	newBsWrPtr = ctx->bsWrPtr + size;
+ 	virtBsWrPtr =
+diff --git a/drivers/media/platform/realtek/vpu/stateful/ve2.c b/drivers/media/platform/realtek/vpu/stateful/ve2.c
+index c358f4db65a1..5b57cb4fb636 100644
+--- a/drivers/media/platform/realtek/vpu/stateful/ve2.c
++++ b/drivers/media/platform/realtek/vpu/stateful/ve2.c
+@@ -433,6 +433,7 @@ static int ve2_cap_qbuf(void *fh, struct vb2_buffer *vb)
+ 	if (ctx->cap_hndl->dpb_cnt < vb->vb2_queue->num_buffers) {
+ 		uint32_t cap_buf_size = 0;
+ 		struct rtkve2_reg_dpb_t dpb;
++		int i = 0;
+ 
+ 		cap_buf_size = vb2_plane_size(vb, 0);
+ 		if (cap_buf_size == 0) {
+@@ -452,10 +453,16 @@ static int ve2_cap_qbuf(void *fh, struct vb2_buffer *vb)
+ 		dpb.vb2_v4l2_buf = vb2_v4l2_buf;
+ 		dpb.idx = vb->index;
+ 
+-		ret = ve2rpc_add_capbuf_to_dpb(
++		for (i = 0; i < ctx->cap_hndl->dpb_cnt; i++)
++			if (ctx->cap_hndl->dpb[i].y_phy_addr == dpb.y_phy_addr)
++				break;
++
++		if(i == ctx->cap_hndl->dpb_cnt) {
++			ret = ve2rpc_add_capbuf_to_dpb(
+ 			ctx->out_hndl, ctx->cap_hndl, dpb);
+-		if (ret != 0)
+-			goto exit;
++			if (ret != 0)
++				goto exit;
++		}
+ 	}
+ 
+ 	rm_vb2_v4l2_buf =
+diff --git a/drivers/media/platform/realtek/vpu/stateful/ve2rpc.c b/drivers/media/platform/realtek/vpu/stateful/ve2rpc.c
+index c2e94872db01..441cb4b891d7 100644
+--- a/drivers/media/platform/realtek/vpu/stateful/ve2rpc.c
++++ b/drivers/media/platform/realtek/vpu/stateful/ve2rpc.c
+@@ -2395,6 +2395,7 @@ int ve2rpc_init_out_handle(struct device *dev, struct ve2rpc **handle,
+ 	hndl = *handle;
+ 	hndl->dev = dev;
+ 	hndl->is_secure = is_secure;
++	hndl->type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+ 	mutex_init(&hndl->lock);
+ 
+ 	ret = _ve2rpc_open(hndl, VF_TYPE_VIDEO_MPEG2_DECODER, fh);
+@@ -2455,6 +2456,7 @@ int ve2rpc_init_cap_handle(struct device *dev, struct ve2rpc **handle,
+ 	hndl = *handle;
+ 	hndl->dev = dev;
+ 	hndl->is_secure = is_secure;
++	hndl->type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+ 	mutex_init(&hndl->lock);
+ 
+ 	ret = _ve2rpc_open(hndl, VF_TYPE_FLASH, fh);
+diff --git a/drivers/media/platform/realtek/vpu/stateful/vpu.c b/drivers/media/platform/realtek/vpu/stateful/vpu.c
+index b3de96220184..4058805cbad4 100644
+--- a/drivers/media/platform/realtek/vpu/stateful/vpu.c
++++ b/drivers/media/platform/realtek/vpu/stateful/vpu.c
+@@ -32,6 +32,16 @@
+ struct veng_ops *vpu_ve1_ops = NULL;
+ struct veng_ops *vpu_ve2_ops = NULL;
+ 
++//#define RTKVPU_DUMP_OUTBUF_EN
++#if defined(RTKVPU_DUMP_OUTBUF_EN)
++static int gOutbufDumpSerial = 0;
++#endif
++
++//#define RTKVPU_DUMP_CAPBUF_EN
++#if defined(RTKVPU_DUMP_CAPBUF_EN)
++static int gCapbufDumpSerial = 0;
++#endif
++
+ #ifdef ENABLE_SHOW_VIDEO_INFO
+ static int width = 0;
+ static int height = 0;
+@@ -44,9 +54,13 @@ static uint32_t pixfmt = 0;
+ #define RTK_VE2_HEIGHT_ALIGN 128
+ 
+ #define RTK_VPU_DEC_4K_CODED_MAX_WIDTH 4096
+-#define RTK_VPU_DEC_4K_CODED_MAX_HEIGHT 2304
++#define RTK_VPU_DEC_4K_CODED_MAX_HEIGHT 4096
++//4K max resolution : 4096x2304=9437184
++#define RTK_VPU_DEC_4K_CODED_MAX_RESOLUTION 9437184
+ #define RTK_VPU_DEC_2K_CODED_MAX_WIDTH 1920
+-#define RTK_VPU_DEC_2K_CODED_MAX_HEIGHT 1088
++#define RTK_VPU_DEC_2K_CODED_MAX_HEIGHT 1920
++//2K max resolution : 1920x1088=2088960
++#define RTK_VPU_DEC_2K_CODED_MAX_RESOLUTION 2088960
+ 
+ void vpu_cap_buf_done(struct v4l2_fh *fh, struct vb2_v4l2_buffer *buf, bool eos,
+ 		      enum vb2_buffer_state state);
+@@ -80,6 +94,7 @@ const static struct vpu_fmt out_fmt[] = {
+ 
+ 		/* struct vpu_misc */
+ 		.misc.bufcnt = 4,
++		.misc.max_resolution = RTK_VPU_DEC_4K_CODED_MAX_RESOLUTION,
+ 		.misc.VideoEngine = VIDEO_ENGINE_1,
+ 	},
+ 	{
+@@ -107,6 +122,7 @@ const static struct vpu_fmt out_fmt[] = {
+ 
+ 		/* struct vpu_misc */
+ 		.misc.bufcnt = 4,
++		.misc.max_resolution = RTK_VPU_DEC_2K_CODED_MAX_RESOLUTION,
+ 		.misc.VideoEngine = VIDEO_ENGINE_1,
+ 	},
+ 	{
+@@ -134,6 +150,7 @@ const static struct vpu_fmt out_fmt[] = {
+ 
+ 		/* struct vpu_misc */
+ 		.misc.bufcnt = 4,
++		.misc.max_resolution = RTK_VPU_DEC_2K_CODED_MAX_RESOLUTION,
+ 		.misc.VideoEngine = VIDEO_ENGINE_1,
+ 	},
+ 	{
+@@ -161,6 +178,7 @@ const static struct vpu_fmt out_fmt[] = {
+ 
+ 		/* struct vpu_misc */
+ 		.misc.bufcnt = 4,
++		.misc.max_resolution = RTK_VPU_DEC_2K_CODED_MAX_RESOLUTION,
+ 		.misc.VideoEngine = VIDEO_ENGINE_1,
+ 	},
+ 	{
+@@ -188,6 +206,7 @@ const static struct vpu_fmt out_fmt[] = {
+ 
+ 		/* struct vpu_misc */
+ 		.misc.bufcnt = 4,
++		.misc.max_resolution = RTK_VPU_DEC_2K_CODED_MAX_RESOLUTION,
+ 		.misc.VideoEngine = VIDEO_ENGINE_1,
+ 	},
+ 	{
+@@ -215,6 +234,7 @@ const static struct vpu_fmt out_fmt[] = {
+ 
+ 		/* struct vpu_misc */
+ 		.misc.bufcnt = 4,
++		.misc.max_resolution = RTK_VPU_DEC_2K_CODED_MAX_RESOLUTION,
+ 		.misc.VideoEngine = VIDEO_ENGINE_1,
+ 	},
+ 	/* video engine VE2 output format */
+@@ -245,6 +265,7 @@ const static struct vpu_fmt out_fmt[] = {
+ 
+ 		/* struct vpu_misc */
+ 		.misc.bufcnt = 15,
++		.misc.max_resolution = RTK_VPU_DEC_4K_CODED_MAX_RESOLUTION,
+ 		.misc.VideoEngine = VIDEO_ENGINE_2,
+ 	},
+ 	{
+@@ -272,6 +293,7 @@ const static struct vpu_fmt out_fmt[] = {
+ 
+ 		/* struct vpu_misc */
+ 		.misc.bufcnt = 10,
++		.misc.max_resolution = RTK_VPU_DEC_4K_CODED_MAX_RESOLUTION,
+ 		.misc.VideoEngine = VIDEO_ENGINE_2,
+ 	},
+ 	{
+@@ -299,6 +321,7 @@ const static struct vpu_fmt out_fmt[] = {
+ 
+ 		/* struct vpu_misc */
+ 		.misc.bufcnt = 10,
++		.misc.max_resolution = RTK_VPU_DEC_4K_CODED_MAX_RESOLUTION,
+ 		.misc.VideoEngine = VIDEO_ENGINE_2,
+ 	},
+ };
+@@ -329,6 +352,7 @@ static const struct vpu_fmt cap_fmt[] = {
+ 
+ 		/* struct vpu_misc */
+ 		.misc.bufcnt = 10,
++		.misc.max_resolution = RTK_VPU_DEC_4K_CODED_MAX_RESOLUTION,
+ 		.misc.VideoEngine = VIDEO_OUTPUT_1,
+ 	},
+ };
+@@ -391,6 +415,61 @@ static int vpu_buf_done(struct v4l2_fh *fh, struct vb2_v4l2_buffer *v4l2_buf,
+ 	return 0;
+ }
+ 
++static int rtkvpu_dump_capbuf(struct vpu_ctx *ctx, struct vb2_v4l2_buffer *v4l2_buf, uint32_t size)
++{
++#if defined(RTKVPU_DUMP_CAPBUF_EN)
++	struct vb2_buffer *vb2_buf = NULL;
++	void *vb2_virt_addr = NULL;
++	int filp_open_flags;
++	ssize_t bytes = 0;
++	loff_t pos = 0;
++
++	if ((v4l2_buf == NULL) || (size == 0)) {
++		return -1;
++	}
++
++	vb2_buf = &(v4l2_buf->vb2_buf);
++	vb2_virt_addr = vb2_plane_vaddr(vb2_buf, 0);
++	vpu_info("%d.%s.v4l2_buf:0x%px.vb2_virt_addr:0x%px.size:%d\n",__LINE__,__func__,
++			(void *)v4l2_buf,vb2_virt_addr,size);
++
++	if (ctx->bNewCapbufDumpFile == 1) {
++		ctx->bNewCapbufDumpFile = 0;
++		filp_open_flags = O_CREAT | O_WRONLY;
++		memset(ctx->capbufDumpFileName, 0, sizeof(unsigned char)*256);
++		snprintf(ctx->capbufDumpFileName, 256,
++				"/media/removable/32G_BLACK/capbuf_%d.yuv",
++				gCapbufDumpSerial);
++		gCapbufDumpSerial++;
++		vpu_info("%d.%s.create new capbuf dump:%s\n",__LINE__,__func__,
++				ctx->capbufDumpFileName);
++	} else {
++		filp_open_flags = O_APPEND | O_WRONLY;
++	}
++	ctx->capbufDumpFile =
++		(void *)filp_open(ctx->capbufDumpFileName, filp_open_flags, 0);
++	if (IS_ERR((struct file *)ctx->capbufDumpFile)) {
++		vpu_err("%d.%s.filp_open %s fail\n",__LINE__,__func__,
++				ctx->capbufDumpFileName);
++	} else {
++		//vpu_info("%d.%s.filp_open %s ok\n",__LINE__,__func__,
++		//		ctx->capbufDumpFileName);
++		bytes =
++			kernel_write((struct file *)(ctx->capbufDumpFile),
++						(void *)vb2_virt_addr, (size_t)size, &pos);
++		//vpu_info("%d.%s.kernel_write bytes:%ld.pos:%lld\n",__LINE__,__func__,
++		//		bytes, pos);
++		filp_close((struct file *)(ctx->capbufDumpFile), NULL);
++		//vpu_info("%d.%s.filp_close %s\n",__LINE__,__func__,
++		//		ctx->capbufDumpFileName);
++		ctx->capbufDumpFile = NULL;
++	}
++	return 0;
++#else
++	return -1;
++#endif
++}
++
+ static int threadcap(void *data)
+ {
+ 	struct v4l2_fh *fh = (struct v4l2_fh *)data;
+@@ -435,6 +514,8 @@ static int threadcap(void *data)
+ 			ret = ctx->veng_ops->ve_cap_dqbuf(fh, NULL, &timestamp,
+ 							  &disp_buf);
+ 			if (!ret) {
++				rtkvpu_dump_capbuf(ctx, disp_buf, sizeimage);
++
+ 				if (ctx->veng_ops->ve_get_info)
+ 					ctx->veng_ops->ve_get_info(fh, &eos,
+ 								   &no_frame);
+@@ -465,6 +546,54 @@ static int threadcap(void *data)
+ 	return 0;
+ }
+ 
++static void rtkvpu_dump_outbuf(struct vpu_ctx *ctx, uint8_t* buf,
++					uint32_t offset, uint32_t len)
++{
++#if defined(RTKVPU_DUMP_OUTBUF_EN)
++	int filp_open_flags;
++	ssize_t bytes = 0;
++	loff_t pos = 0;
++
++	if (ctx == NULL) {
++		return;
++	}
++
++	if ((buf != NULL) && (len != 0)) {
++		if (ctx->bNewOutbufDumpFile == 1) {
++			ctx->bNewOutbufDumpFile = 0;
++			filp_open_flags = O_CREAT | O_WRONLY;
++			memset(ctx->outbufDumpFileName, 0, sizeof(unsigned char)*256);
++			snprintf(ctx->outbufDumpFileName, 256,
++					"/media/removable/32G_BLACK/outbuf_%d.es",
++					gOutbufDumpSerial);
++			gOutbufDumpSerial++;
++			vpu_info("%d.%s.create new outbuf dump:%s\n",__LINE__,__func__,
++					ctx->outbufDumpFileName);
++		} else {
++			filp_open_flags = O_APPEND | O_WRONLY;
++		}
++		ctx->outbufDumpFile =
++			(void *)filp_open(ctx->outbufDumpFileName, filp_open_flags, 0);
++		if (IS_ERR((struct file *)ctx->outbufDumpFile)) {
++			vpu_err("%d.%s.filp_open %s fail\n",__LINE__,__func__,
++					ctx->outbufDumpFileName);
++		} else {
++			//vpu_info("%d.%s.filp_open %s ok\n",__LINE__,__func__,
++			//		ctx->outbufDumpFileName);
++			bytes =
++				kernel_write((struct file *)(ctx->outbufDumpFile),
++							(void *)(buf + offset), (size_t)len, &pos);
++			//vpu_info("%d.%s.kernel_write bytes:%ld.pos:%lld\n",__LINE__,__func__,
++			//		bytes, pos);
++			filp_close((struct file *)(ctx->outbufDumpFile), NULL);
++			//vpu_info("%d.%s.filp_close %s\n",__LINE__,__func__,
++			//		ctx->outbufDumpFileName);
++			ctx->outbufDumpFile = NULL;
++		}
++	}
++#endif
++}
++
+ static int threadout(void *data)
+ {
+ 	struct v4l2_fh *fh = (struct v4l2_fh *)data;
+@@ -552,6 +681,8 @@ static int threadout(void *data)
+ 						len, v4l2_buf->vb2_buf.timestamp,
+ 						sequence);
+ 				if (!qbuf_ret) {
++					rtkvpu_dump_outbuf(ctx, p, offset, len);
++
+ 					v4l2_buf = v4l2_m2m_src_buf_remove(
+ 						fh->m2m_ctx);
+ 					if (!v4l2_buf) {
+@@ -770,6 +901,12 @@ static int vpu_s_fmt_out(struct v4l2_fh *fh, struct v4l2_format *f)
+ 	}
+ 
+ 	mutex_lock(&ctx->vpu_mutex);
++	if (f->fmt.pix_mp.width * f->fmt.pix_mp.height > fmt->misc.max_resolution) {
++		vpu_err("%s, %d x %d over spec ", __func__, f->fmt.pix_mp.width, f->fmt.pix_mp.height);
++		ret = -EINVAL;
++		goto exit;
++	}
++
+ 	ctx->rect.width = f->fmt.pix_mp.width;
+ 	ctx->rect.height = f->fmt.pix_mp.height;
+ 	mutex_unlock(&ctx->vpu_mutex);
+@@ -831,7 +968,7 @@ static int vpu_s_fmt_out(struct v4l2_fh *fh, struct v4l2_format *f)
+ exit:
+ 	mutex_unlock(&ctx->vpu_mutex);
+ 
+-	return 0;
++	return ret;
+ }
+ 
+ static int vpu_queue_info(struct vb2_queue *vq, int *bufcnt,
+@@ -910,12 +1047,18 @@ int vpu_start_streaming(struct vb2_queue *q, uint32_t count)
+ 		ctx->thread_out = kthread_run(
+ 			threadout, fh, "outthread %p4cc", &pixelformat);
+ 		ctx->is_out_started = 1;
++#if defined(RTKVPU_DUMP_OUTBUF_EN)
++		ctx->bNewOutbufDumpFile = 1;
++#endif
+ 	} else {
+ 		ctx->seq_cap = 0;
+ 		ctx->memory_cap = q->memory;
+ 		ctx->thread_cap = kthread_run(
+ 			threadcap, fh, "capthread %p4cc", &pixelformat);
+ 		ctx->is_cap_started = 1;
++#if defined(RTKVPU_DUMP_CAPBUF_EN)
++		ctx->bNewCapbufDumpFile = 1;
++#endif
+ 	}
+ 	mutex_unlock(&ctx->vpu_mutex);
+ 
+diff --git a/drivers/media/platform/realtek/vpu/stateful/vpu.h b/drivers/media/platform/realtek/vpu/stateful/vpu.h
+index 666fd788ed9f..1be8e1d78f9a 100644
+--- a/drivers/media/platform/realtek/vpu/stateful/vpu.h
++++ b/drivers/media/platform/realtek/vpu/stateful/vpu.h
+@@ -21,6 +21,7 @@ struct vpu_misc {
+ 	uint32_t bufcnt;
+ 	uint32_t ori_width;
+ 	uint32_t ori_height;
++	uint32_t max_resolution;
+ };
+ 
+ struct vpu_fmt {
+@@ -60,6 +61,13 @@ struct vpu_ctx {
+ 	unsigned int ddr_height;
+ 	bool is_bs_error;
+ 	bool is_decoder_error;
++
++	int bNewOutbufDumpFile;		// #if defined(RTKVPU_DUMP_BS_EN) in vpu.c
++	void *outbufDumpFile;		// #if defined(RTKVPU_DUMP_BS_EN) in vpu.c
++	unsigned char outbufDumpFileName[256]; // #if defined(RTKVPU_DUMP_BS_EN) in vpu.c
++	int bNewCapbufDumpFile;		// #if defined(RTKVPU_DUMP_BS_EN) in vpu.c
++	void *capbufDumpFile;		// #if defined(RTKVPU_DUMP_BS_EN) in vpu.c
++	unsigned char capbufDumpFileName[256]; // #if defined(RTKVPU_DUMP_BS_EN) in vpu.c
+ };
+ 
+ struct vpu_fmt_ops {
+-- 
+2.45.2
+
