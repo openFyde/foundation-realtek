@@ -25,6 +25,7 @@ S=${FILESDIR}
 src_install() {
   insinto /etc/init
   doins init/load-rtd1619-modules.conf
+  doins init/net-acc.conf
   if use tty_console_ttyS0; then
     doins init/console-ttyS0.override
   fi
