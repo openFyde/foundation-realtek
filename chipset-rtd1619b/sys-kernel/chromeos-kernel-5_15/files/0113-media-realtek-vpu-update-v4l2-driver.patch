@@ -1,0 +1,578 @@
+From 59332897ea9c549aad07073004d23edeff832f02 Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Tue, 6 Aug 2024 16:17:57 +0800
+Subject: [PATCH] media: realtek: vpu: update v4l2 driver
+
+internal v4l2 commit:
+a62017a (HEAD -> topic/va_v4l2-stark-k5.15_chromium, origin/topic/va_v4l2-stark-k5.15_chromium) SW-8187 : specific vp9 video hw decode fail
+
+Change-Id: I19e4a5de9e56768a9eeb04e5f6ed31a01e75341c
+---
+ .../platform/realtek/vpu/stateful/drv_if.c    |  1 -
+ .../realtek/vpu/stateful/ve1_decode.c         | 48 +++++++-----
+ .../platform/realtek/vpu/stateful/ve1_v4l2.c  | 75 ++++++++++++++-----
+ .../platform/realtek/vpu/stateful/ve1_v4l2.h  |  3 +
+ .../realtek/vpu/stateful/ve1_wrapper.c        | 51 +++++++++++--
+ .../realtek/vpu/stateful/ve1_wrapper.h        |  1 +
+ .../platform/realtek/vpu/stateful/ve2rpc.c    | 47 +++++++-----
+ .../media/platform/realtek/vpu/stateful/vpu.c | 15 +---
+ .../media/platform/realtek/vpu/stateful/vpu.h |  1 -
+ 9 files changed, 159 insertions(+), 83 deletions(-)
+
+diff --git a/drivers/media/platform/realtek/vpu/stateful/drv_if.c b/drivers/media/platform/realtek/vpu/stateful/drv_if.c
+index 57fc9c428259..1c06241a5ae1 100644
+--- a/drivers/media/platform/realtek/vpu/stateful/drv_if.c
++++ b/drivers/media/platform/realtek/vpu/stateful/drv_if.c
+@@ -648,7 +648,6 @@ static int videc_decoder_cmd(struct file *file, void *fh,
+ 	case V4L2_DEC_CMD_START:
+ 		vpu_ctx->stop_cmd = false;
+ 		vpu_ctx->last_buf_done = false;
+-		vpu_ctx->miss_last_buf_done = false;
+ 		ret = op->vpu_start_cmd(fh);
+ 		break;
+ 	default:
+diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_decode.c b/drivers/media/platform/realtek/vpu/stateful/ve1_decode.c
+index 132bba55dc05..14934a136051 100644
+--- a/drivers/media/platform/realtek/vpu/stateful/ve1_decode.c
++++ b/drivers/media/platform/realtek/vpu/stateful/ve1_decode.c
+@@ -42,25 +42,29 @@ int ve1_fill_bitstream(struct ve1_ctx *ctx, uint8_t *buf, uint32_t len,
+ 
+ 	// check if bitstream buffer has available space to put new data
+ 	if (ve1_get_bitstream_payload(ctx) + len >= ctx->bitstream.size) {
++		ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG, "ENOSPC.payload:%d + len:%d >= bs_bufsize:%d\n",
++			ve1_get_bitstream_payload(ctx), len, ctx->bitstream.size);
+ 		return -ENOSPC;
+ 	}
+ 	if (ctx->decHandle != NULL) {
+ 		VE1_DecGetRdWrPtr(ctx);
+ 		if (ctx->vpuBsRingRoom <= len) {
++			ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG, "ENOSPC.vpuBsRingRoom:%d <= len:%d\n",
++				ctx->vpuBsRingRoom, len);
+ 			return -ENOSPC;
+ 		}
+ 	}
+ 	if (ctx->bGotNextField) {
+ 		ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
+-			"bWaitNextField.only update next field before continue decoding\n");
++			"ENOSPC.bWaitNextField.only update next field before continue decoding\n");
+ 		return -ENOSPC;
+ 	}
+ 	if (ctx->bPostponeUpBs) {
+-		ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG, "bPostponeUpBs.postpone fill bs\n");
++		ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG, "ENOSPC.bPostponeUpBs.postpone fill bs\n");
+ 		return -ENOSPC;
+ 	}
+ 	if (ctx->dpbFull && (!ctx->bWaitNextField)) {
+-		//ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG, "dpb full.postpone fill bs\n");
++		ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG, "ENOSPC.dpb full.postpone fill bs\n");
+ 		return -ENOSPC;
+ 	}
+ 
+@@ -190,7 +194,6 @@ static int rtkve1_get_meta(struct ve1_ctx *ctx, struct ve1_meta *result)
+ 	if (!list_empty(&ctx->buffer_meta_list)) {
+ 		meta = list_first_entry(&ctx->buffer_meta_list,
+ 				struct ve1_meta, list);
+-		ctx->num_metas--;
+ 		*result = *meta;
+ 		ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
+ 			"timestamp:0x%lld.start:0x%x.end:0x%x.num_metas:%d.ve1DecState:%d.vpuRdPtr:0x%x\n",
+@@ -207,10 +210,11 @@ static int rtkve1_get_meta(struct ve1_ctx *ctx, struct ve1_meta *result)
+ 				meta->end);
+ 		}
+ 		else {
++			ctx->num_metas--;
+ 			list_del(&meta->list);
+ 			kfree(meta);
++			meta = NULL;
+ 		}
+-		meta = NULL;
+ 	} else {
+ 		ve1_info(VE1_LOGTAG, "buffer_meta_list is empty\n");
+ 		ret = -1;
+@@ -390,18 +394,23 @@ void rtkve1_add_displayble_frame_to_list(struct ve1_ctx *ctx)
+ 		   (!ctx->seqChangeDone)) {
+ 		struct ve1_displayable_frame *frame;
+ 		spin_lock_irqsave(&ctx->displayable_frame_lock, flags);
+-		frame = list_last_entry(&ctx->displayable_frame_list,
+-					struct ve1_displayable_frame, list);
+-		ve1_dbg(VPU_DBG_VE1_DIS, VE1_LOGTAG,
+-			"last frame in displayable_frame_list.regIndex:%d.dpb_paddr:0x%x.vb2_v4l2_buf:0x%px.timestamp:%lld\n",
+-			frame->regIndex, frame->dpb_paddr, frame->vb2_v4l2_buf,
+-			frame->timestamp);
+-		frame->last_frame = 1;
+-		if (frame->isDequeued) // CXI-3872
+-		{
+-			// the last displayable frame has been dqbuf, and maybe no more ve1_cap_dqbuf() calls
+-			// set ctx->last_frame = 1 to let ve_get_info() in vpu.c get eos
+-			ve1_info(VE1_LOGTAG, "ctx->last_frame = 1\n");
++		if (!list_empty(&ctx->displayable_frame_list)) {
++			frame = list_last_entry(&ctx->displayable_frame_list,
++						struct ve1_displayable_frame, list);
++			ve1_dbg(VPU_DBG_VE1_DIS, VE1_LOGTAG,
++				"last frame in displayable_frame_list.regIndex:%d.dpb_paddr:0x%x.vb2_v4l2_buf:0x%px.timestamp:%lld\n",
++				frame->regIndex, frame->dpb_paddr, frame->vb2_v4l2_buf,
++				frame->timestamp);
++			frame->last_frame = 1;
++			if (frame->isDequeued) // CXI-3872
++			{
++				ve1_info(VE1_LOGTAG, "set ctx->last_frame=1, ctx->bLastFrmReportedAfFrmDq=true\n");
++				ctx->last_frame = 1;
++				ctx->bLastFrmReportedAfFrmDq = true;
++			}
++		}
++		else {
++			ve1_info(VE1_LOGTAG, "set ctx->last_frame=1, ctx->bLastFrmReportedAfFrmDq=true\n");
+ 			ctx->last_frame = 1;
+ 			ctx->bLastFrmReportedAfFrmDq = true;
+ 		}
+@@ -425,10 +434,11 @@ void ve1_show_displayable_frame_list(struct ve1_ctx *ctx)
+ 		list_for_each_entry (frame, &ctx->displayable_frame_list,
+ 				     list) {
+ 			ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
+-				"iterate displayable_frame_list.regIndex:%d.dpb_paddr:0x%x.vb2_v4l2_buf:0x%px.isDequeued:%d.timestamp:0x%llx.sequenceNo:%d\n",
++				"iterate displayable_frame_list.regIndex:%d.dpb_paddr:0x%x.vb2_v4l2_buf:0x%px.isDequeued:%d.timestamp:0x%llx.sequenceNo:%d.last_frame:%d\n",
+ 				frame->regIndex, frame->dpb_paddr,
+ 				frame->vb2_v4l2_buf, frame->isDequeued,
+-				frame->timestamp, frame->sequenceNo);
++				frame->timestamp, frame->sequenceNo,
++				frame->last_frame);
+ 		}
+ 	}
+ 	spin_unlock_irqrestore(&ctx->displayable_frame_lock, flags);
+diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.c b/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.c
+index 7b42e9c7b254..85e16eddacaa 100644
+--- a/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.c
++++ b/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.c
+@@ -420,7 +420,12 @@ static int ve1_stop_streaming(struct vb2_queue *q)
+ 		ctx->last_frame = 0;
+ 		ctx->streamon_cap = 0;
+ 		ctx->capbuf_sequence = 0;
++		ctx->bLastFrmReportedAfFrmDq = false;
++		ctx->lastDqCapBuf = NULL;
+ 		mutex_unlock(&ctx->ve1_mutex);
++		mutex_lock(&ctx->ve1_dma_mutex);
++		ctx->lastDoneCapBuf = NULL;
++		mutex_unlock(&ctx->ve1_dma_mutex);
+ 	}
+ 
+ 	ve1_dbg(VPU_DBG_INPUT, VE1_LOGTAG,
+@@ -722,6 +727,9 @@ static int ve1_cap_dqbuf(void *fh, uint8_t *buf, uint64_t *timestamp,
+ 	unsigned int regIndex;
+ 	unsigned int sequenceNo;
+ 	int ret = -EINVAL;
++	//unsigned int unDqFrmCount = 0;
++	//int lastFrmFlag = 0;
++	struct rtkve1_dpb_t *dpb_undq = NULL;
+ 
+ 	if ((fh == NULL) || (timestamp == NULL) || (disp_buf == NULL)) {
+ 		ve1_err(VE1_LOGTAG, "invalid parameters\n");
+@@ -738,10 +746,37 @@ static int ve1_cap_dqbuf(void *fh, uint8_t *buf, uint64_t *timestamp,
+ 		return -EINVAL;
+ 	}
+ 
++	//ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG, "[+]\n");
++
+ 	if (ctx->streamon_cap == 1) {
+ 		// print displayable_frame_list for debug
+ 		//ve1_show_displayable_frame_list(ctx);
+-
++/*
++		if ((ctx->handle_eos_by >= VE1_HANDLE_EOS_SET_END) && (ctx->last_frame == 0)) {
++			spin_lock_irqsave(&ctx->displayable_frame_lock, flags);
++			if (!list_empty(&ctx->displayable_frame_list)) {
++				list_for_each_entry (
++					frame, &ctx->displayable_frame_list, list) {
++					if ((frame->vb2_v4l2_buf != NULL) &&
++						(frame->isDequeued == 0)) {
++						unDqFrmCount++;
++					}
++					if ((frame->vb2_v4l2_buf != NULL) &&
++						(frame->last_frame == 1)) {
++						lastFrmFlag = 1;
++					}
++				}
++			}
++			spin_unlock_irqrestore(&ctx->displayable_frame_lock, flags);
++			//ve1_dbg(VPU_DBG_OUTPUT, VE1_LOGTAG,
++			//		"unDqFrmCount:%d.lastFrmFlag:%d\n",unDqFrmCount,lastFrmFlag);
++			if ((unDqFrmCount == 1) && (lastFrmFlag == 0)) {
++				ve1_dbg(VPU_DBG_OUTPUT, VE1_LOGTAG,
++					"streamEnd + unDqFrmCount==1 + !lastFrmFlag, wait ve1 report last frame\n");
++				return -EINVAL;
++			}
++		}
++*/
+ 		spin_lock_irqsave(&ctx->displayable_frame_lock, flags);
+ 		if (!list_empty(&ctx->displayable_frame_list)) {
+ 			list_for_each_entry (
+@@ -778,19 +813,12 @@ static int ve1_cap_dqbuf(void *fh, uint8_t *buf, uint64_t *timestamp,
+ 							"incorrect POC.curr:%d.last:%d\n",frame->POC,ctx->lastDispPOC);
+ 					}
+ 					ctx->lastDispPOC = frame->POC;
++					ctx->lastDqCapBuf = frame->vb2_v4l2_buf;
+ 					break;
+ 				}
+ 			}
+ 		}
+ 
+-		if (list_empty(&ctx->displayable_frame_list)) {
+-			if (ctx->last_frame && (!vpu_ctx->last_buf_done)) {
+-				ve1_info(VE1_LOGTAG, "%s.%d.vpu_ctx->miss_last_buf_done = true\n",
+-						__func__, __LINE__);
+-				vpu_ctx->miss_last_buf_done = true;
+-			}
+-		}
+-
+ 		spin_unlock_irqrestore(&ctx->displayable_frame_lock, flags);
+ 		if (bFillFrameInfo) {
+ #ifdef VPU_GET_CC
+@@ -800,11 +828,27 @@ static int ve1_cap_dqbuf(void *fh, uint8_t *buf, uint64_t *timestamp,
+ #endif
+ 			VE1_UpdateDPBStatus((void *)ctx, dpb_paddr, sequenceNo,
+ 								RTKVE1_DPB_ST_DQ);
+-			ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG, "[-]\n");
+ 			ret = 0;
+ 		}
++		else if (ctx->bLastFrmReportedAfFrmDq) {
++			mutex_lock(&ctx->ve1_dma_mutex);
++			if (!ctx->lastDoneCapBuf) {
++				dpb_undq = (struct rtkve1_dpb_t *)rtkve1_find_dpb_undequeue((void *)ctx);
++				if (dpb_undq) {
++					*disp_buf = (struct vb2_v4l2_buffer *)(dpb_undq->vb2_v4l2_buf);
++					ctx->lastDoneCapBuf = *disp_buf;
++					ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG,
++						"bLastFrmReportedAfFrmDq.let flow to vpu_buf_done() in threadcap().undq_v4l2_buf:0x%px.lastDqCapBuf:0x%px\n",
++						*disp_buf, ctx->lastDqCapBuf);
++					// return 0 to let flow to ve_get_info(get no_frame==1) => vpu_buf_done() in threadcap() (vpu.c)
++					ret = 0;
++				}
++			}
++			mutex_unlock(&ctx->ve1_dma_mutex);
++		}
+ 	}
+ 
++	//ve1_dbg(VPU_DBG_NONE, VE1_LOGTAG, "[-] ret:%d\n", ret);
+ 	return ret;
+ }
+ 
+@@ -995,15 +1039,6 @@ static int ve1_stop_cmd(void *fh, int pixelformat)
+ 				ctx->cntQueuePicRunWorkFail, queueRet);
+ 		}
+ 	}
+-	// rtkve1_add_displayble_frame_to_list() get last frame notify, but the last frame has been cap_dqbuf,
+-	// if no more cap_dqbuf, vpu_ctx->miss_last_buf_done must be set to true here to trigger eos event in threadout()
+-	if (ctx->bLastFrmReportedAfFrmDq && !vpu_ctx->last_buf_done)
+-	{
+-		ctx->bLastFrmReportedAfFrmDq = false;
+-		ve1_info(VE1_LOGTAG, "%s.%d.vpu_ctx->miss_last_buf_done = true\n",
+-			__func__, __LINE__);
+-		vpu_ctx->miss_last_buf_done = true;
+-	}
+ 
+ out:
+ 	mutex_unlock(&ctx->ve1_mutex);
+@@ -1050,7 +1085,7 @@ static void ve1_get_info(void *fh, bool *eos, bool *no_frame)
+ 	}
+ 
+ 	*eos = (bool)ctx->last_frame;
+-	*no_frame = 0;
++	*no_frame = ctx->bLastFrmReportedAfFrmDq;
+ }
+ 
+ static int ve1_get_undq_dispFrm_cnt(void *fh)
+diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.h b/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.h
+index 5a9593fe3a05..9b8ec45d7cea 100644
+--- a/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.h
++++ b/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.h
+@@ -153,6 +153,7 @@ enum { V4L2_M2M_SRC = 0,
+ enum { VE1_HANDLE_EOS_BY_NONE = 0,
+        VE1_HANDLE_EOS_BY_PREPARE_RUN = 1,
+        VE1_HANDLE_EOS_SET_END = 2,
++	   VE1_HANDLE_EOS_DEC_FINISH = 3,
+ };
+ 
+ struct ve1_device;
+@@ -393,6 +394,8 @@ struct ve1_ctx {
+ 	int handle_eos_by;
+ 	int last_frame;
+ 	bool bLastFrmReportedAfFrmDq;
++	struct vb2_v4l2_buffer *lastDqCapBuf;
++	struct vb2_v4l2_buffer *lastDoneCapBuf;
+ 	unsigned long long lastFrameTimestamp;
+ 	struct ve1_decoded_frame frameQueue[MAX_VE1_FRAME_BUFFERS];
+ 	unsigned long long timeTick; // 90KHz
+diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.c b/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.c
+index 9552f7920b9c..93a4faba2d2b 100644
+--- a/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.c
++++ b/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.c
+@@ -584,6 +584,29 @@ void *rtkve1_find_dpb_unreg(void *pCtx)
+ 	return NULL;
+ }
+ 
++void *rtkve1_find_dpb_undequeue(void *pCtx)
++{
++	int i = 0;
++	struct ve1_ctx *ctx;
++	struct rtkve1_dpb_t *dpb = NULL;
++
++	if (pCtx == NULL) {
++		ve1_err(VE1_WRAPPER_TAG, "pCtx == NULL\n");
++		return NULL;
++	}
++	ctx = (struct ve1_ctx *)pCtx;
++
++	for (i = 0; i < VE1_ION_STRUCT_NUM; i++) {
++		if (IS_RTKVE1_DPB_VALID(ctx->dpb[i].status) &&
++			IS_RTKVE1_DPB_REG(ctx->dpb[i].status) &&
++			!IS_RTKVE1_DPB_DQ(ctx->dpb[i].status)) {
++				dpb = &(ctx->dpb[i]);
++		}
++	}
++
++	return (void *)dpb;
++}
++
+ void rtkve1_show_dpbs(struct ve1_ctx *ctx)
+ {
+ 	int i = 0;
+@@ -1005,17 +1028,28 @@ void rtkve1_flush_dpbs(void *pCtx)
+ 	for (i = 0; i < VE1_ION_STRUCT_NUM; i++) {
+ 		if (!IS_RTKVE1_DPB_DQ(ctx->dpb[i].status) &&
+ 		    IS_RTKVE1_DPB_VALID(ctx->dpb[i].status)) {
+-			ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
+-				"v4l2_m2m_buf_done.vb2_v4l2_buf:0x%px.phys_addr:0x%lx\n",
+-				ctx->dpb[i].vb2_v4l2_buf,
+-				ctx->dpb[i].phys_addr);
+-			v4l2_m2m_buf_done((struct vb2_v4l2_buffer
+-						   *)(ctx->dpb[i].vb2_v4l2_buf),
+-					  VB2_BUF_STATE_ERROR);
++			if ((ctx->lastDoneCapBuf == NULL) ||
++				((ctx->lastDoneCapBuf != NULL) && (ctx->dpb[i].vb2_v4l2_buf != ctx->lastDoneCapBuf))) {
++				ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++					"v4l2_m2m_buf_done.vb2_v4l2_buf:0x%px.phys_addr:0x%lx\n",
++					ctx->dpb[i].vb2_v4l2_buf,
++					ctx->dpb[i].phys_addr);
++				v4l2_m2m_buf_done((struct vb2_v4l2_buffer
++							*)(ctx->dpb[i].vb2_v4l2_buf),
++						VB2_BUF_STATE_ERROR);
++			}
+ 		}
+ 		else if (IS_RTKVE1_DPB_DQ(ctx->dpb[i].status)) {
+ 			ctx->dpb[i].status &= ~RTKVE1_DPB_ST_DQ;
+ 		}
++		if (IS_RTKVE1_DPB_WAIT_RECYCLE(ctx->dpb[i].status)) {
++			//ve1_dbg(VPU_DBG_NONE, VE1_WRAPPER_TAG,
++			//	"clear wait recycle status.regIndex:%d.vb2_v4l2_buf:0x%px.phys_addr:0x%lx\n",
++			//	ctx->dpb[i].regIndex,
++			//	ctx->dpb[i].vb2_v4l2_buf,
++			//	ctx->dpb[i].phys_addr);
++			ctx->dpb[i].status &= ~RTKVE1_DPB_ST_WAIT_RECYCLE;
++		}
+ 	}
+ 	//rtkve1_show_dpbs(ctx);
+ 	mutex_unlock(&ctx->ve1_dma_mutex);
+@@ -2617,7 +2651,7 @@ int VE1_DecPicDone(void *pCtx)
+ 			ret, STREAM_END_CLEAR_FLAG);
+ 		VE1_DecGetRdWrPtr(ctx);
+ 		ctx->streamEnd = 0;
+-		ctx->handle_eos_by = VE1_HANDLE_EOS_BY_NONE;
++		ctx->handle_eos_by = VE1_HANDLE_EOS_DEC_FINISH;
+ 	}
+ 
+ 	return VE1_DEC_RETURN_OK;
+@@ -3798,6 +3832,7 @@ int rtkve1_flush_bitstream(void *pCtx)
+ 	}
+ 	ctx->handle_eos_by = VE1_HANDLE_EOS_BY_NONE;
+ 	ctx->bPostponeUpBs = false;
++	ctx->dpbFull = 0;
+ 
+ out:
+ 	mutex_unlock(&ctx->ve1_mutex);
+diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.h b/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.h
+index 77e8540cb2cf..51d070833f7c 100644
+--- a/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.h
++++ b/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.h
+@@ -77,4 +77,5 @@ int rtkve1_check_new_dpb(void *pCtx);
+ void rtkve1_flush_dpbs(void *pCtx);
+ int rtkve1_flush_bitstream(void *pCtx);
+ int rtkve1_flush(void *pCtx);
++void *rtkve1_find_dpb_undequeue(void *pCtx);
+ #endif // #define __VE1_WRAPPER_H__
+diff --git a/drivers/media/platform/realtek/vpu/stateful/ve2rpc.c b/drivers/media/platform/realtek/vpu/stateful/ve2rpc.c
+index 01cc0532770c..89eaa70bb4ec 100644
+--- a/drivers/media/platform/realtek/vpu/stateful/ve2rpc.c
++++ b/drivers/media/platform/realtek/vpu/stateful/ve2rpc.c
+@@ -1809,16 +1809,36 @@ int ve2rpc_add_to_buflock_clear_q(struct ve2rpc *cap_hndl, uint32_t buflock_pa,
+ 	return 0;
+ }
+ 
++static void ve2rpc_add_to_mesgQ(struct ve2rpc *cap_hndl, uint32_t buflock_pa)
++{
++	uint32_t frm_idx = 0;
++	volatile ve2rpc_flash_frame_info_t *frame;
++
++	frm_idx = cap_hndl->outputRingIdx++;
++	if (cap_hndl->outputRingIdx >= VE2_MAX_DPB_NUM)
++		cap_hndl->outputRingIdx = 0;
++
++	frame = (volatile ve2rpc_flash_frame_info_t *)cap_hndl->frame[frm_idx];
++
++	memset_volatile(frame, 0, sizeof(ve2rpc_flash_frame_info_t));
++	frame->nPicFlags = 0;
++	frame->nPicWidth = PIC_SIZE_INVALID;
++	frame->nPicHeight = PIC_SIZE_INVALID;
++	frame->nClkTimeHigh = -1;
++	frame->nClkTimeLow = -1;
++	frame->nBufLockPhysicalAddr = htonl(buflock_pa);
++	frame->pUserData = true;
++	dsb(sy);
++}
++
+ int ve2rpc_qframe(struct ve2rpc *cap_hndl, dma_addr_t phy_addr,
+ 		  uint32_t vb2_q_idx)
+ {
+-	volatile ve2rpc_flash_frame_info_t *frame;
+ 	struct ve2rpc_ion_object *buflock;
+ 	struct ve2rpc_ringbuf_t *prb;
+ 	struct rtkve2_buflock_t * buflock_info = NULL;
+ 	uint32_t buflock_pa = 0;
+ 	volatile uint8_t *buflock_va;
+-	uint32_t frm_idx = 0;
+ 	struct traveling_frame_st *tentry;
+ 	struct traveling_frame_st *tmp_tentry = NULL;
+ 	int ret = 0;
+@@ -1884,22 +1904,8 @@ int ve2rpc_qframe(struct ve2rpc *cap_hndl, dma_addr_t phy_addr,
+ 
+ 	buflock_va = buflock_info->buflock_va;
+ 
+-	frm_idx = cap_hndl->outputRingIdx++;
+-	if (cap_hndl->outputRingIdx >= VE2_MAX_DPB_NUM)
+-		cap_hndl->outputRingIdx = 0;
+-
+-	frame = (volatile ve2rpc_flash_frame_info_t *)cap_hndl->frame[frm_idx];
+-
+ 	mutex_lock(&prb->lock);
+-	memset_volatile(frame, 0, sizeof(ve2rpc_flash_frame_info_t));
+-	frame->nPicFlags = 0;
+-	frame->nPicWidth = PIC_SIZE_INVALID;
+-	frame->nPicHeight = PIC_SIZE_INVALID;
+-	frame->nClkTimeHigh = -1;
+-	frame->nClkTimeLow = -1;
+-	frame->nBufLockPhysicalAddr = htonl(buflock_info->buflock_pa);
+-	frame->pUserData = htonl((uint32_t)phy_addr);
+-	dsb(sy);
++	ve2rpc_add_to_mesgQ(cap_hndl, buflock_info->buflock_pa);
+ 	mutex_unlock(&prb->lock);
+ 
+ 	return ret;
+@@ -1985,7 +1991,7 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
+ 
+ 	frame = (volatile ve2rpc_flash_frame_info_t *)cap_hndl->frame[frm_idx];
+ 
+-	frame->pUserData = 0;
++	frame->pUserData = false;
+ 	dsb(sy);
+ 	y_phy_addr = htonl(frame->nPicPhysicalAddr);
+ 	c_phy_addr = htonl(frame->nPicCPhysicalAddr);
+@@ -2007,6 +2013,7 @@ static int _ve2rpc_get_frame(struct ve2rpc *cap_hndl, void **disp_buf,
+ 		vpu_output_dbg("No decoded frame with no show frame count %d", *no_show_frm_cnt);
+ 		ret = -ENODATA;
+ 		*no_frame = true;
++		ve2rpc_add_to_mesgQ(cap_hndl, buflock_phy_addr);
+ 		goto exit;
+ 	}
+ 
+@@ -2311,7 +2318,7 @@ int ve2rpc_reset_output_ring_rwptr(struct ve2rpc *cap_hndl)
+ 					  htonl(prb->pRBH->beginAddr)) /
+ 					 sizeof(ve2rpc_flash_frame_info_t);
+ 		frame = (volatile ve2rpc_flash_frame_info_t *)cap_hndl->frame[rptr];
+-		frame->pUserData = 0;
++		frame->pUserData = false;
+ 		rptr = htonl(prb->pRBH->beginAddr) +
+ 			  ((rptr + 1) % VE2_MAX_DPB_NUM) *
+ 				  sizeof(ve2rpc_flash_frame_info_t);
+@@ -2529,7 +2536,7 @@ int ve2rpc_init_cap_handle(struct device *dev, struct ve2rpc **handle,
+ 		frame[i].nPicCPhysicalAddr = 0;
+ 		frame[i].nPicWidth = PIC_SIZE_INVALID;
+ 		frame[i].nPicHeight = PIC_SIZE_INVALID;
+-		frame[i].pUserData = 0;
++		frame[i].pUserData = false;
+ 		dsb(sy);
+ 		/* DO NOT CHANGE THE ORDER END*/
+ 	}
+diff --git a/drivers/media/platform/realtek/vpu/stateful/vpu.c b/drivers/media/platform/realtek/vpu/stateful/vpu.c
+index 4058805cbad4..4c6d8b932862 100644
+--- a/drivers/media/platform/realtek/vpu/stateful/vpu.c
++++ b/drivers/media/platform/realtek/vpu/stateful/vpu.c
+@@ -531,10 +531,6 @@ static int threadcap(void *data)
+ 
+ 					if (ctx->cap_retry_cnt > 1000) {
+ 						ctx->cap_retry_cnt = 0;
+-						if (ctx->stop_cmd) {
+-							vpu_output_dbg("stop cmd received, escape from cap retry\n");
+-							ctx->miss_last_buf_done = true;
+-						}
+ 					}
+ 				}
+ 				usleep_range(1000, 1000);
+@@ -633,7 +629,7 @@ static int threadout(void *data)
+ 		    !v4l2_m2m_num_src_bufs_ready(fh->m2m_ctx) &&
+ 		    !ctx->last_buf_done) {
+ 			ret = op->vpu_stop_cmd(fh);
+-			if (((ret < 0) && (!bForceEscapeDone)) || ctx->miss_last_buf_done) {
++			if ((ret < 0) && (!bForceEscapeDone)) {
+ 				dst_vq = v4l2_m2m_get_vq(
+ 					fh->m2m_ctx,
+ 					V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
+@@ -1204,12 +1200,6 @@ static int vpu_qbuf(struct v4l2_fh *fh, struct vb2_buffer *vb)
+ 
+ 		if (!ret) {
+ 			wake_up_interruptible(&ctx->vpu_cap_waitq);
+-		} else {
+-			vpu_err("%d.%s.ve_cap_qbuf return errno:%d, skip vb2_v4l2:0x%px\n",
+-							__LINE__, __func__, ret, vbuf);
+-			vb2_set_plane_payload(vb, 0, 0);
+-			v4l2_m2m_buf_done(vbuf, VB2_BUF_STATE_DONE);
+-			ctx->miss_last_buf_done = true;
+ 		}
+ 		return ret;
+ 	}
+@@ -1309,7 +1299,6 @@ static int vpu_reset_resource(void *fh)
+ 		ctx->memory_cap = 0;
+ 		ctx->stop_cmd = false;
+ 		ctx->last_buf_done = false;
+-		ctx->miss_last_buf_done = false;
+ 		ctx->cap_retry_cnt = 0;
+ 		ctx->out_q_cnt = 0;
+ 	}
+@@ -1462,7 +1451,6 @@ void *vpu_alloc_context(void)
+ 	ctx->cap_retry_cnt = 0;
+ 	ctx->stop_cmd = false;
+ 	ctx->last_buf_done = false;
+-	ctx->miss_last_buf_done = false;
+ 	ctx->out_q_cnt = 0;
+ 	ctx->bit_depth = 8;
+ 
+@@ -1498,7 +1486,6 @@ void vpu_free_context(void *ctx)
+ 	vpu_ctx->memory_cap = 0;
+ 	vpu_ctx->stop_cmd = false;
+ 	vpu_ctx->last_buf_done = false;
+-	vpu_ctx->miss_last_buf_done = false;
+ 	vpu_ctx->cap_retry_cnt = 0;
+ 	vpu_ctx->out_q_cnt = 0;
+ 
+diff --git a/drivers/media/platform/realtek/vpu/stateful/vpu.h b/drivers/media/platform/realtek/vpu/stateful/vpu.h
+index 1be8e1d78f9a..633c39a304f2 100644
+--- a/drivers/media/platform/realtek/vpu/stateful/vpu.h
++++ b/drivers/media/platform/realtek/vpu/stateful/vpu.h
+@@ -51,7 +51,6 @@ struct vpu_ctx {
+ 
+ 	bool stop_cmd;
+ 	bool last_buf_done;
+-	bool miss_last_buf_done;
+ 	int cap_retry_cnt;
+ 	uint64_t out_q_cnt;
+ 	struct completion bs_parsing_comp; // init in vpu_alloc_context(), it should reinit_completion() when vpu_stop_streaming
+-- 
+2.45.2
+
