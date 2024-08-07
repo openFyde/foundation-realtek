@@ -11,6 +11,10 @@ cros_pre_src_prepare_remove_internal() {
   fi
 }
 
+cros_post_src_install_remove_fakefiles() {
+  rm -rf "${D_CHROME_DIR}/WidevineCdm/_platform_specific" || true
+}
+
 PATCHES=(
   ${CHIPSET_RTD1619B_BASHRC_FILESDIR}/001-disalbe-fieldtrial-testing-config.patch
   ${CHIPSET_RTD1619B_BASHRC_FILESDIR}/002-add-support-for-av1.patch
