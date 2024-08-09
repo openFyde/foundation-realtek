@@ -1,7 +1,7 @@
-From 2f4ac332802970d57c5327e30026bdcfef196c23 Mon Sep 17 00:00:00 2001
+From f547fb4d2d482eb3376be91af8cc9f6788c1eedd Mon Sep 17 00:00:00 2001
 From: Edward Wu <edwardwu@realtek.com>
 Date: Fri, 19 Jan 2024 16:03:34 +0800
-Subject: [PATCH 59/80] gpu: drm: realtek: select neccessary DRM_KMS_HELPER
+Subject: [PATCH 59/98] gpu: drm: realtek: select neccessary DRM_KMS_HELPER
  config
 
 Change-Id: Ic06b00798703c873610309f4b1b01a4e3b0d2a00

@@ -1,7 +1,7 @@
-From e02ce652537291775fcc130ebae7658063288855 Mon Sep 17 00:00:00 2001
+From 7b98cb47ff64322b2077debb1beb0082fb3f7161 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Fri, 11 Nov 2022 22:31:24 +0800
-Subject: [PATCH 31/80] mmc: host: add SDHCI controller driver for Realtek DHC
+Subject: [PATCH 31/98] mmc: host: add SDHCI controller driver for Realtek DHC
  SoCs
 
 Change-Id: I82d52bf774b7bd7624ef2dbdc45ce65bb823f48e

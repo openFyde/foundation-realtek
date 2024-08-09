@@ -1,7 +1,7 @@
-From b83fc61e28e18da5650111c46d9b95bb82a69bd2 Mon Sep 17 00:00:00 2001
+From 783349c8c6656d84111c2e6247f4e4bf47824bc0 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 8 Dec 2022 15:28:32 +0800
-Subject: [PATCH 11/80] hwspinlock: add realtek hwlock driver
+Subject: [PATCH 11/98] hwspinlock: add realtek hwlock driver
 
 Change-Id: Iee35a94fa15f66128426d359886cfecc56f0ce97
 ---

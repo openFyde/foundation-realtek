@@ -1,7 +1,7 @@
-From 8b52143cf5b73c67b06222260b814ead17dadc28 Mon Sep 17 00:00:00 2001
+From fbeb17bbfe8efeb3979aa31f91e4be84ee76343e Mon Sep 17 00:00:00 2001
 From: invalid_git config <unknown@unknown>
 Date: Fri, 10 May 2024 06:31:00 +0000
-Subject: [PATCH 60/80] enable hdmi encoder
+Subject: [PATCH 60/98] enable hdmi encoder
 
 Change-Id: I34f5a42b4a7439b20969faf4a70deab8ade7bf0c
 ---

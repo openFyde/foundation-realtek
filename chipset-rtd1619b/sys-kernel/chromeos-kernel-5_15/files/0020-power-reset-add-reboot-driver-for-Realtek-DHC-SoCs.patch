@@ -1,7 +1,7 @@
-From 11b29fa6b653a6fed48b20a77b01c4ed12659e70 Mon Sep 17 00:00:00 2001
+From a06fb8bf088b303367a57afd785a18a9e0c6c79b Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Mon, 14 Nov 2022 17:06:42 +0800
-Subject: [PATCH 20/80] power: reset: add reboot driver for Realtek DHC SoCs
+Subject: [PATCH 20/98] power: reset: add reboot driver for Realtek DHC SoCs
 
 Change-Id: Ia658cb14ffa46bc787e078b19b23058518adbfa4
 ---

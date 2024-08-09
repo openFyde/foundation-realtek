@@ -1,7 +1,7 @@
-From 5473f3696519ea59f943008369290ac919b16cce Mon Sep 17 00:00:00 2001
+From 2085da7e598d9f7abe9cdb0b3ad454905820f244 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 10 Nov 2022 17:27:47 +0800
-Subject: [PATCH 18/80] nvmem: realtek: add Realtek efuse driver
+Subject: [PATCH 18/98] nvmem: realtek: add Realtek efuse driver
 
 Change-Id: Ieed58241ca286704c32ed73aff9a2579470f85ab
 ---

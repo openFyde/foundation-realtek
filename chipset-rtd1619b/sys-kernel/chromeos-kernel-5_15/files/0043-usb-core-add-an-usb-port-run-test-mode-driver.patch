@@ -1,7 +1,7 @@
-From 0c7783d72eb9d83f3e73678a543a3f624c601b32 Mon Sep 17 00:00:00 2001
+From da2ddd029f4eb94de5bb8b27de6b1e8d9b5d000e Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Wed, 7 Jun 2023 16:56:19 +0800
-Subject: [PATCH 43/80] usb: core: add an usb port run test mode driver
+Subject: [PATCH 43/98] usb: core: add an usb port run test mode driver
 
 [Information]
 Implement an usb port run test mode driver to run usb 2.0 host CTS

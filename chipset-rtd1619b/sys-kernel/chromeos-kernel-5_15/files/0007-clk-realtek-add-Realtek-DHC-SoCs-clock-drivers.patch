@@ -1,7 +1,7 @@
-From 3eec41812c0ebf0d39f60f14a6c93a25198cb386 Mon Sep 17 00:00:00 2001
+From 45de4afca17167cf2c8e5a87f72e84b1385ea299 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 10 Nov 2022 17:26:55 +0800
-Subject: [PATCH 07/80] clk: realtek: add Realtek DHC SoCs clock drivers
+Subject: [PATCH 07/98] clk: realtek: add Realtek DHC SoCs clock drivers
 
 Change-Id: Ibd0aa4294539ec1c81a90f2855715686b349d848
 ---

@@ -1,7 +1,7 @@
-From a8b52d65c640e1f25b110aaf9357e4c24c363539 Mon Sep 17 00:00:00 2001
+From 43db86886aaed51e54910ed61ecc82bdb9397996 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 10 Aug 2023 17:35:46 +0800
-Subject: [PATCH 49/80] soc: realtek: common: rtk_tee: Add tee_shm_register_fd
+Subject: [PATCH 49/98] soc: realtek: common: rtk_tee: Add tee_shm_register_fd
  function
 
 register a shared memory from a file descriptor.

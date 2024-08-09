@@ -1,7 +1,7 @@
-From 646a5f22cb9f91da0c21e636dc14205b9c136cf4 Mon Sep 17 00:00:00 2001
+From 0ef98207652f8521650b7a26a3e756745be45130 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Fri, 11 Nov 2022 21:56:00 +0800
-Subject: [PATCH 30/80] mmc: host: add SD/MMC host controller driver for
+Subject: [PATCH 30/98] mmc: host: add SD/MMC host controller driver for
  Realtek DHC SoCs
 
 Change-Id: If6679f7825af5c6fb266be21887cd26115cb34cb

@@ -1,0 +1,40 @@
+From 718c91f991501ce3e3d229412d5043b0962bcb65 Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Fri, 16 Dec 2022 14:28:39 +0800
+Subject: [PATCH 90/98] Adjust IRQ mitigation timer to INTT_3 from INTT_1
+
+Jira: DHCPARKER-300
+Specific youtube streaming that can achieve 1x MB/s throughput
+GRO aggregation gso_segs is about 0 ~ 1 with INTT_1
+This causes a lot of NET_RX softirqs and Youtube process loading
+is increasing because handling pkt too often.
+
+gso_segs becomes 2 ~ 4 pkts when adjusting IRQ mitigation timer to INTT_1.
+And CPU loading is lower.
+
+Change-Id: I92e2aadde267092a14bc41e3e35528b16ac1d563
+(cherry picked from commit 208096eabdf078d1221778a6b788c15ddb31bb5c)
+---
+ drivers/net/ethernet/realtek/r8169soc.c | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/drivers/net/ethernet/realtek/r8169soc.c b/drivers/net/ethernet/realtek/r8169soc.c
+index d5910a2bf357..1908192efc68 100644
+--- a/drivers/net/ethernet/realtek/r8169soc.c
++++ b/drivers/net/ethernet/realtek/r8169soc.c
+@@ -3097,11 +3097,8 @@ static void rtl_hw_start_8168(struct net_device *dev)
+ 
+ 	rtl_set_rx_max_size(ioaddr, rx_buf_sz);
+ 
+-#if defined(CONFIG_RTL_RX_NO_COPY)
+ 	tp->cp_cmd |= RTL_R16(C_PLUS_CMD) | PKT_CNTR_DISABLE | INTT_3;
+-#else
+-	tp->cp_cmd |= RTL_R16(C_PLUS_CMD) | PKT_CNTR_DISABLE | INTT_1;
+-#endif /* CONFIG_RTL_RX_NO_COPY */
++
+ 	/* Disable VLAN De-tagging */
+ 	tp->cp_cmd &= ~RX_VLAN;
+ 
+-- 
+2.45.2
+

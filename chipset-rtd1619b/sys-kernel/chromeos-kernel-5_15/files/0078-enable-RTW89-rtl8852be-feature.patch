@@ -1,0 +1,30 @@
+From 8e7d8f8640f0a8cacc343311d567565f6e4da391 Mon Sep 17 00:00:00 2001
+From: edwardwu <edwardwu@realtek.com>
+Date: Tue, 11 Jun 2024 14:53:59 +0800
+Subject: [PATCH 78/98] enable RTW89 rtl8852be feature
+
+Change-Id: If48177430baa1c5511615cc10f4bcc5801537c79
+---
+ .../chromeos/arm64/chromiumos-realtek.flavour.config     | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+index 7d1fa4ae8aa2..f610d769a714 100644
+--- a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
++++ b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+@@ -101,3 +101,12 @@ CONFIG_USB_ULPI=y
+ CONFIG_USB_STORAGE=y
+ CONFIG_USB_UAS=y
+ CONFIG_TMPFS=y
++CONFIG_RTW89=m
++CONFIG_RTW89_CORE=m
++CONFIG_RTW89_PCI=m
++CONFIG_RTW89_8852B_COMMON=m
++CONFIG_RTW89_8852B=m
++CONFIG_RTW89_8852BE=m
++CONFIG_RTW89_DEBUGFS=y
++CONFIG_RTW89_DEBUGMSG=y
++CONFIG_RTW89_DEBUGFS=y
+-- 
+2.45.2
+

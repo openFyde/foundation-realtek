@@ -1,7 +1,7 @@
-From 9580b4902e61e2d5b6037eea03b0d8a4934e3f1d Mon Sep 17 00:00:00 2001
+From 4356eef6245aa15cc74d3937eda1e159bc943881 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 10 Nov 2022 20:31:16 +0800
-Subject: [PATCH 46/80] net: ethernet: realtek: add r8169soc ethernet driver
+Subject: [PATCH 46/98] net: ethernet: realtek: add r8169soc ethernet driver
  for Realtek DHC SoCs
 
 Change-Id: Ibb5203e995fcfed5b4a9434df308ddbc603b34a2

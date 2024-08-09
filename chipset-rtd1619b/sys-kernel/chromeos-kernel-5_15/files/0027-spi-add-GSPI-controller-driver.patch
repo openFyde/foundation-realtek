@@ -1,7 +1,7 @@
-From 1affe983180126ac9efa2b4c3216149baed2e2c0 Mon Sep 17 00:00:00 2001
+From fbfd92b8074b3fdcd9bf27a2addad0e5eb06c609 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Mon, 14 Nov 2022 16:17:10 +0800
-Subject: [PATCH 27/80] spi: add GSPI controller driver
+Subject: [PATCH 27/98] spi: add GSPI controller driver
 
 Change-Id: Id9ecc7bb70241e75cd8df6645213b6bc6ab932ab
 ---

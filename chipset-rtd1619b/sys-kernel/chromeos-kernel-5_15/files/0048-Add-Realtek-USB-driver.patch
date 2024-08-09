@@ -1,7 +1,7 @@
-From 6248aa23754d4b3fe08841b34b6b3618f0e247d8 Mon Sep 17 00:00:00 2001
+From 1f7929e753ea8023ddae92107e573b17f99e4e5b Mon Sep 17 00:00:00 2001
 From: invalid_git config <unknown@unknown>
 Date: Fri, 10 May 2024 06:30:58 +0000
-Subject: [PATCH 48/80] Add Realtek USB driver
+Subject: [PATCH 48/98] Add Realtek USB driver
 
 Change-Id: Ia6099b0e74a8a6ad4d4518b8907aa4a28b9f3f37
 ---

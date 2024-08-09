@@ -1,7 +1,7 @@
-From 8d1fbea7106b402cc24922c182c88d65ccf25dae Mon Sep 17 00:00:00 2001
+From 82163e9284813270bdece45f3012740b78b4a849 Mon Sep 17 00:00:00 2001
 From: John Stultz <john.stultz@linaro.org>
 Date: Thu, 7 May 2020 20:08:13 +0000
-Subject: [PATCH 52/80] FROMLIST: dma-buf: dma-heap: Keep track of the heap
+Subject: [PATCH 52/98] FROMLIST: dma-buf: dma-heap: Keep track of the heap
  device struct
 
 Keep track of the heap device struct.

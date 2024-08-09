@@ -1,7 +1,7 @@
-From c18681aec120046f4d1e5848a6b972768e34db5d Mon Sep 17 00:00:00 2001
+From 338c1bbb4b3f12023e873df57514b3742a618e65 Mon Sep 17 00:00:00 2001
 From: Jyan Chou <jyanchou@realtek.com>
 Date: Mon, 14 Aug 2023 18:28:41 +0800
-Subject: [PATCH 17/80] Do not need to retune when switching to rpmb partition
+Subject: [PATCH 17/98] Do not need to retune when switching to rpmb partition
 
 Change-Id: I93ac16e05f6f0cac6dbe1f1d249f4200348168b7
 ---

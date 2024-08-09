@@ -1,7 +1,7 @@
-From 52cdcaa23ff53714c29df10bff1c609535a06878 Mon Sep 17 00:00:00 2001
+From b7dc77775f5582e32792252650808d0e0562de1a Mon Sep 17 00:00:00 2001
 From: phinex <phinex@realtek.com>
 Date: Fri, 21 Oct 2022 19:43:56 +0800
-Subject: [PATCH 03/80] soc: realtek: rtk_barrier : Add Rbus Memory Barrier for
+Subject: [PATCH 03/98] soc: realtek: rtk_barrier : Add Rbus Memory Barrier for
  rtd129x
 
 Change-Id: Ia5300a4f589e33516e4f53c07afaecbc13a42461

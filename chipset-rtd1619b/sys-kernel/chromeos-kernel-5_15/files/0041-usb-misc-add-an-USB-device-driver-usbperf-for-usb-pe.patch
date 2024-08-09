@@ -1,7 +1,7 @@
-From 5a87573bdc680c54d23bc98d12eb1411006886bd Mon Sep 17 00:00:00 2001
+From 2e1a428fbbc3b8010bfc4c77ec41647c99c77291 Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Thu, 21 Sep 2023 19:34:12 +0800
-Subject: [PATCH 41/80] usb: misc: add an USB device driver usbperf for usb
+Subject: [PATCH 41/98] usb: misc: add an USB device driver usbperf for usb
  performance test
 
 [Information]

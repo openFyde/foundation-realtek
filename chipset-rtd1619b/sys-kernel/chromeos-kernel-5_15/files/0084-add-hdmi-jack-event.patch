@@ -1,0 +1,128 @@
+From 6a227665acacd395869b571243b50ab1d7e7807d Mon Sep 17 00:00:00 2001
+From: yaozenhu <yaozenhu@realtek.com>
+Date: Fri, 14 Jun 2024 15:52:34 +0800
+Subject: [PATCH 84/98] add hdmi jack event
+
+---
+ drivers/gpu/drm/realtek/rtk_hdmi.c          |  4 +++
+ sound/soc/realtek/common/snd-hifi-realtek.c | 37 +++++++++++++++------
+ 2 files changed, 31 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/gpu/drm/realtek/rtk_hdmi.c b/drivers/gpu/drm/realtek/rtk_hdmi.c
+index 8cb8d5478d88..8f2f70260c0a 100644
+--- a/drivers/gpu/drm/realtek/rtk_hdmi.c
++++ b/drivers/gpu/drm/realtek/rtk_hdmi.c
+@@ -35,6 +35,8 @@
+ #define OFF_FLAG_DIS_AUDIO  (1 << 2)
+ #define OFF_FLAG_NORMAL (OFF_FLAG_HDCP | OFF_FLAG_AVMUTE | OFF_FLAG_DIS_AUDIO)
+ 
++extern void rtk_snd_hotplug_notify(int hotplug);
++
+ static const unsigned int rtk_hdmi_cable[] = {
+ 	EXTCON_DISP_HDMI,
+ 	EXTCON_NONE,
+@@ -1034,9 +1036,11 @@ static bool rtk_hdmi_update_hpd_state(struct rtk_hdmi *hdmi)
+ 			rtk_hdmi_update_sink_info(hdmi);
+ 			cec_notifier_set_phys_addr_from_edid(hdmi->cec, hdmi->edid_cache);
+ 			dev_info(hdmi->dev, "get edid done");
++			rtk_snd_hotplug_notify(1);
+ 		}
+ 	} else if ((hdmi->hpd_state == 1) && (hpd == 0)) {
+ 		cec_notifier_phys_addr_invalidate(hdmi->cec);
++		rtk_snd_hotplug_notify(0);
+ 	}
+ 
+ 	if ((hpd != hdmi->hpd_state) || (rxsense != hdmi->rxsense_state)) {
+diff --git a/sound/soc/realtek/common/snd-hifi-realtek.c b/sound/soc/realtek/common/snd-hifi-realtek.c
+index 2960a5146f1f..519db06f7bf4 100644
+--- a/sound/soc/realtek/common/snd-hifi-realtek.c
++++ b/sound/soc/realtek/common/snd-hifi-realtek.c
+@@ -29,6 +29,7 @@
+ #include <sound/pcm.h>
+ #include <sound/rawmidi.h>
+ #include <sound/hwdep.h>
++#include <sound/jack.h>
+ #include <soc/realtek/rtk_refclk.h>
+ #include <soc/realtek/memory.h>
+ #include <soc/realtek/rtk_media_heap.h>
+@@ -135,7 +136,7 @@ static void ring1_to_ring2_general_64(struct audio_ringbuf_ptr_64 *ring1,
+ 				      long size);
+ 
+ /* GLOBAL */
+-static char *snd_pcm_id[] = {"Skip decoder normal/HDMI-RX",
++static char *snd_pcm_id[] = {"HDMI"/*"Skip decoder normal/HDMI-RX",*/,
+ 			     "Skip decoder mmap/I2S",
+ 			     "Skip decoder deepbuffer/non pcm",
+ 			     "With decoder/audio_aec_mix",
+@@ -144,7 +145,7 @@ static char *snd_pcm_id[] = {"Skip decoder normal/HDMI-RX",
+ 			     "rtk_snd_audio_v4_in",
+ 			     "rtk_snd_i2s_loopback_in",
+ 			     "rtk_snd_dmic_passthrough_in",
+-			     "rtk_snd_pure_dmic_in"};
++			     "Internal Mic"/*"rtk_snd_pure_dmic_in"*/};
+ 
+ static void __iomem *sys_clk_en2_virt;
+ static int snd_open_count;
+@@ -152,6 +153,7 @@ static int snd_open_ai_count;
+ static int mtotal_latency;
+ static unsigned int rtk_dec_ao_buffer;
+ static bool is_suspend;
++struct snd_jack *hdmi_jack = NULL;
+ 
+ static struct snd_kcontrol_new rtk_snd_controls[] = {
+ 	RTK_VOLUME("Master Volume", 0, MIXER_ADDR_MASTER),
+@@ -3512,6 +3514,18 @@ static int rtk_snd_mixer_new_mixer(struct snd_card *card,
+ 	return 0;
+ }
+ 
++void rtk_snd_hotplug_notify(int hotplug)
++{
++	if (!hdmi_jack) {
++		pr_err("hdmi jack no found, can't notify\n");
++		return;
++	}
++	pr_err("%s %d\n", __func__, hotplug);
++	snd_jack_report(hdmi_jack, hotplug ? SND_JACK_LINEOUT : 0);
++}
++EXPORT_SYMBOL_GPL(rtk_snd_hotplug_notify);
++
++
+ static int snd_RTK_volume_info(struct snd_kcontrol *kcontrol,
+ 			       struct snd_ctl_elem_info *uinfo)
+ {
+@@ -3785,14 +3799,14 @@ static int snd_card_probe(struct platform_device *pdev)
+ 	mixer->dev = dev;
+ 
+ 	err = rtk_create_pcm_instance(card, ENUM_AIN_HDMIRX, 2, 0);
+-	err |= rtk_create_pcm_instance(card, ENUM_AIN_I2S, 1, 1);
+-	err |= rtk_create_pcm_instance(card, ENUM_AIN_NON_PCM, 1, 0);
+-	err |= rtk_create_pcm_instance(card, ENUM_AIN_AEC_MIX, 1, 0);
+-	err |= rtk_create_pcm_instance(card, ENUM_AIN_AUDIO_V2, 0, 0);
+-	err |= rtk_create_pcm_instance(card, ENUM_AIN_AUDIO_V3, 0, 0);
+-	err |= rtk_create_pcm_instance(card, ENUM_AIN_AUDIO_V4, 0, 0);
+-	err |= rtk_create_pcm_instance(card, ENUM_AIN_I2S_LOOPBACK, 0, 1);
+-	err |= rtk_create_pcm_instance(card, ENUM_AIN_DMIC_PASSTHROUGH, 0, 0);
++//	err |= rtk_create_pcm_instance(card, ENUM_AIN_I2S, 1, 1);
++//	err |= rtk_create_pcm_instance(card, ENUM_AIN_NON_PCM, 1, 0);
++//	err |= rtk_create_pcm_instance(card, ENUM_AIN_AEC_MIX, 1, 0);
++//	err |= rtk_create_pcm_instance(card, ENUM_AIN_AUDIO_V2, 0, 0);
++//	err |= rtk_create_pcm_instance(card, ENUM_AIN_AUDIO_V3, 0, 0);
++//	err |= rtk_create_pcm_instance(card, ENUM_AIN_AUDIO_V4, 0, 0);
++//	err |= rtk_create_pcm_instance(card, ENUM_AIN_I2S_LOOPBACK, 0, 1);
++//	err |= rtk_create_pcm_instance(card, ENUM_AIN_DMIC_PASSTHROUGH, 0, 0);
+ 	err |= rtk_create_pcm_instance(card, ENUM_AIN_PURE_DMIC, 0, 1);
+ 	if (err < 0) {
+ 		pr_err("[%s create instance fail]\n", __func__);
+@@ -3823,6 +3837,9 @@ static int snd_card_probe(struct platform_device *pdev)
+ 	if (err)
+ 		pr_err("%s: unable to create sysfs entry\n", __func__);
+ #endif
++	err = snd_jack_new(card, "HDMI Jack", SND_JACK_LINEOUT, &hdmi_jack, true, false);
++	if (err < 0)
++		goto __nodev;
+ 
+ 	err = snd_card_register(card);
+ 	if (err) {
+-- 
+2.45.2
+

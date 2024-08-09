@@ -1,7 +1,7 @@
-From d308b6bf527fa0a004bc0911b00aeb1394decc67 Mon Sep 17 00:00:00 2001
+From ffa08d2922e7f8af8d922b821c565014d1a7cdde Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 17 Nov 2022 15:37:52 +0800
-Subject: [PATCH 23/80] reset: add m2tmx reset controller for Realtek DHC SoCs
+Subject: [PATCH 23/98] reset: add m2tmx reset controller for Realtek DHC SoCs
 
 Change-Id: If4e28933601387a95d10be5f9b5b68f3f1b40e83
 ---

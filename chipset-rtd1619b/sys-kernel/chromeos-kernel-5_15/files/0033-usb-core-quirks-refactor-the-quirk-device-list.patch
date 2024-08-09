@@ -1,7 +1,7 @@
-From a5c38f5e1a99a50a708cb1a425395a80a3361153 Mon Sep 17 00:00:00 2001
+From be9ced4b0d57e183f721252dc6cdf3b3b58aa494 Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Wed, 21 Jun 2023 11:43:15 +0800
-Subject: [PATCH 33/80] usb: core: quirks: refactor the quirk device list
+Subject: [PATCH 33/98] usb: core: quirks: refactor the quirk device list
 
 Change-Id: I15bd848185bf0e47486b0c82039e68016435f69c
 Signed-off-by: Stanley Chang <stanley_chang@realtek.com>

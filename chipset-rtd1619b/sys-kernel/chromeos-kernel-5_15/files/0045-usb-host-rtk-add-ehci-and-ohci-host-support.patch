@@ -1,7 +1,7 @@
-From 1afe5d7fbe4e3ae21c0aba5454a7d392465cd414 Mon Sep 17 00:00:00 2001
+From 3b69d201c6378b31556dab870f54b1b21df54898 Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Tue, 16 Jan 2024 11:12:11 +0800
-Subject: [PATCH 45/80] usb: host: rtk: add ehci and ohci host support
+Subject: [PATCH 45/98] usb: host: rtk: add ehci and ohci host support
 
 Kylin usb port3 is ehci/ohci host.
 

@@ -1,7 +1,7 @@
-From 1a44441b3eada9d15ce1bc96f4330fda385313d7 Mon Sep 17 00:00:00 2001
+From 60b5b4ec8f4035fe3c5040b14035aca527984366 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Mon, 14 Nov 2022 16:07:12 +0800
-Subject: [PATCH 29/80] watchdog: add watchdog driver for Realtek DHC SoCs
+Subject: [PATCH 29/98] watchdog: add watchdog driver for Realtek DHC SoCs
 
 Change-Id: Ib40a3e5676240110f08b85826b5efd392f6bd002
 ---

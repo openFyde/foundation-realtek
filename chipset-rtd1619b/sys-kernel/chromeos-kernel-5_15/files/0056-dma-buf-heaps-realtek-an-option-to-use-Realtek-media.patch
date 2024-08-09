@@ -1,7 +1,7 @@
-From 7a3213dcf37f8c06e81fa79f66ddbc91333d8a33 Mon Sep 17 00:00:00 2001
+From 2e1beffbebb67e1c8e2f45fab5a53ab3d5631b41 Mon Sep 17 00:00:00 2001
 From: Edward Wu <edwardwu@realtek.com>
 Date: Tue, 23 Jan 2024 07:55:05 +0800
-Subject: [PATCH 56/80] dma-buf: heaps: realtek: an option to use Realtek media
+Subject: [PATCH 56/98] dma-buf: heaps: realtek: an option to use Realtek media
  heap without Soc memory protection
 
 Change-Id: I454417d36ffabd2d1d7ad91feea89feb235a71be

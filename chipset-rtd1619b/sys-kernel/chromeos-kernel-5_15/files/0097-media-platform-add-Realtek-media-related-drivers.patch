@@ -1,0 +1,45 @@
+From cf2d59e439f15be023600715cdf8076c56ed4c5a Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Fri, 9 Aug 2024 15:50:13 +0800
+Subject: [PATCH 97/98] media: platform: add Realtek media related drivers
+
+Change-Id: I04954e2a16d5804bccaf37db147659cb58e0baae
+---
+ drivers/media/platform/Kconfig  | 4 ++++
+ drivers/media/platform/Makefile | 6 ++++++
+ 2 files changed, 10 insertions(+)
+
+diff --git a/drivers/media/platform/Kconfig b/drivers/media/platform/Kconfig
+index 451cd145d653..663b3092a10e 100644
+--- a/drivers/media/platform/Kconfig
++++ b/drivers/media/platform/Kconfig
+@@ -581,3 +581,7 @@ config VIDEO_RCAR_DRIF
+ 	  will be called rcar_drif.
+ 
+ endif # SDR_PLATFORM_DRIVERS
++
++source "drivers/media/platform/rtk-cec/Kconfig"
++source "drivers/media/platform/rtk_dsi/Kconfig"
++source "drivers/media/platform/rtk_tpdemux/Kconfig"
+diff --git a/drivers/media/platform/Makefile b/drivers/media/platform/Makefile
+index f50587cd5b71..9bfd74e9284a 100644
+--- a/drivers/media/platform/Makefile
++++ b/drivers/media/platform/Makefile
+@@ -85,8 +85,14 @@ obj-$(CONFIG_VIDEO_QCOM_CAMSS)		+= qcom/camss/
+ 
+ obj-$(CONFIG_VIDEO_QCOM_VENUS)		+= qcom/venus/
+ 
++obj-$(CONFIG_RTK_HDMI_CEC)		+= rtk-cec/
++
+ obj-y					+= sunxi/
+ 
+ obj-$(CONFIG_VIDEO_MESON_GE2D)		+= meson/ge2d/
+ 
++obj-$(CONFIG_RTK_DSI)			+= rtk_dsi/
++
++obj-$(CONFIG_RTK_TPDEMUX)		+= rtk_tpdemux/
++
+ obj-y					+= camx/
+-- 
+2.45.2
+

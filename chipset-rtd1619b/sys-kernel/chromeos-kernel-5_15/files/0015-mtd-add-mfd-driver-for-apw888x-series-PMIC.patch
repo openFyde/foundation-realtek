@@ -1,7 +1,7 @@
-From a65aac4c3424c19344dbe609785dcc596e86c077 Mon Sep 17 00:00:00 2001
+From 3cfc4012d66b0dd420aa0e201ab1d3f4ce4f4701 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Sun, 13 Nov 2022 20:38:26 +0800
-Subject: [PATCH 15/80] mtd: add mfd driver for apw888x series PMIC
+Subject: [PATCH 15/98] mtd: add mfd driver for apw888x series PMIC
 
 Change-Id: Id1806c06511eca150c49344c87a135969842708d
 ---

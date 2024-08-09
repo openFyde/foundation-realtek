@@ -1,7 +1,7 @@
-From 8735039fd9257705612bb87d50a24808036312fa Mon Sep 17 00:00:00 2001
+From 1e64e270e092f8efdad07c668fda7c1d1edf473e Mon Sep 17 00:00:00 2001
 From: Haru Zheng <haruzheng@realtek.com>
 Date: Wed, 10 Nov 2021 16:40:11 +0800
-Subject: [PATCH 40/80] usb: rtk: add the ftdi-spi driver.
+Subject: [PATCH 40/98] usb: rtk: add the ftdi-spi driver.
 
 [REVIEWER] Haru Zheng
 [Information]

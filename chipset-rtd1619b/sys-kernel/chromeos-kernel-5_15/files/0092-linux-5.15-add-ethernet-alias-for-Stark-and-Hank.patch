@@ -1,0 +1,48 @@
+From 55dde4028f8b7d6e3baac0fcc616ef5b26a18566 Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Thu, 1 Aug 2024 06:55:29 +0800
+Subject: [PATCH 92/98] linux-5.15: add ethernet alias for Stark and Hank
+
+- add in pymparticles and bleedingedge
+- u-boot: image-fdt.c: image_setup_libfdt: fdt_fixup_ethernet
+
+Change-Id: I4e4fb522892f3fa05da1fed43d5eddcdd5483d23
+---
+ arch/arm64/boot/dts/realtek/rtd1319-pymparticles.dtsi  | 8 ++++++++
+ arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi | 1 +
+ 2 files changed, 9 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/realtek/rtd1319-pymparticles.dtsi b/arch/arm64/boot/dts/realtek/rtd1319-pymparticles.dtsi
+index 21c9e28dabc9..8d69b8e2ec7f 100644
+--- a/arch/arm64/boot/dts/realtek/rtd1319-pymparticles.dtsi
++++ b/arch/arm64/boot/dts/realtek/rtd1319-pymparticles.dtsi
+@@ -32,6 +32,14 @@ vcc_ddr: vcc1v2-ddr {
+ 		regulator-min-microvolt = <1200000>;
+ 		regulator-max-microvolt = <1200000>;
+ 	};
++
++	aliases {
++		ethernet = &nic;
++		serial0 = &uart0;
++		serial1 = &uart1;
++		serial2 = &uart2;
++		rtc0 = &rtc;
++	};
+ };
+ 
+ /* debug console (J1) */
+diff --git a/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi b/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi
+index b570fb3c77cc..a24512ed9546 100644
+--- a/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi
++++ b/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi
+@@ -17,6 +17,7 @@ chosen {
+ 	};
+ 
+ 	aliases {
++		ethernet = &nic;
+ 		serial0 = &uart0;
+ 		serial1 = &uart1;
+ 		serial2 = &uart2;
+-- 
+2.45.2
+

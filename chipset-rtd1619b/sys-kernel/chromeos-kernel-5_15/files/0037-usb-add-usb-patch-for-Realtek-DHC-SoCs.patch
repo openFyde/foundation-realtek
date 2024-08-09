@@ -1,7 +1,7 @@
-From 6057d9d2d54195b5549e09b8e76765e909036c9a Mon Sep 17 00:00:00 2001
+From 739a46ec6f8c498e5af1bc4688b56a1e0bd4c1fa Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Mon, 14 Nov 2022 15:38:40 +0800
-Subject: [PATCH 37/80] usb: add usb patch for Realtek DHC SoCs
+Subject: [PATCH 37/98] usb: add usb patch for Realtek DHC SoCs
 
 Change-Id: I042c40866e4b2bc34e4df2127c0deecce589afb2
 ---

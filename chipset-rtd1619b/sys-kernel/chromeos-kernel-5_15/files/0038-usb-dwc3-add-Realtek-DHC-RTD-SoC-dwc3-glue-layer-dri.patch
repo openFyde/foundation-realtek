@@ -1,7 +1,7 @@
-From 442a4f7013312aa68dc34a86250ea67516ee0794 Mon Sep 17 00:00:00 2001
+From 0219e8afcab8b5b682768bce856cb158d7b1f53e Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Sat, 26 Aug 2023 11:10:06 +0800
-Subject: [PATCH 38/80] usb: dwc3: add Realtek DHC RTD SoC dwc3 glue layer
+Subject: [PATCH 38/98] usb: dwc3: add Realtek DHC RTD SoC dwc3 glue layer
  driver
 
 [ upstream commit 34c200483569fc209e31017e2f6fdbfcb79cd3d5 ]

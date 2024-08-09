@@ -1,7 +1,7 @@
-From 5e8e1ab2192d64371a45b0af380b59c44dc9423c Mon Sep 17 00:00:00 2001
+From bd7f5afce97c1830091ca6605fa2fb2949d29f4a Mon Sep 17 00:00:00 2001
 From: Cheng-Yu Lee <cylee12@realtek.com>
 Date: Tue, 13 Oct 2020 15:45:51 +0800
-Subject: [PATCH 28/80] thermal: realtek: add thermal sensor driver
+Subject: [PATCH 28/98] thermal: realtek: add thermal sensor driver
 
 Change-Id: I248a66f1a822b7ef3ec07ca9f217ec47c9d14cd3
 ---

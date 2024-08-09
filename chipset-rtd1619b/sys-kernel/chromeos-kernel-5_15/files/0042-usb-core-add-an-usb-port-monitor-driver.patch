@@ -1,7 +1,7 @@
-From ef8d61430a39ce17ba44d77dac6d19de33b6aff6 Mon Sep 17 00:00:00 2001
+From 1528568d974ebf89f04a95e5c4a3f94a87929ab2 Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Fri, 7 Jan 2022 15:44:14 +0800
-Subject: [PATCH 42/80] usb: core: add an usb port monitor driver
+Subject: [PATCH 42/98] usb: core: add an usb port monitor driver
 
 [Information]
 Implement an usb port monitor driver to check if usb device disconnected or died.

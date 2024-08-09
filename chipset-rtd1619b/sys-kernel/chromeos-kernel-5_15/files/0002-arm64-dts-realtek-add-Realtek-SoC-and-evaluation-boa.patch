@@ -1,7 +1,7 @@
-From 9175d76f493b1231014822781c06bcabb46317ea Mon Sep 17 00:00:00 2001
+From cb6a75cb15ca57d146c148ae5b45709cc1788825 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 10 Nov 2022 17:21:45 +0800
-Subject: [PATCH 02/80] arm64: dts: realtek: add Realtek SoC and evaluation
+Subject: [PATCH 02/98] arm64: dts: realtek: add Realtek SoC and evaluation
  boards
 
 Change-Id: I064a309459748a970f9bb7bd68116244f5974d11

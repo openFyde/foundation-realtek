@@ -1,0 +1,97 @@
+From eaf60f53a3e9874f32f09d784897ead53f6b4cd7 Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Fri, 7 Jun 2024 08:21:54 +0800
+Subject: [PATCH 75/98] reduce cursor update
+
+Change-Id: Iebc9155afa8e6c3dc0d9a3b9a5add29343940d73
+---
+ drivers/gpu/drm/realtek/rtk_drm_plane.c | 41 +++++++++++++++++++++++--
+ 1 file changed, 39 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/realtek/rtk_drm_plane.c b/drivers/gpu/drm/realtek/rtk_drm_plane.c
+index 5c0feea70048..63930cd75249 100644
+--- a/drivers/gpu/drm/realtek/rtk_drm_plane.c
++++ b/drivers/gpu/drm/realtek/rtk_drm_plane.c
+@@ -14,6 +14,7 @@
+ 
+ #include <drm/drm_plane_helper.h>
+ #include <drm/drm_atomic_helper.h>
++#include <drm/drm_atomic.h>
+ #include <drm/drm_blend.h>
+ #include <drm/drm_fourcc.h>
+ #include <drm/drm_framebuffer.h>
+@@ -89,6 +90,7 @@ struct rtk_drm_plane_state {
+ 	struct drm_property_blob *rtk_meta_data_blob;
+ 	struct drm_property_enum *vo_plane_name;
+ 	struct video_object rtk_meta_data;
++  ktime_t update_time;
+ };
+ 
+ static struct vo_rectangle rect_plane_disabled = {0};
+@@ -796,6 +798,8 @@ static int rtk_plane_atomic_check(struct drm_plane *plane,
+ 	return 0;
+ }
+ 
++#define MIN_UPDATE_INTERVAL 20
++
+ static void rtk_plane_atomic_update(struct drm_plane *plane,
+ 				    struct drm_atomic_state *old_state)
+ {
+@@ -834,10 +838,43 @@ static void rtk_plane_atomic_disable(struct drm_plane *plane,
+ 	rtk_plane_clear_buflock(rtk_plane, 1);
+ }
+ 
++static int rtk_plane_atomic_async_check(struct drm_plane *plane,
++           struct drm_atomic_state *state)
++{
++  if (plane->state->fb->width < 257 && plane->state->fb->height < 257)
++    return 0;
++  return -EINVAL;
++}
++
++static void rtk_plane_atomic_async_update(struct drm_plane *plane,
++            struct drm_atomic_state *state)
++{
++  struct drm_plane_state *old_plane_state, *new_plane_state;
++  struct rtk_drm_plane_state *rtk_state;
++  struct drm_crtc_commit *commit;
++  int i = drm_plane_index(plane);
++  new_plane_state = state->planes[i].new_state;
++  old_plane_state = state->planes[i].old_state;
++  commit = old_plane_state->commit;
++  old_plane_state->state = state;
++  new_plane_state->state = NULL;
++  plane->state = new_plane_state;
++  state->planes[i].state = old_plane_state;
++  rtk_state = to_rtk_plane_state(old_plane_state);
++  if (ktime_before(ktime_get(),
++      ktime_add_ms(rtk_state->update_time, MIN_UPDATE_INTERVAL)))
++    return;
++  rtk_state = to_rtk_plane_state(plane->state);
++  rtk_state->update_time = ktime_get();
++  queue_ring_buffer(plane);
++}
++
+ static const struct drm_plane_helper_funcs rtk_plane_helper_funcs = {
+ 	.atomic_check = rtk_plane_atomic_check,
+ 	.atomic_update = rtk_plane_atomic_update,
+ 	.atomic_disable = rtk_plane_atomic_disable,
++  .atomic_async_check = rtk_plane_atomic_async_check,
++  .atomic_async_update = rtk_plane_atomic_async_update,
+ };
+ 
+ int rtk_plane_init(struct drm_device *drm, struct rtk_drm_plane *rtk_plane,
+@@ -1388,8 +1425,8 @@ static int plane_display_set(struct rtk_rpc_info *rpc_info,
+ 
+ 		memset(&structConfigGraphicCanvas, 0, sizeof(structConfigGraphicCanvas));
+ 		structConfigGraphicCanvas.plane = VO_GRAPHIC_SUB1;
+-		structConfigGraphicCanvas.srcWin.width = 1280;
+-		structConfigGraphicCanvas.srcWin.height = 720;
++		structConfigGraphicCanvas.srcWin.width = 256;
++		structConfigGraphicCanvas.srcWin.height = 256;
+ 		structConfigGraphicCanvas.srcWin.x = 0;
+ 		structConfigGraphicCanvas.srcWin.y = 0;
+ 		structConfigGraphicCanvas.dispWin = *rect;
+-- 
+2.45.2
+

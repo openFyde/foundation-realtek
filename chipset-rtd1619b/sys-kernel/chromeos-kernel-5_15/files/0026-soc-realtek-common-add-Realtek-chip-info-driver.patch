@@ -1,7 +1,7 @@
-From 099c60b4123e5f0957e03ccee10f216ea590f058 Mon Sep 17 00:00:00 2001
+From 1fd704b78012e251fd061072b3a3a1c2db411a4b Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 10 Nov 2022 17:28:28 +0800
-Subject: [PATCH 26/80] soc: realtek: common: add Realtek chip info driver
+Subject: [PATCH 26/98] soc: realtek: common: add Realtek chip info driver
 
 Change-Id: Ie8576b79af4256ebaa1004dba16ee6e2d52405c8
 ---

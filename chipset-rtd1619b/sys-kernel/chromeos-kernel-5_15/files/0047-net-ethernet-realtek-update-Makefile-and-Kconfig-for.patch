@@ -1,7 +1,7 @@
-From 742d6af45966e539d177c4b4a5cedb052a5a58af Mon Sep 17 00:00:00 2001
+From d282d1d93e5a93b2dfc000358c461ef7a8b3c778 Mon Sep 17 00:00:00 2001
 From: TY Chang <tychang@realtek.com>
 Date: Mon, 23 Oct 2023 16:56:49 +0800
-Subject: [PATCH 47/80] net: ethernet: realtek: update Makefile and Kconfig for
+Subject: [PATCH 47/98] net: ethernet: realtek: update Makefile and Kconfig for
  r8125 and r8168
 
 Change-Id: I445d76a0c82dfc524899f8d2df4741c72da4b4b6

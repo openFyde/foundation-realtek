@@ -1,7 +1,7 @@
-From f45fc7f1737f555daaa2a3e1e8d449ecbafdb6c8 Mon Sep 17 00:00:00 2001
+From 652490dbab22e6cb7cfb46aa12ba3be27f57eb62 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 10 Nov 2022 17:30:35 +0800
-Subject: [PATCH 19/80] pinctrl: realtek: add Realtek DHC SoCs pinctrl driver
+Subject: [PATCH 19/98] pinctrl: realtek: add Realtek DHC SoCs pinctrl driver
 
 Change-Id: I0be0e5bdcd3c88cf6384201b54753c95d5c1e881
 ---

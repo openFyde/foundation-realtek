@@ -1,0 +1,181 @@
+From 58704a6a75391a4dfbae63de6f0b7ec3359a14a4 Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Fri, 7 Jun 2024 08:21:20 +0800
+Subject: [PATCH 74/98] char hw random fix the initial failure of the RNG
+ driver
+
+Change-Id: If7b93ff30a449984a63a222a81ba3ece6bd8f9da
+---
+ arch/arm64/boot/dts/realtek/rtd16xxb.dtsi |  1 +
+ drivers/char/hw_random/rtd-rng.c          | 79 +++++++++++------------
+ 2 files changed, 39 insertions(+), 41 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi b/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
+index c74878687a0b..ea0d06866732 100644
+--- a/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
++++ b/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
+@@ -631,6 +631,7 @@ power_model {
+ 
+ 			rng: rng@1000 {
+ 				compatible = "realtek,rt16xxb-rng";
++				clocks = <&cc RTD1619B_CRT_CLK_SYS>;
+ 				reg = <0x1000 0x2000>;
+ 				status = "disabled";
+ 			};
+diff --git a/drivers/char/hw_random/rtd-rng.c b/drivers/char/hw_random/rtd-rng.c
+index 627a40e9bf46..02efeb4d64b3 100644
+--- a/drivers/char/hw_random/rtd-rng.c
++++ b/drivers/char/hw_random/rtd-rng.c
+@@ -16,6 +16,12 @@
+ #include <linux/platform_device.h>
+ #include <linux/clk.h>
+ 
++struct rtd_rng {
++	struct device *dev;
++	void __iomem *base;
++	struct hwrng rng;
++};
++
+ #define MAX_1MS_TO_CNT		1000
+ 
+ #define TRNG_REG_BASE		0
+@@ -39,8 +45,9 @@
+ static int rtd_rng_read(struct hwrng *rng, void *buf, size_t max,
+ 			       bool wait)
+ {
+-	void __iomem *rng_base = (void __iomem *)rng->priv;
+-	unsigned int tocnt=0;
++	struct rtd_rng *rtd_rng = container_of(rng, struct rtd_rng, rng);
++	void __iomem *rng_base = (void __iomem *)rtd_rng->base;
++	unsigned int tocnt = 0;
+ 
+ 	while (!(__raw_readl(rng_base + RNG_OUT_READY) & 0x1)) {
+ 		if (!wait || tocnt++ > MAX_1MS_TO_CNT){
+@@ -63,7 +70,9 @@ static int rtd13xxd_rng_init(struct hwrng *rng)
+ 
+ static int rtd1319_rng_init(struct hwrng *rng)
+ {
+-	void __iomem *rng_base = (void __iomem *)rng->priv;
++	struct rtd_rng *rtd_rng = container_of(rng, struct rtd_rng, rng);
++	void __iomem *rng_base = (void __iomem *)rtd_rng->base;
++
+ 	pr_info("%s \n", __func__);
+ 
+ 	__raw_writel(0x00008000, rng_base + RNG_CTRL);
+@@ -78,12 +87,13 @@ static int rtd1319_rng_init(struct hwrng *rng)
+ 
+ static int rtd16xxb_rng_init(struct hwrng *rng)
+ {
+-	void __iomem *rng_base = (void __iomem *)rng->priv;
++	struct rtd_rng *rtd_rng = container_of(rng, struct rtd_rng, rng);
++	void __iomem *rng_base = (void __iomem *)rtd_rng->base;
+ 	struct clk *sclk;
+ 	unsigned long sclk_rate = 0;
+ 	int error;
+ 
+-	sclk = clk_get(NULL, "clk_sys");
++	sclk = clk_get(rtd_rng->dev, NULL);
+ 	if (IS_ERR(sclk)) {
+ 		error = PTR_ERR(sclk);
+ 		pr_err("could not get clk_sys: %i\n", (int)PTR_ERR(sclk));
+@@ -120,57 +130,42 @@ static int rtd16xxb_rng_init(struct hwrng *rng)
+ 	return 0;
+ }
+ 
+-
+-static struct hwrng rtd_rng_ops = {
+-	.name		= "rtd",
+-	.read		= rtd_rng_read,
+-	.quality	= 1000,
+-};
+-
+ static int rtd_rng_probe(struct platform_device *pdev)
+ {
++	struct rtd_rng *rtd_rng;
+ 	struct device *dev = &pdev->dev;
+-	struct device_node *np = dev->of_node;
+-	void __iomem *rng_base;
+ 	int err;
+ 
++	rtd_rng = devm_kzalloc(&pdev->dev, sizeof(*rtd_rng), GFP_KERNEL);
++	if (!rtd_rng)
++		return -ENOMEM;
++
++	rtd_rng->dev = &pdev->dev;
++
+ 	/* map peripheral */
+-	rng_base = of_iomap(np, 0);
+-	if (!rng_base) {
++	rtd_rng->base = devm_platform_ioremap_resource(pdev, 0);
++	if (IS_ERR(rtd_rng->base)) {
+ 		dev_err(dev, "failed to remap rng regs");
+ 		return -ENODEV;
+ 	}
+-	rtd_rng_ops.priv = (unsigned long)rng_base;
+ 
+-	rtd_rng_ops.init = of_device_get_match_data(&pdev->dev);
+-	if (!rtd_rng_ops.init) {
+-		dev_err(&pdev->dev, "missing init program\n");
+-		return -ENODEV;
+-	}
++	rtd_rng->rng.name = pdev->name;
++	rtd_rng->rng.init = of_device_get_match_data(&pdev->dev);
++	rtd_rng->rng.read = rtd_rng_read;
++	rtd_rng->rng.quality = 1000;
++
++	platform_set_drvdata(pdev, rtd_rng);
+ 
+ 	/* register driver */
+-	err = hwrng_register(&rtd_rng_ops);
+-	if (err) {
++	err = devm_hwrng_register(&pdev->dev, &rtd_rng->rng);
++	if (err)
+ 		dev_err(dev, "hwrng registration failed\n");
+-		iounmap(rng_base);
+-		rtd_rng_ops.priv = (unsigned long)0;
+-	} else
++	else
+ 		dev_info(dev, "hwrng registered\n");
+ 
+ 	return err;
+ }
+ 
+-static int rtd_rng_remove(struct platform_device *pdev)
+-{
+-	void __iomem *rng_base = (void __iomem *)rtd_rng_ops.priv;
+-
+-	/* unregister driver */
+-	hwrng_unregister(&rtd_rng_ops);
+-	iounmap(rng_base);
+-
+-	return 0;
+-}
+-
+ #ifdef CONFIG_PM
+ static int rtd_rng_suspend(struct device *dev)
+ {
+@@ -179,8 +174,11 @@ static int rtd_rng_suspend(struct device *dev)
+ 
+ static int rtd_rng_resume(struct device *dev)
+ {
+-	if (rtd_rng_ops.priv && rtd_rng_ops.init)
+-		rtd_rng_ops.init(&rtd_rng_ops);
++	struct rtd_rng *priv = dev_get_drvdata(dev);
++
++	if (priv->rng.init)
++		priv->rng.init(&priv->rng);
++
+ 	return 0;
+ }
+ 
+@@ -207,7 +205,6 @@ static struct platform_driver rtd_rng_driver = {
+ #endif /* CONFIG_PM */
+ 	},
+ 	.probe			= rtd_rng_probe,
+-	.remove			= rtd_rng_remove,
+ };
+ module_platform_driver(rtd_rng_driver);
+ 
+-- 
+2.45.2
+

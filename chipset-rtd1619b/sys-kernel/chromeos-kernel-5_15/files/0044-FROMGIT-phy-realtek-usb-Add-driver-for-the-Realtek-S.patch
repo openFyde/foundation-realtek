@@ -1,7 +1,7 @@
-From d75412db79ce8e022d3fc990461326e7fb5046c4 Mon Sep 17 00:00:00 2001
+From 75bba01ff259ffe701ba863d60b619ecc4c28093 Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Thu, 18 May 2023 19:22:14 +0800
-Subject: [PATCH 44/80] FROMGIT: phy: realtek: usb: Add driver for the Realtek
+Subject: [PATCH 44/98] FROMGIT: phy: realtek: usb: Add driver for the Realtek
  SoC USB 2.0 PHY
 
 Realtek DHC (digital home center) RTD SoCs support DWC3 XHCI USB

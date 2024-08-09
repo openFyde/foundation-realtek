@@ -1,7 +1,7 @@
-From 097a98bac925ad0e496fc8b4c24c5e7c412aa0a5 Mon Sep 17 00:00:00 2001
+From 9085e0a15091c03c12ad41fa9d787ab3f0cd57ec Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 17 Nov 2022 16:42:46 +0800
-Subject: [PATCH 50/80] pci: controller: add pcie host driver for Realtek DHC
+Subject: [PATCH 50/98] pci: controller: add pcie host driver for Realtek DHC
  SoCs
 
 Change-Id: I1abda74f8a2b47d353c1456ae3ac9541252cf463

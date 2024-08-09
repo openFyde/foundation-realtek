@@ -1,7 +1,7 @@
-From 996ce40e3a4fd442a4dcdb2c139e090be49100d1 Mon Sep 17 00:00:00 2001
+From 9480c7168597e091eb40b99b6e181c7fd7c5b14f Mon Sep 17 00:00:00 2001
 From: simon_hsu <simon_hsu@realtek.com>
 Date: Wed, 3 May 2023 11:25:15 +0800
-Subject: [PATCH 58/80] gpu: drm: realtek: add DRM_MODE_ATOMIC_NONBLOCK flag
+Subject: [PATCH 58/98] gpu: drm: realtek: add DRM_MODE_ATOMIC_NONBLOCK flag
 
 Change-Id: I164efcab1d61340ba4808005d009cf266da851d2
 ---

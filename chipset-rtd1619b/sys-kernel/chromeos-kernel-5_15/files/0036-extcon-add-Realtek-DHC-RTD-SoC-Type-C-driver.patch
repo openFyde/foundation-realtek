@@ -1,7 +1,7 @@
-From b80a1f069e95995b0b9f0c03a09762ef942235ff Mon Sep 17 00:00:00 2001
+From aeadc6918a22a7e3bf43340586e48cad9b3b2e86 Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Mon, 4 Sep 2023 13:12:47 +0800
-Subject: [PATCH 36/80] extcon: add Realtek DHC RTD SoC Type-C driver
+Subject: [PATCH 36/98] extcon: add Realtek DHC RTD SoC Type-C driver
 
 [ upstream commit 8a590d7371f02ba37d073bed9f988f529f95a03c ]
 

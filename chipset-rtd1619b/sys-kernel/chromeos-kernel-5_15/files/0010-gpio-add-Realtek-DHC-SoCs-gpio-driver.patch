@@ -1,7 +1,7 @@
-From 98de92d877730481b6f92d9c959f611ec7eeb4af Mon Sep 17 00:00:00 2001
+From 12d4b3f82ca3014503033cbf475444088ccf1b7b Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Thu, 10 Nov 2022 17:32:09 +0800
-Subject: [PATCH 10/80] gpio: add Realtek DHC SoCs gpio driver
+Subject: [PATCH 10/98] gpio: add Realtek DHC SoCs gpio driver
 
 Change-Id: I7543bb16157ef6a41515b3a346d99f72e33f3d2e
 ---

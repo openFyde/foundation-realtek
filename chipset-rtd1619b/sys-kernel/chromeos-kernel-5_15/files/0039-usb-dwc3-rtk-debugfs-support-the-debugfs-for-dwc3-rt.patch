@@ -1,7 +1,7 @@
-From ecca26c1a38e5a93bbdcc4a1d1af350594a7404f Mon Sep 17 00:00:00 2001
+From de26f832c10d57f6002f2d644fcca0430fa490e3 Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Mon, 30 Oct 2023 14:44:27 +0800
-Subject: [PATCH 39/80] usb: dwc3: rtk: debugfs: support the debugfs for
+Subject: [PATCH 39/98] usb: dwc3: rtk: debugfs: support the debugfs for
  dwc3-rtk
 
 Add a driver to support debugfs for dwc3-rtk.

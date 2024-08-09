@@ -1,0 +1,29 @@
+From 9a159f569d62d3ab909b2b7614b82dce608077d3 Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Fri, 9 Aug 2024 15:27:09 +0800
+Subject: [PATCH 72/98] add support for booting from usb disk
+
+Change-Id: Ic17c8e3f3d3a2dd44f5d78f9e516a998e6bcdb0e
+---
+ .../chromeos/arm64/chromiumos-realtek.flavour.config      | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+index 7ae5199c9a47..7d1fa4ae8aa2 100644
+--- a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
++++ b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+@@ -93,3 +93,11 @@ CONFIG_SND_SOC_REALTEK_NOTIFY=m
+ CONFIG_SND_SOC_REALTEK_FL3236=m
+ CONFIG_RTK_PM_HIFI=m
+ CONFIG_RTK_CACHEABLE_HEADER=y
++CONFIG_ATA=y
++CONFIG_USB_CONFIGFS=m
++CONFIG_USB_CONFIGFS_F_FS=y
++CONFIG_USB_GADGET=y
++CONFIG_USB_ULPI=y
++CONFIG_USB_STORAGE=y
++CONFIG_USB_UAS=y
++CONFIG_TMPFS=y
+-- 
+2.45.2
+

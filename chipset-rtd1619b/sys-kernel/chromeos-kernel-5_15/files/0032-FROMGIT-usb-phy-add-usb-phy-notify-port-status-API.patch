@@ -1,7 +1,7 @@
-From bf1c02b2862c87944f46e94c4dc4caccb71220e9 Mon Sep 17 00:00:00 2001
+From 92dfc2ae15e43eb54a0d4bdfc537d69911a70ab4 Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Thu, 25 May 2023 10:22:50 +0800
-Subject: [PATCH 32/80] FROMGIT: usb: phy: add usb phy notify port status API
+Subject: [PATCH 32/98] FROMGIT: usb: phy: add usb phy notify port status API
 
 In Realtek SoC, the parameter of usb phy is designed to can dynamic
 tuning base on port status. Therefore, add a notify callback of phy

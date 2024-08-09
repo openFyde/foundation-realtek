@@ -1,7 +1,7 @@
-From 64ecf7fef54a3736f9c4b8feaceabdef653008f5 Mon Sep 17 00:00:00 2001
+From 642dbfd6f97f07b723e79466e131008ff2b9e717 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Mon, 12 Jun 2023 09:53:46 +0800
-Subject: [PATCH 06/80] char: hw_random: add Realtek random number generator
+Subject: [PATCH 06/98] char: hw_random: add Realtek random number generator
 
 Change-Id: Ib9c38ab05e5b73f2e613fe3f8547a6d110f76481
 ---

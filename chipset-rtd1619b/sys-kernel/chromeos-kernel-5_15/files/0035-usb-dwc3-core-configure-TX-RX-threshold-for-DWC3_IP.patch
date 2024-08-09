@@ -1,7 +1,7 @@
-From e2588e4481f5979f08739fa66386639a46bfc210 Mon Sep 17 00:00:00 2001
+From ceff580584fbd38d52d9b95c6613dedde82e7dc0 Mon Sep 17 00:00:00 2001
 From: Stanley Chang <stanley_chang@realtek.com>
 Date: Tue, 12 Sep 2023 12:19:02 +0800
-Subject: [PATCH 35/80] usb: dwc3: core: configure TX/RX threshold for DWC3_IP
+Subject: [PATCH 35/98] usb: dwc3: core: configure TX/RX threshold for DWC3_IP
 
 [ upstream commit e72fc8d6a12af7ae8dd1b52cf68ed68569d29f80 ]
 

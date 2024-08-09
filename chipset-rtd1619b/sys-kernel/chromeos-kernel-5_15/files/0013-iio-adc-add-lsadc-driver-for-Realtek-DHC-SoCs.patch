@@ -1,7 +1,7 @@
-From cebc492fbcd1c91e80e90da52cfaefd2318ea87d Mon Sep 17 00:00:00 2001
+From 1134c2a5320a3d41eb2afbc42dc50778956bbd73 Mon Sep 17 00:00:00 2001
 From: James Tai <james.tai@realtek.com>
 Date: Wed, 16 Nov 2022 22:16:41 +0800
-Subject: [PATCH 13/80] iio: adc: add lsadc driver for Realtek DHC SoCs
+Subject: [PATCH 13/98] iio: adc: add lsadc driver for Realtek DHC SoCs
 
 Change-Id: If9a2eb86659d2617fee9b82fcfed404e7982ea74
 ---
