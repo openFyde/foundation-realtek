@@ -25,11 +25,5 @@ src_unpack() {
 }
 
 src_install() {
-  rm usr/lib/pkgconfig/{gbm,wayland-egl}.pc
-  insinto /usr/lib64
-  doins -r usr/lib/*
-  if use vulkan; then
-    insinto /usr/share/vulkan/icd.d
-    doins ${FILESDIR}/mali_ICD.json
-  fi
+  cp -pPR "${S}"/* "${D}/"
 }
