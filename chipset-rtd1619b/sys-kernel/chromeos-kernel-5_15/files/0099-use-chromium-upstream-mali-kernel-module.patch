@@ -1,0 +1,648 @@
+From ac506ee33bda35cef9cbc4989db653f3e06afcf2 Mon Sep 17 00:00:00 2001
+From: yaozenhu <yaozenhu@realtek.com>
+Date: Mon, 12 Aug 2024 11:52:21 +0800
+Subject: [PATCH] update chromium upstream mali kernel module
+
+---
+ .../dts/realtek/rtd1619b-bleedingedge.dtsi    |  17 +-
+ arch/arm64/boot/dts/realtek/rtd16xxb.dtsi     |  42 +++--
+ .../arm64/chromiumos-realtek.flavour.config   |   8 +-
+ drivers/gpu/arm/mali/platform/realtek/Kbuild  |   4 +
+ .../realtek/mali_kbase_clk_rate_trace.c       | 105 +++++++++++++
+ .../realtek/mali_kbase_config_platform.h      |  55 +++++++
+ .../realtek/mali_kbase_config_realtek.c       |  59 +++++++
+ .../platform/realtek/mali_kbase_runtime_pm.c  | 148 ++++++++++++++++++
+ drivers/soc/realtek/gpu/rtk-gpu_wrap.c        |  50 ++++++
+ 9 files changed, 464 insertions(+), 24 deletions(-)
+ create mode 100644 drivers/gpu/arm/mali/platform/realtek/Kbuild
+ create mode 100644 drivers/gpu/arm/mali/platform/realtek/mali_kbase_clk_rate_trace.c
+ create mode 100644 drivers/gpu/arm/mali/platform/realtek/mali_kbase_config_platform.h
+ create mode 100644 drivers/gpu/arm/mali/platform/realtek/mali_kbase_config_realtek.c
+ create mode 100644 drivers/gpu/arm/mali/platform/realtek/mali_kbase_runtime_pm.c
+
+diff --git a/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi b/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi
+index a24512ed9..1b801b351 100644
+--- a/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi
++++ b/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi
+@@ -35,6 +35,13 @@
+ 		regulator-min-microvolt = <1200000>;
+ 		regulator-max-microvolt = <1200000>;
+ 	};
++
++	gpu_supp: gpu-supply {
++		compatible = "regulator-fixed";
++		regulator-name = "core-gpu";
++		regulator-min-microvolt = <800000>;
++		regulator-max-microvolt = <800000>;
++	};
+ };
+ 
+ &audio_in_i2s {
+@@ -226,30 +233,32 @@
+ 	gpu_opps: opp-table-gpu {
+ 		compatible = "operating-points-v2",
+ 			     "operating-points-v2-mali";
++		mali-supply = <&gpu_supp>;
++		shadercores-supply = <&gpu_supp>;
+ 
+ 		opp-450000000 {
+ 			opp-hz = /bits/ 64 <450000000>;
+ 			opp-hz-real = /bits/ 64 <450000000>;
+-			opp-microvolt = <800000>;
++			opp-microvolt = <800000>, <800000>;
+ 			opp-suspend;
+ 		};
+ 
+ 		opp-550000000 {
+ 			opp-hz = /bits/ 64 <550000000>;
+ 			opp-hz-real = /bits/ 64 <550000000>;
+-			opp-microvolt = <800000>;
++			opp-microvolt = <800000>, <800000>;
+ 		};
+ 
+ 		opp-650000000 {
+ 			opp-hz = /bits/ 64 <650000000>;
+ 			opp-hz-real = /bits/ 64 <650000000>;
+-			opp-microvolt = <800000>;
++			opp-microvolt = <800000>, <800000>;
+ 		};
+ 
+ 		opp-702000000 {
+ 			opp-hz = /bits/ 64 <702000000>;
+ 			opp-hz-real = /bits/ 64 <702000000>;
+-			opp-microvolt = <800000>;
++			opp-microvolt = <800000>, <800000>;
+ 		};
+ 	};
+ };
+diff --git a/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi b/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
+index 48b4ff754..8ca3dcf0b 100644
+--- a/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
++++ b/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
+@@ -597,30 +597,42 @@
+ 				status = "disabled";
+ 			};
+ 
+-			gpu: gpu@1d0000 {
+-				compatible = "arm,mali-midgard", "realtek,rtd1619b-mali";
+-				reg = <0x1d0000 0x10000>;
+-				interrupts = <GIC_SPI 76 IRQ_TYPE_LEVEL_HIGH>,
+-					     <GIC_SPI 77 IRQ_TYPE_LEVEL_HIGH>,
+-					     <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>;
+-				interrupt-names = "JOB", "MMU", "GPU";
++			gpu-wrap@1d0000 {
++				reg = <0x1d0000 0x4000>,
++				      <0x1d6000 0x1000>;
++				reg-names = "ip", "bist";
++				compatible = "realtek,rtd1619b-gpu-wrap";
+ 				clocks = <&cc RTD1619B_CRT_CLK_EN_GPU>;
+-				clock-name = "clk_mali";
+ 				resets = <&cc RTD1619B_CRT_RSTN_GPU>, <&cc RTD1619B_CRT_RSTN_GPU_BIST>;
+ 				reset-names = "core", "bist";
+ 				power-domains = <&pwr_gpu>;
+ 				nvmem-cells = <&otp_bist_rst_ctrl>;
+ 				nvmem-cell-names = "bist_rst_ctrl";
+-				status = "disabled";
++
++				#address-cells = <1>;
++				#size-cells = <1>;
++				ranges = <0x0 0x1d0000 0x20000>;
+ 				assigned-clocks = <&cc RTD1619B_CRT_PLL_GPU>;
+ 				assigned-clock-rates = <702000000>;
+ 
+-				power_model {
+-					compatible = "arm,mali-simple-power-model";
+-					static-coefficient = <0>;
+-					dynamic-coefficient = <0>;
+-					ts = <0 0 0 0>;
+-					thermal-zone = "";
++				gpu: gpu@0 {
++					compatible = "arm,mali-midgard";
++					reg = <0x0 0x4000>;
++					interrupts = <GIC_SPI 76 IRQ_TYPE_LEVEL_HIGH>,
++						     <GIC_SPI 77 IRQ_TYPE_LEVEL_HIGH>,
++						     <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>;
++					interrupt-names = "JOB", "MMU", "GPU";
++					status = "disabled";
++					clocks = <&cc RTD1619B_CRT_CLK_EN_GPU>;
++					clock-name = "clk_mali";
++
++					power_model {
++						compatible = "arm,mali-simple-power-model";
++						static-coefficient = <0>;
++						dynamic-coefficient = <0>;
++						ts = <0 0 0 0>;
++						thermal-zone = "";
++					};
+ 				};
+ 			};
+ 
+diff --git a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+index e19d44d37..ae5be238b 100644
+--- a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
++++ b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+@@ -62,11 +62,9 @@ CONFIG_CPU_THERMAL=y
+ CONFIG_CPU_FREQ_THERMAL=y
+ CONFIG_RTK_THERMAL=y
+ CONFIG_RTK_THERMAL_CPU_CORE_COOLING=y
+-CONFIG_MALI_MIDGARD=m
+-CONFIG_MALI_PLATFORM_NAME="rtk"
+-CONFIG_MALI_GATOR_SUPPORT=n
+-CONFIG_MALI_DEVFREQ=y
+-CONFIG_MALI_MIDGARD_ENABLE_TRACE=y
++CONFIG_MALI=m
++CONFIG_MALI_EXPERT=y
++CONFIG_MALI_PLATFORM_NAME="realtek"
+ CONFIG_SOUND=y
+ CONFIG_SND=y
+ CONFIG_SND_TIMER=y
+diff --git a/drivers/gpu/arm/mali/platform/realtek/Kbuild b/drivers/gpu/arm/mali/platform/realtek/Kbuild
+new file mode 100644
+index 000000000..87ae5787d
+--- /dev/null
++++ b/drivers/gpu/arm/mali/platform/realtek/Kbuild
+@@ -0,0 +1,4 @@
++mali_kbase-y += \
++	platform/$(MALI_PLATFORM_DIR)/mali_kbase_config_realtek.o \
++	platform/$(MALI_PLATFORM_DIR)/mali_kbase_clk_rate_trace.o \
++	platform/$(MALI_PLATFORM_DIR)/mali_kbase_runtime_pm.o
+diff --git a/drivers/gpu/arm/mali/platform/realtek/mali_kbase_clk_rate_trace.c b/drivers/gpu/arm/mali/platform/realtek/mali_kbase_clk_rate_trace.c
+new file mode 100644
+index 000000000..4bcd5854d
+--- /dev/null
++++ b/drivers/gpu/arm/mali/platform/realtek/mali_kbase_clk_rate_trace.c
+@@ -0,0 +1,105 @@
++// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
++/*
++ *
++ * (C) COPYRIGHT 2015, 2017-2021 ARM Limited. All rights reserved.
++ *
++ * This program is free software and is provided to you under the terms of the
++ * GNU General Public License version 2 as published by the Free Software
++ * Foundation, and any use by you of this program is subject to the terms
++ * of such GNU license.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, you can access it online at
++ * http://www.gnu.org/licenses/gpl-2.0.html.
++ *
++ */
++
++#include <mali_kbase.h>
++#include <mali_kbase_defs.h>
++#include <linux/clk.h>
++#include "mali_kbase_config_platform.h"
++
++#if MALI_USE_CSF
++#include <asm/arch_timer.h>
++#endif
++
++static void *enumerate_gpu_clk(struct kbase_device *kbdev,
++		unsigned int index)
++{
++	if (index >= kbdev->nr_clocks)
++		return NULL;
++
++#if MALI_USE_CSF
++	if (of_machine_is_compatible("arm,juno"))
++		WARN_ON(kbdev->nr_clocks != 1);
++#endif
++
++	return kbdev->clocks[index];
++}
++
++static unsigned long get_gpu_clk_rate(struct kbase_device *kbdev,
++		void *gpu_clk_handle)
++{
++#if MALI_USE_CSF
++	/* On Juno fpga platforms, the GPU clock rate is reported as 600 MHZ at
++	 * the boot time. Then after the first call to kbase_devfreq_target()
++	 * the clock rate is reported as 450 MHZ and the frequency does not
++	 * change after that. But the actual frequency at which GPU operates
++	 * is always 50 MHz, which is equal to the frequency of system counter
++	 * and HW counters also increment at the same rate.
++	 * DVFS, which is a client of kbase_ipa_control, needs normalization of
++	 * GPU_ACTIVE counter to calculate the time for which GPU has been busy.
++	 * So for the correct normalization need to return the system counter
++	 * frequency value.
++	 * This is a reasonable workaround as the frequency value remains same
++	 * throughout. It can be removed after GPUCORE-25693.
++	 */
++	if (of_machine_is_compatible("arm,juno"))
++		return arch_timer_get_cntfrq();
++#endif
++
++	return clk_get_rate((struct clk *)gpu_clk_handle);
++}
++
++static int gpu_clk_notifier_register(struct kbase_device *kbdev,
++		void *gpu_clk_handle, struct notifier_block *nb)
++{
++	compiletime_assert(offsetof(struct clk_notifier_data, clk) ==
++		offsetof(struct kbase_gpu_clk_notifier_data, gpu_clk_handle),
++		"mismatch in the offset of clk member");
++
++	compiletime_assert(sizeof(((struct clk_notifier_data *)0)->clk) ==
++	     sizeof(((struct kbase_gpu_clk_notifier_data *)0)->gpu_clk_handle),
++	     "mismatch in the size of clk member");
++
++#if MALI_USE_CSF
++	/* Frequency is fixed on Juno platforms */
++	if (of_machine_is_compatible("arm,juno"))
++		return 0;
++#endif
++
++	return clk_notifier_register((struct clk *)gpu_clk_handle, nb);
++}
++
++static void gpu_clk_notifier_unregister(struct kbase_device *kbdev,
++		void *gpu_clk_handle, struct notifier_block *nb)
++{
++#if MALI_USE_CSF
++	if (of_machine_is_compatible("arm,juno"))
++		return;
++#endif
++
++	clk_notifier_unregister((struct clk *)gpu_clk_handle, nb);
++}
++
++struct kbase_clk_rate_trace_op_conf clk_rate_trace_ops = {
++	.get_gpu_clk_rate = get_gpu_clk_rate,
++	.enumerate_gpu_clk = enumerate_gpu_clk,
++	.gpu_clk_notifier_register = gpu_clk_notifier_register,
++	.gpu_clk_notifier_unregister = gpu_clk_notifier_unregister,
++};
+diff --git a/drivers/gpu/arm/mali/platform/realtek/mali_kbase_config_platform.h b/drivers/gpu/arm/mali/platform/realtek/mali_kbase_config_platform.h
+new file mode 100644
+index 000000000..1ac569a6f
+--- /dev/null
++++ b/drivers/gpu/arm/mali/platform/realtek/mali_kbase_config_platform.h
+@@ -0,0 +1,55 @@
++/*
++ *
++ * (C) COPYRIGHT 2014-2017 ARM Limited. All rights reserved.
++ *
++ * This program is free software and is provided to you under the terms of the
++ * GNU General Public License version 2 as published by the Free Software
++ * Foundation, and any use by you of this program is subject to the terms
++ * of such GNU licence.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, you can access it online at
++ * http://www.gnu.org/licenses/gpl-2.0.html.
++ *
++ * SPDX-License-Identifier: GPL-2.0
++ *
++ */
++
++/**
++ * Power management configuration
++ *
++ * Attached value: pointer to @ref kbase_pm_callback_conf
++ * Default value: See @ref kbase_pm_callback_conf
++ */
++#define POWER_MANAGEMENT_CALLBACKS (&pm_callbacks)
++
++/**
++ * Platform specific configuration functions
++ *
++ * Attached value: pointer to @ref kbase_platform_funcs_conf
++ * Default value: See @ref kbase_platform_funcs_conf
++ */
++#define PLATFORM_FUNCS (&platform_funcs)
++
++#define CLK_RATE_TRACE_OPS (&clk_rate_trace_ops)
++
++extern struct kbase_pm_callback_conf pm_callbacks;
++extern struct kbase_clk_rate_trace_op_conf clk_rate_trace_ops;
++extern struct kbase_platform_funcs_conf platform_funcs;
++
++/**
++ * Autosuspend delay
++ *
++ * The delay time (in milliseconds) to be used for autosuspend
++ */
++#define AUTO_SUSPEND_DELAY (1)
++
++#if IS_ENABLED(CONFIG_OF)
++extern const struct of_device_id kbase_dt_ids[];
++#endif
++
+diff --git a/drivers/gpu/arm/mali/platform/realtek/mali_kbase_config_realtek.c b/drivers/gpu/arm/mali/platform/realtek/mali_kbase_config_realtek.c
+new file mode 100644
+index 000000000..f66ac78c0
+--- /dev/null
++++ b/drivers/gpu/arm/mali/platform/realtek/mali_kbase_config_realtek.c
+@@ -0,0 +1,59 @@
++#include <linux/of.h>
++#include <mali_kbase.h>
++#include <mali_kbase_defs.h>
++#include "mali_kbase_config_platform.h"
++
++#if IS_ENABLED(CONFIG_OF)
++const struct of_device_id kbase_dt_ids[] = {
++        { .compatible = "arm,malit6xx" },
++        { .compatible = "arm,mali-midgard" },
++        { .compatible = "arm,mali-bifrost" },
++        { .compatible = "arm,mali-valhall" },
++        { /* sentinel */ }
++};
++MODULE_DEVICE_TABLE(of, kbase_dt_ids);
++#endif
++
++#ifndef CONFIG_OF
++int kbase_platform_register(void)
++{
++        return 0;
++}
++
++void kbase_platform_unregister(void)
++{
++}
++#endif
++
++#ifdef CONFIG_MALI_DVFS
++#if MALI_USE_CSF
++int kbase_platform_dvfs_event(struct kbase_device *kbdev, u32 utilisation)
++#else
++int kbase_platform_dvfs_event(struct kbase_device *kbdev, u32 utilisation, u32 util_gl_share, u32 util_cl_share[2])
++#endif
++{
++        return 1;
++}
++#endif /* CONFIG_MALI_DVFS */
++
++
++static int kbase_platform_init(struct kbase_device *kbdev)
++{
++	return 0;
++}
++
++static void kbase_platform_term(struct kbase_device *kbdev)
++{
++}
++
++struct kbase_platform_funcs_conf platform_funcs = {
++	.platform_init_func = kbase_platform_init,
++	.platform_term_func = kbase_platform_term,
++};
++
++static struct kbase_platform_config dummy_platform_config;
++
++struct kbase_platform_config *kbase_get_platform_config(void)
++{
++	return &dummy_platform_config;
++}
+diff --git a/drivers/gpu/arm/mali/platform/realtek/mali_kbase_runtime_pm.c b/drivers/gpu/arm/mali/platform/realtek/mali_kbase_runtime_pm.c
+new file mode 100644
+index 000000000..fbed5118b
+--- /dev/null
++++ b/drivers/gpu/arm/mali/platform/realtek/mali_kbase_runtime_pm.c
+@@ -0,0 +1,148 @@
++/*
++ *
++ * (C) COPYRIGHT 2015, 2017 ARM Limited. All rights reserved.
++ *
++ * This program is free software and is provided to you under the terms of the
++ * GNU General Public License version 2 as published by the Free Software
++ * Foundation, and any use by you of this program is subject to the terms
++ * of such GNU licence.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, you can access it online at
++ * http://www.gnu.org/licenses/gpl-2.0.html.
++ *
++ * SPDX-License-Identifier: GPL-2.0
++ *
++ */
++
++#include <mali_kbase.h>
++#include <mali_kbase_defs.h>
++#include <linux/pm_runtime.h>
++#include <linux/clk.h>
++#include <linux/clk-provider.h>
++#include "mali_kbase_config_platform.h"
++
++static inline void kbdev_enable_clocks(struct kbase_device *kbdev)
++{
++	int i;
++
++	for (i = 0; i < kbdev->nr_clocks; i++)
++		clk_prepare_enable(kbdev->clocks[i]);
++}
++
++static inline void kbdev_disable_clocks(struct kbase_device *kbdev)
++{
++	int i;
++
++	for (i = 0; i < kbdev->nr_clocks; i++)
++		clk_disable_unprepare(kbdev->clocks[i]);
++}
++
++static int pm_callback_power_on(struct kbase_device *kbdev)
++{
++	int ret = 1; /* Assume GPU has been powered off */
++	int error;
++
++	dev_dbg(kbdev->dev, "pm_callback_power_on %p\n",
++		(void *)kbdev->dev->pm_domain);
++
++	error = pm_runtime_get_sync(kbdev->dev);
++	if (error == 1) {
++		/*
++		 * Let core know that the chip has not been
++		 * powered off, so we can save on re-initialization.
++		 */
++		ret = 0;
++	}
++
++	dev_dbg(kbdev->dev, "pm_runtime_get_sync returned %d\n", error);
++
++	return ret;
++}
++
++static void pm_callback_power_off(struct kbase_device *kbdev)
++{
++	dev_dbg(kbdev->dev, "pm_callback_power_off\n");
++
++	pm_runtime_mark_last_busy(kbdev->dev);
++	pm_runtime_put_autosuspend(kbdev->dev);
++}
++
++#ifdef KBASE_PM_RUNTIME
++static int kbase_device_runtime_init(struct kbase_device *kbdev)
++{
++	int ret = 0;
++
++	dev_dbg(kbdev->dev, "kbase_device_runtime_init\n");
++
++	pm_runtime_set_autosuspend_delay(kbdev->dev, AUTO_SUSPEND_DELAY);
++	pm_runtime_use_autosuspend(kbdev->dev);
++
++	pm_runtime_set_active(kbdev->dev);
++	pm_runtime_enable(kbdev->dev);
++
++	if (!pm_runtime_enabled(kbdev->dev)) {
++		dev_warn(kbdev->dev, "pm_runtime not enabled");
++		ret = -ENOSYS;
++	}
++
++	return ret;
++}
++
++static void kbase_device_runtime_disable(struct kbase_device *kbdev)
++{
++	dev_dbg(kbdev->dev, "kbase_device_runtime_disable\n");
++	pm_runtime_disable(kbdev->dev);
++}
++#endif
++
++static int pm_callback_runtime_on(struct kbase_device *kbdev)
++{
++	dev_dbg(kbdev->dev, "pm_callback_runtime_on\n");
++	kbdev_enable_clocks(kbdev);
++
++	return 0;
++}
++
++static void pm_callback_runtime_off(struct kbase_device *kbdev)
++{
++	dev_dbg(kbdev->dev, "pm_callback_runtime_off\n");
++	kbdev_disable_clocks(kbdev);
++}
++
++static void pm_callback_resume(struct kbase_device *kbdev)
++{
++	int ret;
++
++	ret = pm_callback_runtime_on(kbdev);
++	WARN_ON(ret);
++}
++
++static void pm_callback_suspend(struct kbase_device *kbdev)
++{
++	pm_callback_runtime_off(kbdev);
++}
++
++struct kbase_pm_callback_conf pm_callbacks = {
++	.power_on_callback           = pm_callback_power_on,
++	.power_off_callback          = pm_callback_power_off,
++	.power_suspend_callback      = pm_callback_suspend,
++	.power_resume_callback       = pm_callback_resume,
++#ifdef KBASE_PM_RUNTIME
++	.power_runtime_init_callback = kbase_device_runtime_init,
++	.power_runtime_term_callback = kbase_device_runtime_disable,
++	.power_runtime_on_callback   = pm_callback_runtime_on,
++	.power_runtime_off_callback  = pm_callback_runtime_off,
++#else /* KBASE_PM_RUNTIME */
++	.power_runtime_init_callback = NULL,
++	.power_runtime_term_callback = NULL,
++	.power_runtime_on_callback   = NULL,
++	.power_runtime_off_callback  = NULL,
++#endif /* KBASE_PM_RUNTIME */
++};
++
+diff --git a/drivers/soc/realtek/gpu/rtk-gpu_wrap.c b/drivers/soc/realtek/gpu/rtk-gpu_wrap.c
+index 59558835b..2cd0a1751 100644
+--- a/drivers/soc/realtek/gpu/rtk-gpu_wrap.c
++++ b/drivers/soc/realtek/gpu/rtk-gpu_wrap.c
+@@ -13,6 +13,7 @@
+ #include <linux/mfd/syscon.h>
+ #include <linux/regmap.h>
+ #include <linux/module.h>
++#include <linux/nvmem-consumer.h>
+ #include <linux/of.h>
+ #include <linux/of_platform.h>
+ #include <linux/platform_device.h>
+@@ -41,10 +42,41 @@ struct rtk_gpu_wrap_data {
+ struct rtk_gpu_wrap_desc {
+ 	u32 has_bisr : 1;
+ 	u32 request_syscon_dbgport : 1;
++	u32 request_nvmem_bist_rst_ctrl : 1;
+ 	int (*setup_bisr)(struct rtk_gpu_wrap_data *data);
+ 	int (*do_bisr)(struct rtk_gpu_wrap_data *data);
+ };
+ 
++static void rtd1619b_gpu_wrap_sram_fixup(struct rtk_gpu_wrap_data *data)
++{
++	u32 val = readl(data->reg_bist + 0xb0);
++
++	writel(val | 0x8051c364, data->reg_bist + 0xb0);
++	writel(val & ~0x8051c364, data->reg_bist + 0xb0);
++}
++
++static int rtd1619b_do_bisr(struct rtk_gpu_wrap_data *data)
++{
++	unsigned int regval;
++	int ret;
++
++	rtd1619b_gpu_wrap_sram_fixup(data);
++
++	if (!data->auto_bist_enabled)
++		writel(0x00003030, data->reg_bist + 0x10);
++
++	ret = readl_poll_timeout(data->reg_bist + 0x40, regval, (regval & 0x1001) == 0x1001, 0, 1000000);
++	if (ret || regval != 0x1001)
++		dev_warn(data->dev, "error %pe: bisr failed: status=%08x\n", ERR_PTR(ret), regval);
++	return ret;
++}
++
++static const struct rtk_gpu_wrap_desc rtd1619b_gpu_wrap_desc = {
++	.has_bisr = 1,
++	.request_nvmem_bist_rst_ctrl = 1,
++	.do_bisr = rtd1619b_do_bisr,
++};
++
+ static int rtd1319d_auto_bist_enabled(struct rtk_gpu_wrap_data *data)
+ {
+ 	unsigned int st1, st2;
+@@ -250,6 +282,23 @@ static int rtk_gpu_wrap_probe(struct platform_device *pdev)
+ 		return -EINVAL;
+ 	}
+ 
++	if (data->desc->request_nvmem_bist_rst_ctrl) {
++		struct nvmem_cell *cell;
++	        unsigned char *buf;
++		size_t buf_size;
++
++		cell = nvmem_cell_get(dev, "bist_rst_ctrl");
++		if (IS_ERR(cell))
++			return dev_err_probe(dev, PTR_ERR(cell), "failed to get bist-rst-ctrl");
++
++		buf = nvmem_cell_read(cell, &buf_size);
++		dev_info(dev, "bist-rst-ctrl=%d\n", buf[0]);
++		if (buf[0] == 0x2)
++			data->auto_bist_enabled = 1;
++		kfree(buf);
++		nvmem_cell_put(cell);
++	}
++
+ 	if (data->desc->has_bisr) {
+ 		data->reg_bist = devm_platform_ioremap_resource_byname(pdev, "bist");
+ 		if (IS_ERR(data->reg_bist))
+@@ -307,6 +356,7 @@ static void rtk_gpu_wrap_shutdown(struct platform_device *pdev)
+ }
+ 
+ static const struct of_device_id rtk_gpu_wrap_match[] = {
++	{ .compatible = "realtek,rtd1619b-gpu-wrap", .data = &rtd1619b_gpu_wrap_desc, },
+ 	{ .compatible = "realtek,rtd1319d-gpu-wrap", .data = &rtd1319d_gpu_wrap_desc, },
+ 	{ .compatible = "realtek,rtd1315e-gpu-wrap", .data = &rtd1315e_gpu_wrap_desc, },
+ 	{}
+-- 
+2.34.1
+
