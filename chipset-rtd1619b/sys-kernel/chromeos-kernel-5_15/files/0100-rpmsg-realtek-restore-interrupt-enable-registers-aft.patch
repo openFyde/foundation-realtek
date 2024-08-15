@@ -1,0 +1,133 @@
+From efabd3da334d4448d97c1c0b6f0f35267e019bdd Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Wed, 14 Aug 2024 06:50:41 +0800
+Subject: [PATCH 100/108] rpmsg: realtek: restore interrupt enable registers
+ after resuming from S3
+
+Change-Id: I21d9634b9579b0705bee88f149574f98afa54c8b
+---
+ drivers/rpmsg/rpmsg_rtk.c | 52 ++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 46 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/rpmsg/rpmsg_rtk.c b/drivers/rpmsg/rpmsg_rtk.c
+index a9fab2cd522e..07f782c4f7c2 100644
+--- a/drivers/rpmsg/rpmsg_rtk.c
++++ b/drivers/rpmsg/rpmsg_rtk.c
+@@ -182,6 +182,7 @@ struct rtk_rcpu {
+ 	int big_endian;
+ 	irqreturn_t (*isr)(int irq, void *data);
+ 	void (*send_interrupt)(struct rtk_rcpu *rcpu);
++	struct list_head list;
+ };
+ 
+ struct rtk_rpmsg_device {
+@@ -1253,7 +1254,7 @@ static const struct file_operations rpmsg_debug_ops = {
+ 	.release = single_release,
+ };
+ 
+-static int rtk_register_rcpu(struct device *parent,
++static struct rtk_rcpu *rtk_register_rcpu(struct device *parent,
+ 					struct device_node *node,
+ 					struct dentry *rpmsg_dir)
+ {
+@@ -1267,7 +1268,7 @@ static int rtk_register_rcpu(struct device *parent,
+ 
+ 	rcpu = kzalloc(sizeof(*rcpu), GFP_KERNEL);
+ 	if (!rcpu)
+-		return -ENOMEM;
++		return ERR_PTR(-ENOMEM);
+ 
+ 	rcpu->dev.parent = parent;
+ 	rcpu->dev.release = rtk_rcpu_release;
+@@ -1428,7 +1429,7 @@ static int rtk_register_rcpu(struct device *parent,
+ 	}
+ 	dev_info(&rcpu->dev, "probed\n");
+ 
+-	return 0;
++	return rcpu;
+ 
+ unregister_dev:
+ 	device_unregister(&rcpu->dev);
+@@ -1436,7 +1437,7 @@ static int rtk_register_rcpu(struct device *parent,
+ err:
+ 	kfree(rcpu);
+ 
+-	return ret;
++	return ERR_PTR(ret);
+ }
+ 
+ int rcpu_endian_check(struct device *dev)
+@@ -1569,6 +1570,8 @@ static int rtk_rcpu_probe(struct platform_device *pdev)
+ 	int ret = 0;
+ 	struct device_node *node;
+ 	struct dentry *rpmsg_dir;
++	struct list_head *rcpus_list;
++	struct rtk_rcpu *rcpu;
+ 
+ 	if (IS_ENABLED(CONFIG_RTK_FW_REMOTEPROC)) {
+ 		ret = is_rprocs_boot(&pdev->dev);
+@@ -1580,8 +1583,16 @@ static int rtk_rcpu_probe(struct platform_device *pdev)
+ 
+ 	raw_notifier_chain_register(&rtk_rpmsg_chain_head, &rtk_rpmsg_notifier_block);
+ 
+-	for_each_available_child_of_node(pdev->dev.of_node, node)
+-		rtk_register_rcpu(&pdev->dev, node, rpmsg_dir);
++	rcpus_list = kmalloc(sizeof(*rcpus_list), GFP_KERNEL);
++	INIT_LIST_HEAD(rcpus_list);
++
++	for_each_available_child_of_node(pdev->dev.of_node, node) {
++		rcpu = rtk_register_rcpu(&pdev->dev, node, rpmsg_dir);
++		if (!IS_ERR(rcpu))
++			list_add(&rcpu->list, rcpus_list);
++	}
++
++	 platform_set_drvdata(pdev, rcpus_list);
+ 
+ 	return ret;
+ }
+@@ -1595,6 +1606,34 @@ static int rtk_rcpu_remove(struct platform_device *pdev)
+ 	return ret;
+ }
+ 
++#ifdef CONFIG_PM_SLEEP
++static int rtk_rcpu_suspend(struct device *dev)
++{
++	return 0;
++}
++
++static int rtk_rcpu_resume(struct device *dev)
++{
++	struct list_head *rcpus_list = dev_get_drvdata(dev);
++	struct list_head *list;
++
++	list_for_each(list, rcpus_list) {
++		struct rtk_rcpu *rcpu;
++
++		rcpu = list_entry(list, struct rtk_rcpu, list);
++		writel(rcpu->info.intr_en | RPC_INT_WRITE_EN, rcpu->rcpu_intr_base + RPC_SB2_INT_EN);
++	}
++
++	return 0;
++}
++
++static SIMPLE_DEV_PM_OPS(rtk_rcpu_pm_ops, rtk_rcpu_suspend,
++			 rtk_rcpu_resume);
++#else
++static const struct dev_pm_ops rtk_rcpu_pm_ops = {};
++#endif
++
++
+ static const struct of_device_id rtk_rcpu_of_match[] = {
+ 	{ .compatible = "rtk-rpmsg" },
+ 	{},
+@@ -1607,6 +1646,7 @@ static struct platform_driver rtk_rcpu_driver = {
+ 	.driver = {
+ 		.name = "rtk-rpmsg",
+ 		.of_match_table = rtk_rcpu_of_match,
++		.pm     = &rtk_rcpu_pm_ops,
+ 	},
+ };
+ 
+-- 
+2.45.2
+

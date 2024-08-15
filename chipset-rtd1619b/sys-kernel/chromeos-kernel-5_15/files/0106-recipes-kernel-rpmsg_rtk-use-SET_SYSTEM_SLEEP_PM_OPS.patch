@@ -1,0 +1,42 @@
+From 2196333db571d1d8ecde75758ccd2483a0e776fd Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Wed, 14 Aug 2024 07:07:46 +0800
+Subject: [PATCH 106/108] recipes-kernel: rpmsg_rtk: use
+ SET_SYSTEM_SLEEP_PM_OPS
+
+- rpmsg: depends on RTK_FW_REMOTEPROC in RPMSG_RTK_RPC
+
+Change-Id: Ie47c2948cd1830f74c6b5df117834157d2018f90
+---
+ drivers/rpmsg/Kconfig     | 1 +
+ drivers/rpmsg/rpmsg_rtk.c | 2 +-
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/rpmsg/Kconfig b/drivers/rpmsg/Kconfig
+index cff32007298e..6fdb0826bb26 100644
+--- a/drivers/rpmsg/Kconfig
++++ b/drivers/rpmsg/Kconfig
+@@ -83,6 +83,7 @@ config RPMSG_VIRTIO
+ 
+ config RPMSG_RTK_RPC
+ 	tristate "RTK RPC DRIVER"
++	depends on RTK_FW_REMOTEPROC
+ 	select RPMSG
+ 
+ endmenu
+diff --git a/drivers/rpmsg/rpmsg_rtk.c b/drivers/rpmsg/rpmsg_rtk.c
+index d85e738c29ff..70a4579bed97 100644
+--- a/drivers/rpmsg/rpmsg_rtk.c
++++ b/drivers/rpmsg/rpmsg_rtk.c
+@@ -1657,7 +1657,7 @@ static int rtk_rcpu_resume(struct device *dev)
+ }
+ 
+ static const struct dev_pm_ops rtk_rcpu_pm_ops = {
+-	SET_LATE_SYSTEM_SLEEP_PM_OPS(rtk_rcpu_suspend,
++	SET_SYSTEM_SLEEP_PM_OPS(rtk_rcpu_suspend,
+ 			 rtk_rcpu_resume)
+ };
+ #else
+-- 
+2.45.2
+

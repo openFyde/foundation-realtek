@@ -1,0 +1,104 @@
+From db8615edcb4bd0dda7229485dcacb81cea438a1a Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Wed, 14 Aug 2024 07:12:04 +0800
+Subject: [PATCH 107/108] linux-5.15: remoteproc: handle AVCPU power on/off on
+ suspend/resume
+
+SW-8034
+
+Change-Id: Ie388157778c912389f4a3f8c44a4c40a670e493f
+---
+ drivers/remoteproc/rtk_fw_remoteproc.c | 53 +++++++++++++++++++++++++-
+ 1 file changed, 51 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/remoteproc/rtk_fw_remoteproc.c b/drivers/remoteproc/rtk_fw_remoteproc.c
+index 2428a7f99a00..7f53f2cf4c4e 100644
+--- a/drivers/remoteproc/rtk_fw_remoteproc.c
++++ b/drivers/remoteproc/rtk_fw_remoteproc.c
+@@ -319,6 +319,19 @@ static int acpu_start(struct rproc *rproc)
+ 
+ static int acpu_stop(struct rproc *rproc)
+ {
++	struct arm_smccc_res res;
++	void __iomem *map_bit;
++
++	dev_info(&rproc->dev, "afw bring down\n");
++
++	/* Disable acpu clock using bit 6 and 7 */
++	map_bit = ioremap(SYS_CLOCK_ENABLE3, 0x120);
++	writel(0x80, map_bit);
++
++	/* Disable reset using bit 4 and 5 */
++	arm_smccc_smc(0x8400ffff, SYS_SOFT_RESET6,
++		0x20, 0, 0, 0, 0, 0, &res);
++
+ 	return 0;
+ };
+ 
+@@ -391,6 +404,24 @@ static int vcpu_start(struct rproc *rproc)
+ 
+ static int vcpu_stop(struct rproc *rproc)
+ {
++	void __iomem *map_bit;
++
++	dev_info(&rproc->dev, "vfw bring down\n");
++
++	map_bit = ioremap(SYS_PLL_VE2_2, 0x120);
++	writel(0x00000004, map_bit); /* pllvcpu2 power control off */
++
++	map_bit = ioremap(SYS_CLOCK_ENABLE1, 0x120);
++	writel(0x00800000, map_bit); /* clock disable for ve2 H256 */
++
++	map_bit = ioremap(SYS_SOFT_RESET1, 0x120);
++	writel(0x8000, map_bit); /* reset ve2 bist */
++
++	map_bit = ioremap(RESET_VE2_REGISTER, 0x120);
++	writel(0x0, map_bit); /* reset ve2 bit */
++
++	iounmap(map_bit);
++
+ 	return 0;
+ };
+ 
+@@ -787,18 +818,36 @@ MODULE_DEVICE_TABLE(of, rtk_rproc_of_match);
+ #ifdef CONFIG_PM
+ static int rtk_fw_rpm_suspend(struct device *dev)
+ {
+-	return -EBUSY;
++	struct rproc *rproc = dev_get_drvdata(dev);
++	struct rtk_fw_rproc *rtk_rproc = rproc->priv;
++
++	if (rtk_rproc->cert_type == AFW || rtk_rproc->cert_type == VFW)
++		if (rproc->ops && rproc->ops->stop)
++			rproc->ops->stop(rproc);
++
++	return 0;
+ }
+ 
+ static int rtk_fw_rpm_resume(struct device *dev)
+ {
++	struct rproc *rproc = dev_get_drvdata(dev);
++	struct rtk_fw_rproc *rtk_rproc = rproc->priv;
++
++	if (rtk_rproc->cert_type == AFW || rtk_rproc->cert_type == VFW)
++		if (rproc->ops && rproc->ops->start)
++			rproc->ops->start(rproc);
++
+ 	return 0;
+ }
+ #endif
+ 
++#ifdef CONFIG_PM
+ static const struct dev_pm_ops rtk_fw_rproc_pm_ops = {
+-	SET_RUNTIME_PM_OPS(rtk_fw_rpm_suspend, rtk_fw_rpm_resume, NULL)
++	SET_LATE_SYSTEM_SLEEP_PM_OPS(rtk_fw_rpm_suspend, rtk_fw_rpm_resume)
+ };
++#else
++static const struct dev_pm_ops rtk_fw_rproc_pm_ops = {};
++#endif
+ 
+ static struct platform_driver rtk_rproc_driver = {
+ 	.probe = rtk_rproc_probe,
+-- 
+2.45.2
+

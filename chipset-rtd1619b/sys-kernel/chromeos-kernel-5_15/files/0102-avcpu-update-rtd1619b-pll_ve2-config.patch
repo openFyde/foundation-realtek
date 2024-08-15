@@ -1,0 +1,30 @@
+From 362bdc747c50dbafa7066fa95cb6f87b51d549f7 Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Wed, 14 Aug 2024 06:55:21 +0800
+Subject: [PATCH 102/108] avcpu: update rtd1619b pll_ve2 config
+
+Change-Id: I2316111cc1a93be0f156867c299225c7a135b66b
+---
+ drivers/remoteproc/rtk_fw_remoteproc.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/remoteproc/rtk_fw_remoteproc.c b/drivers/remoteproc/rtk_fw_remoteproc.c
+index 6cfd2a5e8eb8..2428a7f99a00 100644
+--- a/drivers/remoteproc/rtk_fw_remoteproc.c
++++ b/drivers/remoteproc/rtk_fw_remoteproc.c
+@@ -323,9 +323,10 @@ static int acpu_stop(struct rproc *rproc)
+ };
+ 
+ #define SYS_VE_CKSEL	0x9800004C
+-#define PLL_VE_FREQ_540 0x08800110
++#define PLL_VE_FREQ_432 0x088011d0
++#define PLL_VE_FREQ_540 0x08801250
+ #define PLL_VE_FREQ_553 0x08801260
+-#define PLL_VE_FREQ_621 0x08800140
++#define PLL_VE_FREQ_621 0x088012b0
+ #define PLL_VE_FREQ_648 0x088012d0
+ #define SYS_PLL_VE2_1	0x980001D0
+ #define SYS_PLL_VE2_2	0x980001D4
+-- 
+2.45.2
+

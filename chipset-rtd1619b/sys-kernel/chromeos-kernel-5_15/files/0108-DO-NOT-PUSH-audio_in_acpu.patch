@@ -1,0 +1,236 @@
+From 53ca837f69377c1f9c4ad599b065a08a82442d66 Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Thu, 15 Aug 2024 12:03:43 +0800
+Subject: [PATCH 108/108] [DO NOT PUSH] audio_in_acpu
+
+Change-Id: I6bb66c9a8b8e99794b74ec5326531c42b5e702e6
+---
+ .../dts/realtek/rtd1619b-bleedingedge.dtsi     |  4 ++--
+ arch/arm64/boot/dts/realtek/rtd16xxb.dtsi      |  7 +++++--
+ .../arm64/chromiumos-realtek.flavour.config    | 11 +++++++----
+ drivers/gpu/drm/realtek/rtk_hdmi.c             |  7 ++++---
+ drivers/remoteproc/rtk_fw_remoteproc.c         |  2 +-
+ drivers/rpmsg/rpmsg_rtk.c                      |  2 ++
+ sound/soc/realtek/common/snd-hifi-realtek.c    |  4 ++--
+ sound/soc/realtek/common/snd-realtek.c         | 18 +++++++++++++++++-
+ 8 files changed, 40 insertions(+), 15 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi b/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi
+index 1b801b35176b..b32e62d9720a 100644
+--- a/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi
++++ b/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi
+@@ -486,11 +486,11 @@ &rtk_pm {
+ &sb2_inv {
+ 	status = "okay";
+ };
+-
++/*
+ &sd {
+ 	status = "okay";
+ };
+-
++*/
+ &sdio {
+ 	bus-width = <4>;
+ 	non-removable;
+diff --git a/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi b/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
+index 8ca3dcf0b4bb..caaa82b7115d 100644
+--- a/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
++++ b/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
+@@ -942,7 +942,8 @@ pm_hifi: pm-hifi {
+ 	};
+ 
+ 	sound: sound {
+-		compatible = "realtek,rtk-alsa-hifi";
++		//compatible = "realtek,rtk-alsa-hifi";
++		compatible = "realtek,rtk-alsa-pcm";
+ 		realtek,krpc-agent = <&acpu_kernel_agent>,
+ 				     <&hifi_kernel_agent>;
+ 		status = "disabled";
+@@ -1353,10 +1354,12 @@ vcpu-intr-channel {
+ 				rx-fifo-size = <0x200>;
+ 			};
+ 		};
++
+ 		hifi-rpc {
+ 			interrupts = <0 104 4>;
+ 			big-endian = <0>;
+ 			rproc = <&hifi_rproc>;
++			status = "disabled";
+ 			hifi-kernel-channel {
+ 				compatible = "realtek,rpc-kernel-hifi";
+ 				name = "hifi-kernel-channel";
+@@ -1637,7 +1640,7 @@ fss: fss@b70 {
+ / {
+ 	audio_out: audio-out {
+ 		compatible = "realtek,audio-out";
+-		remote-cpu = <1>; /* 0: AFW 1: HIFI */
++		remote-cpu = <0>; /* 0: AFW 1: HIFI */
+ 		realtek,krpc-agent = <&acpu_kernel_agent>,
+ 				     <&hifi_kernel_agent>;
+ 		status = "disabled";
+diff --git a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+index df10d5ca92ff..52f06b48921c 100644
+--- a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
++++ b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+@@ -47,7 +47,7 @@ CONFIG_RTK_EFUSE=y
+ CONFIG_RTK_FAN=y
+ CONFIG_RTK_FW_REMOTEPROC=m
+ CONFIG_RTK_HDMI_CEC=y
+-CONFIG_RTK_PM_HIFI=m
++#CONFIG_RTK_PM_HIFI=m
+ CONFIG_RTK_REBOOT_MODE=y
+ CONFIG_RTK_WATCHDOG=y
+ CONFIG_SERIAL_8250=y
+@@ -80,12 +80,15 @@ CONFIG_SND_HDA_PREALLOC_SIZE=64
+ CONFIG_SND_SOC=y
+ CONFIG_SND_SOC_COMPRESS=y
+ CONFIG_SND_ACPU_AO=m
+-CONFIG_SND_HIFI_AO=m
++#CONFIG_SND_HIFI_AO=m
+ CONFIG_SND_SOC_REALTEK=m
+ CONFIG_SND_SOC_REALTEK_NOTIFY=m
+ CONFIG_SND_SOC_REALTEK_FL3236=m
+-CONFIG_RTK_PM_HIFI=m
+-CONFIG_RTK_CACHEABLE_HEADER=y
++CONFIG_SND_VERBOSE_PRINTK=y
++CONFIG_SND_DEBUG=y
++CONFIG_SND_DEBUG_VERBOSE=y
++#CONFIG_RTK_PM_HIFI=m
++#CONFIG_RTK_CACHEABLE_HEADER=y
+ CONFIG_ATA=y
+ CONFIG_USB_CONFIGFS=m
+ CONFIG_USB_CONFIGFS_F_FS=y
+diff --git a/drivers/gpu/drm/realtek/rtk_hdmi.c b/drivers/gpu/drm/realtek/rtk_hdmi.c
+index 7d27d5b0bdff..43f7f3e62ecc 100644
+--- a/drivers/gpu/drm/realtek/rtk_hdmi.c
++++ b/drivers/gpu/drm/realtek/rtk_hdmi.c
+@@ -36,7 +36,8 @@
+ #define OFF_FLAG_DIS_AUDIO  (1 << 2)
+ #define OFF_FLAG_NORMAL (OFF_FLAG_HDCP | OFF_FLAG_AVMUTE | OFF_FLAG_DIS_AUDIO)
+ 
+-extern void rtk_snd_hotplug_notify(int hotplug);
++extern void rtk_snd_hotplug_notify_hifi(int hotplug);
++extern void rtk_snd_hotplug_notify_afw(int hotplug);
+ 
+ static const unsigned int rtk_hdmi_cable[] = {
+ 	EXTCON_DISP_HDMI,
+@@ -1037,11 +1038,11 @@ static bool rtk_hdmi_update_hpd_state(struct rtk_hdmi *hdmi)
+ 			rtk_hdmi_update_sink_info(hdmi);
+ 			cec_notifier_set_phys_addr_from_edid(hdmi->cec, hdmi->edid_cache);
+ 			dev_info(hdmi->dev, "get edid done");
+-			rtk_snd_hotplug_notify(1);
++			rtk_snd_hotplug_notify_afw(1);
+ 		}
+ 	} else if ((hdmi->hpd_state == 1) && (hpd == 0)) {
+ 		cec_notifier_phys_addr_invalidate(hdmi->cec);
+-		rtk_snd_hotplug_notify(0);
++		rtk_snd_hotplug_notify_afw(0);
+ 	}
+ 
+ 	if ((hpd != hdmi->hpd_state) || (rxsense != hdmi->rxsense_state)) {
+diff --git a/drivers/remoteproc/rtk_fw_remoteproc.c b/drivers/remoteproc/rtk_fw_remoteproc.c
+index 7f53f2cf4c4e..1545ac677b03 100644
+--- a/drivers/remoteproc/rtk_fw_remoteproc.c
++++ b/drivers/remoteproc/rtk_fw_remoteproc.c
+@@ -810,7 +810,7 @@ static const struct of_device_id rtk_rproc_of_match[] = {
+ 	{ .compatible = "rtk-avcert-rproc" },
+ 	{ .compatible = "acpu-rproc" },
+ 	{ .compatible = "vcpu-rproc" },
+-	{ .compatible = "hifi-rproc" },
++//	{ .compatible = "hifi-rproc" },
+ 	{},
+ };
+ MODULE_DEVICE_TABLE(of, rtk_rproc_of_match);
+diff --git a/drivers/rpmsg/rpmsg_rtk.c b/drivers/rpmsg/rpmsg_rtk.c
+index 70a4579bed97..d704279aa572 100644
+--- a/drivers/rpmsg/rpmsg_rtk.c
++++ b/drivers/rpmsg/rpmsg_rtk.c
+@@ -749,10 +749,12 @@ static int __rtk_rpmsg_send(struct rtk_rpmsg_channel *channel, const void *data,
+ void rcpu_set_flag(struct rtk_rcpu *rcpu, uint32_t flag)
+ {
+ 	writel(__cpu_to_be32(flag), rcpu->info.rcpu_status);
++	pr_err("Edward:%s:%d rcpu->id=%x rcpu_status=%llx virt_to_phys=%llx\n", __func__, __LINE__, rcpu->id, rcpu->info.rcpu_status, virt_to_phys(rcpu->info.rcpu_status));
+ }
+ 
+ uint32_t rcpu_get_flag(struct rtk_rcpu *rcpu)
+ {
++	//pr_err("Edward:%s:%d rcpu->id=%x rcpu_status=%llx\n", __func__, __LINE__, rcpu->id, rcpu->info.rcpu_status);
+ 	return readl(rcpu->info.rcpu_status);
+ }
+ 
+diff --git a/sound/soc/realtek/common/snd-hifi-realtek.c b/sound/soc/realtek/common/snd-hifi-realtek.c
+index 519db06f7bf4..308086c15adb 100644
+--- a/sound/soc/realtek/common/snd-hifi-realtek.c
++++ b/sound/soc/realtek/common/snd-hifi-realtek.c
+@@ -3514,7 +3514,7 @@ static int rtk_snd_mixer_new_mixer(struct snd_card *card,
+ 	return 0;
+ }
+ 
+-void rtk_snd_hotplug_notify(int hotplug)
++void rtk_snd_hotplug_notify_hifi(int hotplug)
+ {
+ 	if (!hdmi_jack) {
+ 		pr_err("hdmi jack no found, can't notify\n");
+@@ -3523,7 +3523,7 @@ void rtk_snd_hotplug_notify(int hotplug)
+ 	pr_err("%s %d\n", __func__, hotplug);
+ 	snd_jack_report(hdmi_jack, hotplug ? SND_JACK_LINEOUT : 0);
+ }
+-EXPORT_SYMBOL_GPL(rtk_snd_hotplug_notify);
++EXPORT_SYMBOL_GPL(rtk_snd_hotplug_notify_hifi);
+ 
+ 
+ static int snd_RTK_volume_info(struct snd_kcontrol *kcontrol,
+diff --git a/sound/soc/realtek/common/snd-realtek.c b/sound/soc/realtek/common/snd-realtek.c
+index d9975d7f387a..5f07f6718bc4 100644
+--- a/sound/soc/realtek/common/snd-realtek.c
++++ b/sound/soc/realtek/common/snd-realtek.c
+@@ -34,6 +34,7 @@
+ #include <soc/realtek/rtk_media_heap.h>
+ #include "snd-realtek.h"
+ #include <asm/cacheflush.h>
++#include <sound/jack.h>
+ 
+ #define PCM_SUBSTREAM_CHECK(sub) snd_BUG_ON(!(sub) || !(sub)->runtime)
+ #define SHARE_MEM_SIZE 8
+@@ -122,7 +123,7 @@ static spinlock_t playback_lock;
+ static spinlock_t capture_lock;
+ static int mtotal_latency;
+ static bool is_suspend;
+-
++struct snd_jack *hdmi_jack = NULL;
+ static char gRtkDriverName[] = SND_REALTEK_DRIVER_HDMI_IN;
+ 
+ struct rtk_krpc_ept_info *acpu_ept_info;
+@@ -3609,6 +3610,17 @@ static int snd_card_mars_new_mixer(struct RTK_snd_card *pRTK_card)
+ 	return 0;
+ }
+ 
++void rtk_snd_hotplug_notify_afw(int hotplug)
++{
++	if (!hdmi_jack) {
++		pr_err("hdmi jack no found, can't notify\n");
++		return;
++	}
++	pr_err("%s %d\n", __func__, hotplug);
++	snd_jack_report(hdmi_jack, hotplug ? SND_JACK_LINEOUT : 0);
++}
++EXPORT_SYMBOL_GPL(rtk_snd_hotplug_notify_afw);
++
+ static int snd_RTK_volume_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
+ {
+ 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+@@ -3924,6 +3936,10 @@ static int snd_card_probe(struct platform_device *devptr)
+ 		pr_info("%s: unable to create sysfs entry\n", __func__);
+ #endif
+ 
++	err = snd_jack_new(card, "HDMI Jack", SND_JACK_LINEOUT, &hdmi_jack, true, false);
++	if (err < 0)
++		goto __nodev;
++
+ 	err = snd_card_register(card);
+ 	if (err == 0) {
+ 		snd_RTK_cards[card->number] = card;
+-- 
+2.45.2
+
