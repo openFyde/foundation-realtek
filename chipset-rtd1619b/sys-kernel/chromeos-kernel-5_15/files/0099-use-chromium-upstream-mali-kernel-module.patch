@@ -1,19 +1,19 @@
-From ac506ee33bda35cef9cbc4989db653f3e06afcf2 Mon Sep 17 00:00:00 2001
+From 9dc6655acec5468a20cfc78f1b8ceb1693e343d6 Mon Sep 17 00:00:00 2001
 From: yaozenhu <yaozenhu@realtek.com>
-Date: Mon, 12 Aug 2024 11:52:21 +0800
-Subject: [PATCH] update chromium upstream mali kernel module
+Date: Fri, 16 Aug 2024 12:35:02 +0800
+Subject: [PATCH] use chromium upstream mali kernel module
 
 ---
- .../dts/realtek/rtd1619b-bleedingedge.dtsi    |  17 +-
+ .../dts/realtek/rtd1619b-bleedingedge.dtsi    |  17 ++-
  arch/arm64/boot/dts/realtek/rtd16xxb.dtsi     |  42 +++--
  .../arm64/chromiumos-realtek.flavour.config   |   8 +-
  drivers/gpu/arm/mali/platform/realtek/Kbuild  |   4 +
  .../realtek/mali_kbase_clk_rate_trace.c       | 105 +++++++++++++
  .../realtek/mali_kbase_config_platform.h      |  55 +++++++
  .../realtek/mali_kbase_config_realtek.c       |  59 +++++++
- .../platform/realtek/mali_kbase_runtime_pm.c  | 148 ++++++++++++++++++
+ .../platform/realtek/mali_kbase_runtime_pm.c  | 144 ++++++++++++++++++
  drivers/soc/realtek/gpu/rtk-gpu_wrap.c        |  50 ++++++
- 9 files changed, 464 insertions(+), 24 deletions(-)
+ 9 files changed, 460 insertions(+), 24 deletions(-)
  create mode 100644 drivers/gpu/arm/mali/platform/realtek/Kbuild
  create mode 100644 drivers/gpu/arm/mali/platform/realtek/mali_kbase_clk_rate_trace.c
  create mode 100644 drivers/gpu/arm/mali/platform/realtek/mali_kbase_config_platform.h
@@ -279,7 +279,7 @@ index 000000000..4bcd5854d
 +};
 diff --git a/drivers/gpu/arm/mali/platform/realtek/mali_kbase_config_platform.h b/drivers/gpu/arm/mali/platform/realtek/mali_kbase_config_platform.h
 new file mode 100644
-index 000000000..1ac569a6f
+index 000000000..1a9a310f6
 --- /dev/null
 +++ b/drivers/gpu/arm/mali/platform/realtek/mali_kbase_config_platform.h
 @@ -0,0 +1,55 @@
@@ -332,7 +332,7 @@ index 000000000..1ac569a6f
 + *
 + * The delay time (in milliseconds) to be used for autosuspend
 + */
-+#define AUTO_SUSPEND_DELAY (1)
++#define AUTO_SUSPEND_DELAY (100)
 +
 +#if IS_ENABLED(CONFIG_OF)
 +extern const struct of_device_id kbase_dt_ids[];
@@ -405,10 +405,10 @@ index 000000000..f66ac78c0
 +}
 diff --git a/drivers/gpu/arm/mali/platform/realtek/mali_kbase_runtime_pm.c b/drivers/gpu/arm/mali/platform/realtek/mali_kbase_runtime_pm.c
 new file mode 100644
-index 000000000..fbed5118b
+index 000000000..24de65630
 --- /dev/null
 +++ b/drivers/gpu/arm/mali/platform/realtek/mali_kbase_runtime_pm.c
-@@ -0,0 +1,148 @@
+@@ -0,0 +1,144 @@
 +/*
 + *
 + * (C) COPYRIGHT 2015, 2017 ARM Limited. All rights reserved.
@@ -516,7 +516,6 @@ index 000000000..fbed5118b
 +{
 +	dev_dbg(kbdev->dev, "pm_callback_runtime_on\n");
 +	kbdev_enable_clocks(kbdev);
-+
 +	return 0;
 +}
 +
@@ -528,15 +527,12 @@ index 000000000..fbed5118b
 +
 +static void pm_callback_resume(struct kbase_device *kbdev)
 +{
-+	int ret;
-+
-+	ret = pm_callback_runtime_on(kbdev);
-+	WARN_ON(ret);
++	pm_runtime_force_resume(kbdev->dev);
 +}
 +
 +static void pm_callback_suspend(struct kbase_device *kbdev)
 +{
-+	pm_callback_runtime_off(kbdev);
++	pm_runtime_force_suspend(kbdev->dev);
 +}
 +
 +struct kbase_pm_callback_conf pm_callbacks = {
