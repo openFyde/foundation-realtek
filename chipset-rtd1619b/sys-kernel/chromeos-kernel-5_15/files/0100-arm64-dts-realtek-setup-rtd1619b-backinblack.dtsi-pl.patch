@@ -1,0 +1,158 @@
+From e4a0ef32cd2b969a28746777f23745295ae2572c Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Tue, 20 Aug 2024 07:00:46 +0800
+Subject: [PATCH 3/4] arm64: dts: realtek: setup rtd1619b-backinblack.dtsi
+ platform
+
+Change-Id: I0982c7d7975a94e40fd49d005a0e16fa6d1ae80e
+---
+ .../dts/realtek/rtd1619b-backinblack.dtsi     | 75 +++++++++++++------
+ 1 file changed, 53 insertions(+), 22 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/realtek/rtd1619b-backinblack.dtsi b/arch/arm64/boot/dts/realtek/rtd1619b-backinblack.dtsi
+index 17485ee51e8b..136ff6126077 100644
+--- a/arch/arm64/boot/dts/realtek/rtd1619b-backinblack.dtsi
++++ b/arch/arm64/boot/dts/realtek/rtd1619b-backinblack.dtsi
+@@ -228,6 +228,10 @@ &cpu_tm {
+ 	status = "okay";
+ };
+ 
++&dbgprot {
++	status = "okay";
++};
++
+ &emmc {
+ 	status = "okay";
+ };
+@@ -267,6 +271,14 @@ opp-702000000 {
+ 	};
+ };
+ 
++&display_subsystem {
++	status = "okay";
++};
++
++&hdmi {
++	hdmi5v-gpios = <&gpio 5 GPIO_ACTIVE_LOW>;
++};
++
+ &hse {
+ 	status = "okay";
+ };
+@@ -292,6 +304,7 @@ &i2c_5 {
+ };
+ 
+ &irda {
++	wakeup-key = <116>,<148>,<22>;
+ 	status = "okay";
+ };
+ 
+@@ -330,12 +343,24 @@ pwm_2 {
+ 	};
+ };
+ 
++&pwr_ve1 {
++	assigned-clock-rates = <540000000>;
++};
++
++&dpi {
++	status = "okay";
++
++	zq-cal {
++		status = "okay";
++	};
++};
++
+ &reboot_mode {
+ 	status = "okay";
+ };
+ 
+ &rfkill {
+-	rfkill-gpios = <&gpio 2 GPIO_ACTIVE_HIGH>;
++	rfkill-gpios = <&gpio 6 GPIO_ACTIVE_HIGH>;
+ 	status = "okay";
+ };
+ 
+@@ -347,16 +372,21 @@ &rng {
+ 	status = "okay";
+ };
+ 
++&rtk_avcpu {
++	status = "okay";
++};
++
+ &rtk_fw_pm {
+ 	status = "okay";
+ };
+ 
+ &rtk_pm {
+ 	wakeup-flags = <NORMAL_MODE>;
+-	wakeup-gpio-list = <2 0 0>,
+-			   <4 0 0>;
++	wakeup-gpio-list = <2 GPIO_WAKEUP_ENABLE GPIO_WAKEUP_ACTIVE_LOW>,
++			   <4 GPIO_WAKEUP_ENABLE GPIO_WAKEUP_ACTIVE_LOW>;
+ 	wakeup-timer = <0>;
+-	rtk-bt = <255>; /* for Realtek bluetooth only */
++	dco = <DCO_DISABLE>;
++	rtk-bt = <2>; /* for Realtek bluetooth only */
+ 	status = "okay";
+ };
+ 
+@@ -392,24 +422,6 @@ &tp {
+ 	status = "okay";
+ };
+ 
+-&usb_port0_usb2phy {
+-	status = "okay";
+-};
+-
+-&usb_port0 {
+-	realtek,power-gpio = <&gpio 48 GPIO_ACTIVE_LOW>;
+-	status = "okay";
+-};
+-
+-&usb_port1_usb2phy {
+-	status = "okay";
+-};
+-
+-&usb_port1 {
+-	realtek,power-gpio = <&gpio 48 GPIO_ACTIVE_LOW>;
+-	status = "okay";
+-};
+-
+ &usb_port2_usb2phy {
+ 	status = "okay";
+ };
+@@ -420,6 +432,10 @@ &usb_port2_usb3phy {
+ 
+ &usb_port2 {
+ 	status = "okay";
++	realtek,power-gpio = <&gpio 48 GPIO_ACTIVE_LOW>;
++	dwc3@50000 {
++		role-switch-default-mode = "host"; /* host, peripheral*/
++	};
+ };
+ 
+ /* debug console (J1) */
+@@ -459,3 +475,18 @@ &watchdog {
+ &rtk_smcc {
+ 	status = "okay";
+ };
++
++&pm_alarm {
++	status = "okay";
++};
++
++&rtk_ve3_uart {
++	status = "okay";
++};
++
++&pm_hifi {
++	hifi-supply = <&cpu_supp>;
++	status = "okay";
++};
++
++/delete-node/ &type_c;
+-- 
+2.45.2
+
