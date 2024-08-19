@@ -1,0 +1,70 @@
+From 8a1233fd99186b80281a4b8d21de0a8ce38f1708 Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Fri, 16 Aug 2024 07:13:40 +0800
+Subject: [PATCH 4/4] gpu: drm: realtek: modify hdcp init
+
+prevent userspace try to enable hdcp when hdcp init failed
+
+JIRA: CHROME-151
+Change-Id: I36f865f6f5eec0e81b798bc792ca61c0fab80205
+---
+ drivers/gpu/drm/realtek/rtk_hdcp.c | 36 +++++++++++++++---------------
+ 1 file changed, 18 insertions(+), 18 deletions(-)
+
+diff --git a/drivers/gpu/drm/realtek/rtk_hdcp.c b/drivers/gpu/drm/realtek/rtk_hdcp.c
+index cc41e0ad81bc..8c602d7ec034 100644
+--- a/drivers/gpu/drm/realtek/rtk_hdcp.c
++++ b/drivers/gpu/drm/realtek/rtk_hdcp.c
+@@ -2373,24 +2373,6 @@ int rtk_hdcp_init(struct rtk_hdmi *hdmi, u32 hdcp_support)
+ 	else
+ 		hdcp->hdcp2_supported = false;
+ 
+-	hdcp->value = DRM_MODE_CONTENT_PROTECTION_UNDESIRED;
+-	ret = drm_connector_attach_content_protection_property(&hdmi->connector,
+-							       hdcp->hdcp2_supported);
+-	if (ret) {
+-		hdcp->hdcp2_supported = false;
+-		return ret;
+-	}
+-
+-	hdcp->hdcp14_timeout = 5;
+-	hdcp->hdcp14_timeout_property =
+-		drm_property_create_range(hdmi->drm_dev, 0, "hdcp14_timout", 0, 300);
+-	if (!hdcp->hdcp14_timeout_property) {
+-		dev_err(hdmi->dev, "create hdcp14_timeout_property failed");
+-		return -ENOMEM;
+-	}
+-	drm_object_attach_property(&hdmi->connector.base,
+-		hdcp->hdcp14_timeout_property, hdcp->hdcp14_timeout);
+-
+ 	hdcp->do_cancel_hdcp = false;
+ 	hdcp->hdcp_encrypted = false;
+ 	hdcp->hdcp2_encrypted = false;
+@@ -2421,6 +2403,24 @@ int rtk_hdcp_init(struct rtk_hdmi *hdmi, u32 hdcp_support)
+ 		}
+ 	}
+ 
++	hdcp->value = DRM_MODE_CONTENT_PROTECTION_UNDESIRED;
++	ret = drm_connector_attach_content_protection_property(&hdmi->connector,
++								hdcp->hdcp2_supported);
++	if (ret) {
++		hdcp->hdcp2_supported = false;
++		return ret;
++	}
++
++	hdcp->hdcp14_timeout = 5;
++	hdcp->hdcp14_timeout_property =
++		drm_property_create_range(hdmi->drm_dev, 0, "hdcp14_timout", 0, 300);
++	if (!hdcp->hdcp14_timeout_property) {
++		dev_err(hdmi->dev, "create hdcp14_timeout_property failed");
++		return -ENOMEM;
++	}
++	drm_object_attach_property(&hdmi->connector.base,
++		hdcp->hdcp14_timeout_property, hdcp->hdcp14_timeout);
++
+ 	mutex_init(&hdcp->mutex);
+ 	INIT_DELAYED_WORK(&hdcp->commit_work, rtk_hdcp_commit_work);
+ 	INIT_DELAYED_WORK(&hdcp->check_work, rtk_hdcp_check_work);
+-- 
+2.45.2
+
