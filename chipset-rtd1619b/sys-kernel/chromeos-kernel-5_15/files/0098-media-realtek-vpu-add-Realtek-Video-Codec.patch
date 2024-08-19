@@ -1,7 +1,7 @@
-From b130ec26344d2936b257f40cf484d5f4f8d22ce6 Mon Sep 17 00:00:00 2001
+From d720cc408eb77eb87fed1b63571d850200845fc6 Mon Sep 17 00:00:00 2001
 From: Edward Wu <edwardwu@realtek.com>
 Date: Fri, 9 Aug 2024 15:53:28 +0800
-Subject: [PATCH 98/98] media: realtek: vpu: add Realtek Video Codec
+Subject: [PATCH 1/4] media: realtek: vpu: add Realtek Video Codec
 
 Change-Id: Ib2cbc1ac8a3c16736e7406794658c828cadbb9d8
 ---
@@ -12,8 +12,8 @@ Change-Id: Ib2cbc1ac8a3c16736e7406794658c828cadbb9d8
  drivers/media/platform/realtek/vpu/Makefile   |     3 +
  .../platform/realtek/vpu/stateful/Makefile    |    30 +
  .../platform/realtek/vpu/stateful/debug.h     |    64 +
- .../platform/realtek/vpu/stateful/drv_if.c    |  1248 ++
- .../platform/realtek/vpu/stateful/drv_if.h    |    78 +
+ .../platform/realtek/vpu/stateful/drv_if.c    |  1256 ++
+ .../platform/realtek/vpu/stateful/drv_if.h    |    79 +
  .../realtek/vpu/stateful/ve1_config.h         |    61 +
  .../realtek/vpu/stateful/ve1_decode.c         |   648 +
  .../platform/realtek/vpu/stateful/ve1_fw.h    | 12978 ++++++++++++++++
@@ -45,18 +45,18 @@ Change-Id: Ib2cbc1ac8a3c16736e7406794658c828cadbb9d8
  .../realtek/vpu/stateful/ve1_vputypes.h       |   104 +
  .../realtek/vpu/stateful/ve1_wrapper.c        |  3926 +++++
  .../realtek/vpu/stateful/ve1_wrapper.h        |    81 +
- .../media/platform/realtek/vpu/stateful/ve2.c |  1059 ++
+ .../media/platform/realtek/vpu/stateful/ve2.c |  1137 ++
  .../media/platform/realtek/vpu/stateful/ve2.h |    31 +
  .../platform/realtek/vpu/stateful/ve2_frame.h |   216 +
- .../platform/realtek/vpu/stateful/ve2rpc.c    |  2697 ++++
- .../platform/realtek/vpu/stateful/ve2rpc.h    |   292 +
+ .../platform/realtek/vpu/stateful/ve2rpc.c    |  2705 ++++
+ .../platform/realtek/vpu/stateful/ve2rpc.h    |   293 +
  .../realtek/vpu/stateful/ve2rpc_cmd.h         |   581 +
  .../realtek/vpu/stateful/video_engine.h       |    17 +
- .../media/platform/realtek/vpu/stateful/vpu.c |  1527 ++
- .../media/platform/realtek/vpu/stateful/vpu.h |   147 +
+ .../media/platform/realtek/vpu/stateful/vpu.c |  1594 ++
+ .../media/platform/realtek/vpu/stateful/vpu.h |   153 +
  .../platform/realtek/vpu/stateless/Makefile   |    12 +
  include/uapi/linux/v4l2-controls.h            |     3 +
- 51 files changed, 56808 insertions(+), 3 deletions(-)
+ 51 files changed, 56977 insertions(+), 3 deletions(-)
  create mode 100644 drivers/media/platform/realtek/vpu/Kconfig
  create mode 100644 drivers/media/platform/realtek/vpu/Makefile
  create mode 100644 drivers/media/platform/realtek/vpu/stateful/Makefile
@@ -316,10 +316,10 @@ index 000000000000..7c6bfc7073fd
 \ No newline at end of file
 diff --git a/drivers/media/platform/realtek/vpu/stateful/drv_if.c b/drivers/media/platform/realtek/vpu/stateful/drv_if.c
 new file mode 100644
-index 000000000000..1c06241a5ae1
+index 000000000000..12a2f3d29129
 --- /dev/null
 +++ b/drivers/media/platform/realtek/vpu/stateful/drv_if.c
-@@ -0,0 +1,1248 @@
+@@ -0,0 +1,1256 @@
 +/*
 + * Realtek video decoder v4l2 driver
 + *
@@ -774,6 +774,8 @@ index 000000000000..1c06241a5ae1
 +	if (ret)
 +		return ret;
 +
++	vpu_info("%s reqbuf %d", v4l2_type_names[rb->type], rb->count);
++
 +	if (V4L2_TYPE_IS_OUTPUT(rb->type))
 +		ctx->reqbuf_out = rb->count;
 +	else
@@ -784,6 +786,9 @@ index 000000000000..1c06241a5ae1
 +		ctx->ve_ctx = NULL;
 +		ctx->reqbuf_out = -1;
 +		ctx->reqbuf_cap = -1;
++	} else if (ctx->reqbuf_cap == 0) {
++		if (op->vpu_free_capture)
++			op->vpu_free_capture(fh);
 +	}
 +
 +	return ret;
@@ -916,8 +921,11 @@ index 000000000000..1c06241a5ae1
 +int videc_subscribe_event(struct v4l2_fh *fh,
 +			  const struct v4l2_event_subscription *sub)
 +{
++	struct videc_ctx *vid_ctx = container_of(fh, struct videc_ctx, fh);
++
 +	switch (sub->type) {
 +	case V4L2_EVENT_SOURCE_CHANGE:
++		vid_ctx->is_sub_res_chg = true;
 +		return v4l2_src_change_event_subscribe(fh, sub);
 +	case V4L2_EVENT_EOS:
 +		return v4l2_event_subscribe(fh, sub, 0, NULL);
@@ -1086,7 +1094,7 @@ index 000000000000..1c06241a5ae1
 +{
 +	const struct vpu_fmt_ops *op = get_vpu_fmt_ops();
 +	int ret;
-+	vpu_input_dbg("%s %s\n", __func__, V4L2_TYPE_TO_STR(q->type));
++	vpu_info("%s %s\n", __func__, V4L2_TYPE_TO_STR(q->type));
 +
 +	if (!op) {
 +		vpu_err("vpu ops is NULL\n");
@@ -1108,7 +1116,7 @@ index 000000000000..1c06241a5ae1
 +	unsigned long flags;
 +	const struct vpu_fmt_ops *op = get_vpu_fmt_ops();
 +	int ret;
-+	vpu_input_dbg("%s %s\n", __func__, V4L2_TYPE_TO_STR(q->type));
++	vpu_info("%s %s\n", __func__, V4L2_TYPE_TO_STR(q->type));
 +
 +	if (V4L2_TYPE_IS_OUTPUT(q->type)) {
 +		for (;;) {
@@ -1369,7 +1377,7 @@ index 000000000000..1c06241a5ae1
 +	atomic_inc(&dev->num_inst);
 +	hasVideo = 1;
 +
-+	vpu_info("Created instance: %p, m2m_ctx: %p\n", ctx, ctx->fh.m2m_ctx);
++	vpu_info("Created instance: %px, m2m_ctx: %px\n", ctx, ctx->fh.m2m_ctx);
 +
 +open_unlock:
 +	mutex_unlock(&dev->dev_mutex);
@@ -1382,7 +1390,7 @@ index 000000000000..1c06241a5ae1
 +	struct videc_ctx *ctx = file2ctx(file);
 +	const struct vpu_fmt_ops *op = get_vpu_fmt_ops();
 +
-+	vpu_info("Releasing instance %p\n", ctx);
++	vpu_info("Releasing instance %px\n", ctx);
 +
 +	mutex_lock(&dev->dev_mutex);
 +	op->vpu_reset_resource(&ctx->fh);
@@ -1570,10 +1578,10 @@ index 000000000000..1c06241a5ae1
 +MODULE_DESCRIPTION("Realtek V4L2 VE2 Codec Driver");
 diff --git a/drivers/media/platform/realtek/vpu/stateful/drv_if.h b/drivers/media/platform/realtek/vpu/stateful/drv_if.h
 new file mode 100644
-index 000000000000..35f2ab998530
+index 000000000000..aa5e13b61f5d
 --- /dev/null
 +++ b/drivers/media/platform/realtek/vpu/stateful/drv_if.h
-@@ -0,0 +1,78 @@
+@@ -0,0 +1,79 @@
 +/*
 + * Realtek video decoder v4l2 driver
 + *
@@ -1639,6 +1647,7 @@ index 000000000000..35f2ab998530
 +
 +	int reqbuf_out;
 +	int reqbuf_cap;
++	bool is_sub_res_chg;
 +
 +	struct v4l2_ctrl_handler ctrl_hdl;
 +	struct videc_params params;
@@ -50605,10 +50614,10 @@ index 000000000000..51d070833f7c
 +#endif // #define __VE1_WRAPPER_H__
 diff --git a/drivers/media/platform/realtek/vpu/stateful/ve2.c b/drivers/media/platform/realtek/vpu/stateful/ve2.c
 new file mode 100644
-index 000000000000..5b57cb4fb636
+index 000000000000..04c53f64bcdc
 --- /dev/null
 +++ b/drivers/media/platform/realtek/vpu/stateful/ve2.c
-@@ -0,0 +1,1059 @@
+@@ -0,0 +1,1137 @@
 +/*
 + * Realtek video decoder v4l2 driver
 + *
@@ -50634,6 +50643,7 @@ index 000000000000..5b57cb4fb636
 +#include <media/v4l2-mem2mem.h>
 +#include <media/videobuf2-dma-contig.h>
 +#include <media/v4l2-ioctl.h>
++#include <media/v4l2-event.h>
 +
 +#include "drv_if.h"
 +#include "vpu.h"
@@ -50709,8 +50719,10 @@ index 000000000000..5b57cb4fb636
 +int ve2_start_streaming(struct vb2_queue *q, uint32_t count, int pixelformat)
 +{
 +	struct ve2_ctx *ctx = vq_to_ve(q);
++#ifdef SUPPORT_ADAPTIVE_PLAYBACK
 +	struct videc_ctx *vid_ctx = vb2_get_drv_priv(q);
 +	struct vpu_ctx *v_ctx = (struct vpu_ctx *)vid_ctx->vpu_ctx;
++#endif
 +	int type = q->type;
 +	int ret;
 +
@@ -50780,6 +50792,7 @@ index 000000000000..5b57cb4fb636
 +			return -EPERM;
 +		}
 +#endif
++#ifdef SUPPORT_ADAPTIVE_PLAYBACK
 +		if (vid_ctx->params.dec_params.is_adaptive_playback)
 +			ctx->cap_hndl->main_rb.pRBH->reserve3 =
 +				htonl(0 /*width*/ << 16 | 0 /*height*/);
@@ -50787,7 +50800,7 @@ index 000000000000..5b57cb4fb636
 +			ctx->cap_hndl->main_rb.pRBH->reserve3 = htonl(
 +				v_ctx->cap_fmt.misc.ori_width << 16 |
 +				v_ctx->cap_fmt.misc.ori_height);
-+
++#endif
 +		ctx->out_hndl->main_rb.memory = q->memory;
 +
 +		ctx->streamon_out = 1;
@@ -50797,6 +50810,12 @@ index 000000000000..5b57cb4fb636
 +		cc_data_channel_init();
 +#endif
 +	} else {
++		ret = ve2rpc_run(ctx->cap_hndl);
++		if (ret) {
++			vpu_err("ve2rpc_run cap_hndl fail\n");
++			return ret;
++		}
++
 +		ctx->streamon_cap = 1;
 +		ctx->streamoff_cap = 0;
 +		ctx->cap_hndl->type = type;
@@ -50923,7 +50942,7 @@ index 000000000000..5b57cb4fb636
 +			goto exit;
 +		}
 +
-+		ret = ve2rpc_reset_buflock(ctx->cap_hndl, false);
++		ret = ve2rpc_reset_buflock(ctx->cap_hndl, false, false);
 +		if (ret) {
 +			vpu_err("ve2rpc_reset_buflock fail\n");
 +			goto exit;
@@ -50975,7 +50994,7 @@ index 000000000000..5b57cb4fb636
 +		      len);
 +
 +	if (v_ctx->is_decoder_error || out_hdl->is_error) {
-+		vpu_err("%s decode error %d, %d", __func__,v_ctx->is_decoder_error, cap_hdl->is_error);
++		vpu_err("%s decode error %d, %d", __func__,v_ctx->is_decoder_error, out_hdl->is_error);
 +		return -EIO;
 +	}
 +	if (v_ctx->is_bs_error) {
@@ -51044,7 +51063,6 @@ index 000000000000..5b57cb4fb636
 +	if (ctx->cap_hndl->dpb_cnt < vb->vb2_queue->num_buffers) {
 +		uint32_t cap_buf_size = 0;
 +		struct rtkve2_reg_dpb_t dpb;
-+		int i = 0;
 +
 +		cap_buf_size = vb2_plane_size(vb, 0);
 +		if (cap_buf_size == 0) {
@@ -51064,16 +51082,10 @@ index 000000000000..5b57cb4fb636
 +		dpb.vb2_v4l2_buf = vb2_v4l2_buf;
 +		dpb.idx = vb->index;
 +
-+		for (i = 0; i < ctx->cap_hndl->dpb_cnt; i++)
-+			if (ctx->cap_hndl->dpb[i].y_phy_addr == dpb.y_phy_addr)
-+				break;
-+
-+		if(i == ctx->cap_hndl->dpb_cnt) {
-+			ret = ve2rpc_add_capbuf_to_dpb(
++		ret = ve2rpc_add_capbuf_to_dpb(
 +			ctx->out_hndl, ctx->cap_hndl, dpb);
-+			if (ret != 0)
-+				goto exit;
-+		}
++		if (ret != 0)
++			goto exit;
 +	}
 +
 +	rm_vb2_v4l2_buf =
@@ -51293,10 +51305,11 @@ index 000000000000..5b57cb4fb636
 +		vpu_err("ve2rpc_init_handle out fail\n");
 +		goto error;
 +	}
-+
++#ifdef SUPPORT_ADAPTIVE_PLAYBACK
 +	ctx->cap_hndl->is_adaptive_playback =
 +		ctx->out_hndl->is_adaptive_playback =
 +		vid_ctx->params.dec_params.is_adaptive_playback;
++#endif
 +
 +#ifdef REORDER_PTS
 +	ctx->cap_hndl->is_pts_reorder =
@@ -51375,6 +51388,60 @@ index 000000000000..5b57cb4fb636
 +	return NULL;
 +}
 +
++static void ve2_free_capture(void *ve_ctx)
++{
++	struct ve2_ctx *ctx = (struct ve2_ctx *)ve_ctx;
++	int ret = 0;
++
++	if (!ctx)
++		goto exit;
++
++	if ( !ctx->cap_hndl || !ctx->out_hndl)
++		goto exit;
++
++	if (ctx->is_run) {
++		ret = ve2rpc_pause(ctx->cap_hndl);
++		if (ret) {
++			vpu_err("out ve2rpc_pause fail\n");
++			goto exit;
++		}
++
++		ret = ve2rpc_free_travel_frame(ctx->cap_hndl);
++		if (ret) {
++			vpu_err("ve2rpc_free_travel_frame fail\n");
++			goto exit;
++		}
++
++		ret = ve2rpc_reset_buflock(ctx->cap_hndl, true, E_BUFLOCK_ST_UNLOCK);
++		if (ret) {
++			vpu_err("ve2rpc_reset_buflock to UNLOCK fail\n");
++			goto exit;
++		}
++	}
++
++	ret = ve2rpc_del_capbuf_from_dpb(ctx->out_hndl, ctx->cap_hndl);
++	if (ret) {
++		vpu_err("out del_capbuf_from_dpb fail\n");
++		goto exit;
++	}
++
++	ret = ve2rpc_reset_buflock(ctx->cap_hndl, true, E_BUFLOCK_ST_NORMAL);
++	if (ret) {
++		vpu_err("ve2rpc_reset_buflock fail\n");
++		goto exit;
++	}
++
++	if (ctx->is_run) {
++		ret = ve2rpc_flush(ctx->cap_hndl);
++		if (ret) {
++			vpu_err("cap ve2rpc_fluse fail\n");
++			goto exit;
++		}
++	}
++exit:
++	return;
++}
++
 +static void ve2_free_context(void *ve_ctx)
 +{
 +	struct ve2_ctx *ctx = (struct ve2_ctx *)ve_ctx;
@@ -51405,11 +51472,14 @@ index 000000000000..5b57cb4fb636
 +			goto exit;
 +		}
 +
-+		ret = ve2rpc_reset_buflock(ctx->cap_hndl, true);
++		ret = ve2rpc_reset_buflock(ctx->cap_hndl, true, E_BUFLOCK_ST_UNLOCK);
 +		if (ret) {
 +			vpu_err("ve2rpc_reset_buflock fail\n");
 +			goto exit;
 +		}
++
++		ve2_make_undq_capbuf_done(ctx);
++
 +		ctx->is_run = false;
 +	}
 +
@@ -51464,6 +51534,37 @@ index 000000000000..5b57cb4fb636
 +		kfree(ctx);
 +}
 +
++
++static int ve2_force_eos(void *fh, struct ve2rpc *cap_hndl)
++{
++	const struct v4l2_event eos_event = { .type = V4L2_EVENT_EOS };
++	struct vb2_v4l2_buffer *buf = NULL;
++	int i = 0;
++
++	mutex_lock(&cap_hndl->dpb_mutex);
++	for (i = VE2_MAX_DPB_NUM - 1; i >= 0; i--) {
++		struct vb2_v4l2_buffer *tmp = (struct vb2_v4l2_buffer *)cap_hndl->dpb[i].vb2_v4l2_buf;
++		if (cap_hndl->dpb[i].status == RTKVE2_DPB_ST_VALID &&
++				tmp->vb2_buf.state == VB2_BUF_STATE_ACTIVE) {
++			buf = cap_hndl->dpb[i].vb2_v4l2_buf;
++			break;
++		}
++	}
++
++	if (i == -1) {
++		vpu_err("Can't find valid buffer for EOS\n");
++		mutex_unlock(&cap_hndl->dpb_mutex);
++		return -ENOBUFS;
++	}
++	mutex_unlock(&cap_hndl->dpb_mutex);
++
++	vb2_set_plane_payload(&buf->vb2_buf, 0, 0);
++	v4l2_m2m_last_buffer_done(((struct v4l2_fh *)fh)->m2m_ctx, buf);
++	v4l2_event_queue_fh(fh, &eos_event);
++
++	return 0;
++}
++
 +static int ve2_stop_cmd(void *fh, int pixelformat)
 +{
 +	struct ve2_ctx *ctx = NULL;
@@ -51501,6 +51602,9 @@ index 000000000000..5b57cb4fb636
 +		else
 +			ve2rpc_inband_eos_event(&hndl->sub_rb,
 +						hndl->main_rb.pRBH, 0);
++
++		if(hndl->is_error)
++			ve2_force_eos(fh, ctx->cap_hndl);
 +
 +		ctx->eosEvent = 1;
 +	}
@@ -51562,7 +51666,6 @@ index 000000000000..5b57cb4fb636
 +	struct vpu_ctx *v_ctx = (struct vpu_ctx *)vid_ctx->vpu_ctx;
 +	struct ve2_ctx *ctx = fh_to_ve(fh);
 +	struct vb2_v4l2_buffer *v4l2_buf;
-+	struct vpu_fmt vpu_fmt;
 +	uint32_t size = 0;
 +	uint32_t ddr_width = 0;
 +	uint32_t ddr_height = 0;
@@ -51596,25 +51699,8 @@ index 000000000000..5b57cb4fb636
 +		goto exit;
 +	}
 +
-+	vpu_get_cap_fmt(fh, (void *)&vpu_fmt);
-+	if (vpu_fmt.misc.ori_width != *width ||
-+			vpu_fmt.misc.ori_height != *height ||
-+			vpu_fmt.misc.bufcnt != *min_reqbuf ||
-+			v_ctx->bit_depth != ((*bit_depth == 0)?8:10) ||
-+			v_ctx->ddr_width != ddr_width ||
-+			v_ctx->ddr_height != ddr_height) {
-+		vpu_fmt.spec.fmt.pix_mp.width = *width;
-+		vpu_fmt.spec.fmt.pix_mp.height = *height;
-+		vpu_fmt.spec.fmt.pix_mp.plane_fmt[0].bytesperline = *width;
-+		vpu_fmt.misc.bufcnt = *min_reqbuf;
-+		v_ctx->bit_depth = (*bit_depth == 0)?8:10;
-+		v_ctx->ddr_width = ddr_width;
-+		v_ctx->ddr_height = ddr_height;
-+
-+		vpu_update_cap_fmt(fh, (void *)&vpu_fmt);
-+		vpu_notify_event_resolution_change(fh);
-+	}
-+
++	vpu_update_resolution_change(fh, *width, *height, ddr_width, ddr_height,
++		*bit_depth, *min_reqbuf);
 +	v_ctx->is_bs_error = false;
 +	ctx->internal_buf_cnt = 0;
 +exit:
@@ -51630,6 +51716,7 @@ index 000000000000..5b57cb4fb636
 +	.ve_abort = ve2_abort,
 +	.ve_alloc_context = ve2_alloc_context,
 +	.ve_free_context = ve2_free_context,
++	.ve_free_capture = ve2_free_capture,
 +	.ve_stop_cmd = ve2_stop_cmd,
 +	.ve_get_info = ve2_get_info,
 +	.ve_get_undq_dispFrm_cnt = ve2_get_undq_dispFrm_cnt,
@@ -51929,10 +52016,10 @@ index 000000000000..e242f496ced5
 +#endif
 diff --git a/drivers/media/platform/realtek/vpu/stateful/ve2rpc.c b/drivers/media/platform/realtek/vpu/stateful/ve2rpc.c
 new file mode 100644
-index 000000000000..89eaa70bb4ec
+index 000000000000..c25427ce4dad
 --- /dev/null
 +++ b/drivers/media/platform/realtek/vpu/stateful/ve2rpc.c
-@@ -0,0 +1,2697 @@
+@@ -0,0 +1,2705 @@
 +/*
 + * Realtek video decoder v4l2 driver
 + *
@@ -52349,13 +52436,16 @@ index 000000000000..89eaa70bb4ec
 +	struct ve2rpc *hndl = (struct ve2rpc *)krpc_ept_info->priv;
 +	struct v4l2_fh *fh = hndl->fh;
 +	int cmd;
-+	char *event;
++	struct VIDEO_RPC_VOUT_MESSAGE *event;
 +	HRESULT retval = S_OK;
-+	struct vpu_fmt vpu_fmt;
 +	ssize_t size = 0;
 +	struct rpc_struct *rpc_head = (struct rpc_struct *)buf;
 +	uint32_t width = 0;
 +	uint32_t height = 0;
++	uint32_t ddr_width = 0;
++	uint32_t ddr_height = 0;
++	uint32_t is_ten_bits = 0;
++	uint32_t dpb_cnt = 0;
 +
 +	vpu_input_dbg("rpc_kern_ve2_read, cmd %d, count %lu, size %d\n",
 +		      rpc_head->procedureID, sizeof(rpc_head),
@@ -52363,7 +52453,7 @@ index 000000000000..89eaa70bb4ec
 +	cmd = rpc_head->procedureID;
 +	switch (cmd) {
 +	case VIDEO_RPC_DEC_ToSystem_FatalError:
-+		event = kmalloc(sizeof(struct VIDEO_RPC_DEC_ERROR_INFO),
++		event = (struct VIDEO_RPC_VOUT_MESSAGE *)kmalloc(sizeof(struct VIDEO_RPC_DEC_ERROR_INFO),
 +				GFP_KERNEL | __GFP_ZERO);
 +		if (!event) {
 +			vpu_err("VIDEO_RPC_DEC_ERROR_INFO event malloc fail\n");
@@ -52383,7 +52473,7 @@ index 000000000000..89eaa70bb4ec
 +		kfree(event);
 +		break;
 +	case VIDEO_RPC_DEC_ToSystem_Deliver_MediaInfo:
-+		event = kmalloc(sizeof(struct VIDEO_RPC_DEC_MEDIA_INFO),
++		event = (struct VIDEO_RPC_VOUT_MESSAGE *)kmalloc(sizeof(struct VIDEO_RPC_DEC_MEDIA_INFO),
 +				GFP_KERNEL | __GFP_ZERO);
 +		if (!event) {
 +			vpu_err("VIDEO_RPC_DEC_MEDIA_INFO event malloc fail\n");
@@ -52400,12 +52490,13 @@ index 000000000000..89eaa70bb4ec
 +		kfree(event);
 +		break;
 +	case VIDEO_RPC_ToSystem_VoutMessage:
-+		event = kmalloc(sizeof(struct VIDEO_RPC_VOUT_MESSAGE),
++		event = (struct VIDEO_RPC_VOUT_MESSAGE *)kmalloc(sizeof(struct VIDEO_RPC_VOUT_MESSAGE),
 +				GFP_KERNEL | __GFP_ZERO);
 +		if (!event) {
 +			vpu_err("VIDEO_RPC_VOUT_MESSAGE event malloc fail\n");
 +			return -ENOMEM;
 +		}
++
 +		if (rpc_head->parameterSize !=
 +		    sizeof(struct VIDEO_RPC_VOUT_MESSAGE)) {
 +			pr_err("vclient: VIDEO_RPC_VOUT_MESSAGE: rpc data size not match(expect:%lu real:%ld rpc->parameterSize:%d)\n",
@@ -52414,35 +52505,27 @@ index 000000000000..89eaa70bb4ec
 +		}
 +		memcpy(event, buf + sizeof(struct rpc_struct),
 +		       rpc_head->parameterSize);
-+		vpu_input_dbg(
-+			"instanceID %x, message %x, PTShigh %x, PTSlow %x, reserved %x %x %x %x\n",
-+			htonl(((struct VIDEO_RPC_VOUT_MESSAGE *)event)
-+				      ->instanceID),
-+			htonl(((struct VIDEO_RPC_VOUT_MESSAGE *)event)->message),
-+			htonl(((struct VIDEO_RPC_VOUT_MESSAGE *)event)->PTShigh),
-+			htonl(((struct VIDEO_RPC_VOUT_MESSAGE *)event)->PTSlow),
-+			htonl(((struct VIDEO_RPC_VOUT_MESSAGE *)event)
-+				      ->reserved1),
-+			htonl(((struct VIDEO_RPC_VOUT_MESSAGE *)event)
-+				      ->reserved2),
-+			htonl(((struct VIDEO_RPC_VOUT_MESSAGE *)event)
-+				      ->reserved3),
-+			htonl(((struct VIDEO_RPC_VOUT_MESSAGE *)event)
-+				      ->reserved4));
 +
-+		width = ((struct VIDEO_RPC_VOUT_MESSAGE *)event)->reserved1;
-+		height = ((struct VIDEO_RPC_VOUT_MESSAGE *)event)->reserved2;
++		width = event->reserved1;
++		height = event->reserved2;
++		ddr_width = event->reserved3 >> 16;
++		ddr_height = event->reserved3 & 0xffff;
++		is_ten_bits = event->reserved4 >> 16;
++		dpb_cnt = event->reserved4 & 0xffff;
 +
++		vpu_info("Resolution change! width %d, height %d, ddr_width %d, ddr_height %d, is_ten_bits %d, dpb_cnt %d",
++			width, height, ddr_width, ddr_height, is_ten_bits, dpb_cnt);
++
++#ifdef SUPPORT_ADAPTIVE_PLAYBACK
 +		if (!hndl->is_adaptive_playback)
 +			hndl->main_rb.pRBH->reserve3 = htonl(width << 16 | height);
++#endif
++		if (vpu_check_sub_res_chg(fh))
++			vpu_update_resolution_change(fh, width, height, ddr_width, ddr_height,
++				is_ten_bits, dpb_cnt);
++		else
++			hndl->is_error = true;
 +
-+		vpu_get_cap_fmt(fh, (void *)&vpu_fmt);
-+		vpu_fmt.spec.fmt.pix_mp.width = width;
-+		vpu_fmt.spec.fmt.pix_mp.height = height;
-+		vpu_fmt.spec.fmt.pix_mp.plane_fmt[0].bytesperline = width;
-+		vpu_update_cap_fmt(fh, (void *)&vpu_fmt);
-+
-+		vpu_notify_event_resolution_change(fh);
 +		kfree(event);
 +		break;
 +	default:
@@ -52791,24 +52874,18 @@ index 000000000000..89eaa70bb4ec
 +	RPC_CONNECTION connection;
 +	int ret;
 +
-+	mutex_lock(&dst->lock);
-+	mutex_lock(&src->lock);
-+
 +	if (!src || !src->instanceID) {
-+		mutex_unlock(&src->lock);
-+		mutex_unlock(&dst->lock);
-+		vpu_err("src = %p src->instanceID=%d ", src,
-+			(src == NULL) ? 0 : src->instanceID);
++		pr_err("%s out handler is NULL", __func__);
 +		return -EPERM;
 +	}
 +
 +	if (!dst || !dst->instanceID) {
-+		mutex_unlock(&src->lock);
-+		mutex_unlock(&dst->lock);
-+		vpu_err("dst = %p dst->instanceID=%d ", dst,
-+			(dst == NULL) ? 0 : dst->instanceID);
++		pr_err("%s cap handler is NULL", __func__);
 +		return -EPERM;
 +	}
++
++	mutex_lock(&dst->lock);
++	mutex_lock(&src->lock);
 +
 +	memset(&connection, 0, sizeof(connection));
 +	connection.srcInstanceID = htonl(src->instanceID);
@@ -53634,6 +53711,15 @@ index 000000000000..89eaa70bb4ec
 +		goto exit;
 +	}
 +	mutex_lock(&cap_hndl->dpb_mutex);
++	for (i = 0; i < cap_hndl->dpb_cnt; i++)
++		if (cap_hndl->dpb[i].y_phy_addr == dpb.y_phy_addr)
++			break;
++	if (i != cap_hndl->dpb_cnt) {
++		if (cmprs)
++			_ve2rpc_ion_free(cap_hndl, cmprs);
++		mutex_unlock(&cap_hndl->dpb_mutex);
++		goto exit;
++	}
 +	for (i = 0; i < VE2_MAX_DPB_NUM; i++)
 +		if (cap_hndl->dpb[i].status == RTKVE2_DPB_ST_EMPTY)
 +			break;
@@ -54270,7 +54356,8 @@ index 000000000000..89eaa70bb4ec
 +	return ret;
 +}
 +
-+int ve2rpc_reset_buflock(struct ve2rpc *cap_hndl, bool reset_all)
++int ve2rpc_reset_buflock(struct ve2rpc *cap_hndl, bool reset_all,
++	enum buflock_status st)
 +{
 +	volatile uint8_t *buflock_va;
 +	int i = 0;
@@ -54287,9 +54374,14 @@ index 000000000000..89eaa70bb4ec
 +		buflock_va = cap_hndl->buflock_info[i].buflock_va;
 +		mutex_lock(&cap_hndl->buflock_mutex);
 +		if (reset_all) {
-+			*buflock_va = E_BUFLOCK_ST_UNLOCK;
-+			cap_hndl->buflock_info[i].is_used = 0;
-+			add_to_wait_q = 1;
++			if (st == E_BUFLOCK_ST_UNLOCK) {
++				*buflock_va = E_BUFLOCK_ST_UNLOCK;
++				cap_hndl->buflock_info[i].is_used = 0;
++				add_to_wait_q = 1;
++			} else if (st == E_BUFLOCK_ST_NORMAL) {
++				*buflock_va = E_BUFLOCK_ST_NORMAL;
++				cap_hndl->buflock_info[i].is_used = 0;
++			}
 +		}
 +		else {
 +			if (*buflock_va == E_BUFLOCK_ST_NORMAL) {
@@ -54426,8 +54518,10 @@ index 000000000000..89eaa70bb4ec
 +			      (is_secure << 16 & 0x00ff0000) |
 +			      (VRB_STRUCT_VERSION << 8 & 0xff00) |
 +			      VRPC_FLASH_FORMAT_SEND_BUF_ID);
++#ifdef SUPPORT_ADAPTIVE_PLAYBACK
 +		hndl->main_rb.pRBH->reserve3 =
 +			htonl(1 /*width*/ << 16 | 1 /*height*/);
++#endif
 +	}
 +
 +	buflock = (void *)_ve2rpc_media_ion_create(hndl, 4096);
@@ -54498,6 +54592,7 @@ index 000000000000..89eaa70bb4ec
 +		if (hndl->qframe.wq) {
 +			flush_workqueue(hndl->qframe.wq);
 +			destroy_workqueue(hndl->qframe.wq);
++			hndl->qframe.wq = NULL;
 +		}
 +		mutex_destroy(&hndl->qframe.lock);
 +		mutex_destroy(&hndl->travel_mutex);
@@ -54632,10 +54727,10 @@ index 000000000000..89eaa70bb4ec
 +#endif
 diff --git a/drivers/media/platform/realtek/vpu/stateful/ve2rpc.h b/drivers/media/platform/realtek/vpu/stateful/ve2rpc.h
 new file mode 100644
-index 000000000000..e65298c490d4
+index 000000000000..c181bb9a64c3
 --- /dev/null
 +++ b/drivers/media/platform/realtek/vpu/stateful/ve2rpc.h
-@@ -0,0 +1,292 @@
+@@ -0,0 +1,293 @@
 +/*
 + * Realtek video decoder v4l2 driver
 + *
@@ -54892,7 +54987,8 @@ index 000000000000..e65298c490d4
 +int ve2rpc_add_travel_entry(struct ve2rpc *cap_hndl,
 +	uint32_t y_phy_addr, uint32_t buflock_phy_addr,
 +	void *vb2_v4l2_buf, uint32_t idx);
-+int ve2rpc_reset_buflock(struct ve2rpc *cap_hndl, bool reset_all);
++int ve2rpc_reset_buflock(struct ve2rpc *cap_hndl, bool reset_all,
++			   enum buflock_status st);
 +int ve2rpc_run(struct ve2rpc *hndl);
 +int ve2rpc_get_info(struct ve2rpc *cap_hndl, uint32_t *info);
 +int ve2rpc_inband_eos_event(struct ve2rpc_ringbuf_t *ringbuf,
@@ -55541,10 +55637,10 @@ index 000000000000..d2bdfbbd7991
 +#endif
 diff --git a/drivers/media/platform/realtek/vpu/stateful/vpu.c b/drivers/media/platform/realtek/vpu/stateful/vpu.c
 new file mode 100644
-index 000000000000..4c6d8b932862
+index 000000000000..84f47831bb1d
 --- /dev/null
 +++ b/drivers/media/platform/realtek/vpu/stateful/vpu.c
-@@ -0,0 +1,1527 @@
+@@ -0,0 +1,1594 @@
 +/*
 + * Realtek video decoder v4l2 driver
 + *
@@ -56503,7 +56599,6 @@ index 000000000000..4c6d8b932862
 +			ctx->veng_ops->ve_alloc_context(fh);
 +		if (!vid_ctx->ve_ctx) {
 +			ret = -EINVAL;
-+			pr_err("JJJ %s, %d", __func__, __LINE__);
 +			goto exit;
 +		}
 +	}
@@ -56695,7 +56790,6 @@ index 000000000000..4c6d8b932862
 +		ctx->is_cap_started = 0;
 +	if (!ctx->is_cap_started && !ctx->is_out_started) {
 +		reinit_completion(&ctx->bs_parsing_comp);
-+		ctx->parse_header_done = 0;
 +	}
 +
 +	mutex_unlock(&ctx->vpu_mutex);
@@ -56853,6 +56947,27 @@ index 000000000000..4c6d8b932862
 +	return 0;
 +}
 +
++static int vpu_free_capture(void *fh)
++{
++	struct videc_ctx *vid_ctx = container_of(fh, struct videc_ctx, fh);
++	struct vpu_ctx *ctx = fh_to_vpu(fh);
++
++	if(vid_ctx && vid_ctx->ve_ctx &&
++		ctx && ctx->veng_ops && ctx->veng_ops->ve_free_capture) {
++		if (ctx->thread_cap) {
++			wake_up_interruptible(&ctx->vpu_cap_waitq);
++			kthread_stop(ctx->thread_cap);
++			ctx->thread_cap = NULL;
++		}
++		ctx->veng_ops->ve_free_capture(vid_ctx->ve_ctx);
++		ctx->seq_cap = 1;
++		ctx->memory_cap = 0;
++		ctx->cap_retry_cnt = 0;
++	}
++
++	return 0;
++}
++
 +void *vpu_get_frmsize(uint32_t pixel_format)
 +{
 +	int i = 0;
@@ -56942,6 +57057,53 @@ index 000000000000..4c6d8b932862
 +}
 +EXPORT_SYMBOL(vpu_notify_event_resolution_change);
 +
++void vpu_update_resolution_change(void *fh, uint32_t width, uint32_t height,
++			      uint32_t ddr_width, uint32_t ddr_height, uint32_t bit_depth,
++			      uint32_t min_reqbuf)
++{
++	struct vpu_ctx *v_ctx =  fh_to_vpu(fh);
++	struct vpu_fmt vpu_fmt;
++
++	vpu_get_cap_fmt(fh, (void *)&vpu_fmt);
++	if (vpu_fmt.misc.ori_width != width ||
++			vpu_fmt.misc.ori_height != height ||
++			vpu_fmt.misc.bufcnt != min_reqbuf ||
++			v_ctx->bit_depth != ((bit_depth == 0)?8:10) ||
++			v_ctx->ddr_width != ddr_width ||
++			v_ctx->ddr_height != ddr_height) {
++		vpu_fmt.spec.fmt.pix_mp.width = width;
++		vpu_fmt.spec.fmt.pix_mp.height = height;
++		vpu_fmt.spec.fmt.pix_mp.plane_fmt[0].bytesperline = width;
++		vpu_fmt.misc.bufcnt = min_reqbuf;
++		v_ctx->bit_depth = (bit_depth == 0)?8:10;
++		v_ctx->ddr_width = ddr_width;
++		v_ctx->ddr_height = ddr_height;
++
++		vpu_update_cap_fmt(fh, (void *)&vpu_fmt);
++		vpu_notify_event_resolution_change(fh);
++	}
++}
++EXPORT_SYMBOL(vpu_update_resolution_change);
++
++int vpu_check_sub_res_chg(void *fh)
++{
++	struct videc_ctx *vid_ctx = container_of(fh, struct videc_ctx, fh);
++
++	if(!fh) {
++		vpu_err("%s fh is NULL", __func__);
++		return 0;
++	}
++
++	if(!vid_ctx) {
++		vpu_err("%s vid_ctx is NULL", __func__);
++		return 0;
++	}
++
++	return vid_ctx->is_sub_res_chg;
++}
++EXPORT_SYMBOL(vpu_check_sub_res_chg);
++
++
 +const static struct vpu_fmt_ops ops = {
 +	.vpu_enum_fmt_cap = vpu_enum_fmt_cap,
 +	.vpu_enum_fmt_out = vpu_enum_fmt_out,
@@ -56957,6 +57119,7 @@ index 000000000000..4c6d8b932862
 +	.vpu_abort = vpu_abort,
 +	.vpu_g_crop = vpu_g_crop,
 +	.vpu_stop_cmd = vpu_stop_cmd,
++	.vpu_free_capture = vpu_free_capture,
 +	.vpu_reset_resource = vpu_reset_resource,
 +	.vpu_start_cmd = vpu_start_cmd,
 +};
@@ -57074,10 +57237,10 @@ index 000000000000..4c6d8b932862
 +EXPORT_SYMBOL(vpu_ve_unregister);
 diff --git a/drivers/media/platform/realtek/vpu/stateful/vpu.h b/drivers/media/platform/realtek/vpu/stateful/vpu.h
 new file mode 100644
-index 000000000000..633c39a304f2
+index 000000000000..099b54031b52
 --- /dev/null
 +++ b/drivers/media/platform/realtek/vpu/stateful/vpu.h
-@@ -0,0 +1,147 @@
+@@ -0,0 +1,153 @@
 +/*
 + * Realtek video decoder v4l2 driver
 + *
@@ -57166,6 +57329,7 @@ index 000000000000..633c39a304f2
 +	int (*vpu_abort)(void *priv, int type);
 +	int (*vpu_g_crop)(void *fh, struct v4l2_rect *rect);
 +	int (*vpu_stop_cmd)(void *fh);
++	int (*vpu_free_capture)(void *fh);
 +	int (*vpu_reset_resource)(void *fh);
 +	int (*vpu_start_cmd)(void *fh);
 +};
@@ -57187,6 +57351,7 @@ index 000000000000..633c39a304f2
 +	int (*ve_abort)(void *ctx, int type);
 +	void *(*ve_alloc_context)(void *fh);
 +	void (*ve_free_context)(void *ctx);
++	void (*ve_free_capture)(void *ctx);
 +	int (*ve_stop_cmd)(void *fh, int pixelformat);
 +	void (*ve_get_info)(void *fh, bool *eos, bool *no_frame);
 +	int (*ve_get_undq_dispFrm_cnt)(void *fh);
@@ -57215,6 +57380,10 @@ index 000000000000..633c39a304f2
 + * @param fh [input] struct v4l2_fh
 + */
 +void vpu_notify_event_resolution_change(void *fh);
++void vpu_update_resolution_change(void *fh, uint32_t width, uint32_t height,
++			      uint32_t ddr_width, uint32_t ddr_height, uint32_t bit_depth,
++			      uint32_t min_reqbuf);
++int vpu_check_sub_res_chg(void *fh);
 +void *vpu_alloc_context(void);
 +void vpu_free_context(void *ctx);
 +void *vpu_get_frmsize(uint32_t pixel_format);
