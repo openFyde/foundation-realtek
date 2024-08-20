@@ -1,0 +1,56 @@
+From 28cacc8a50498687f94666d3b3119539e49a9d1a Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Wed, 14 Aug 2024 07:00:14 +0800
+Subject: [PATCH 05/10] chromium: fix missing config CONFIG_REALTEK_CRT
+
+-this would affect registers store/restore in suspend/resume
+-fix typo as well
+
+Change-Id: I32039dd94ec78bec91e05fb1003eb6f7b84c676f
+---
+ .../config/chromeos/arm64/chromiumos-realtek.flavour.config     | 1 +
+ drivers/soc/realtek/common/Kconfig                              | 2 +-
+ drivers/soc/realtek/common/Makefile                             | 2 +-
+ 3 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+index ae5be238bc34..df10d5ca92ff 100644
+--- a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
++++ b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+@@ -93,6 +93,7 @@ CONFIG_USB_GADGET=y
+ CONFIG_USB_ULPI=y
+ CONFIG_USB_STORAGE=y
+ CONFIG_USB_UAS=y
++CONFIG_REALTEK_CRT=y
+ CONFIG_TMPFS=y
+ CONFIG_RTW89=m
+ CONFIG_RTW89_CORE=m
+diff --git a/drivers/soc/realtek/common/Kconfig b/drivers/soc/realtek/common/Kconfig
+index 74829a06ea0e..e683ce1d5ca9 100644
+--- a/drivers/soc/realtek/common/Kconfig
++++ b/drivers/soc/realtek/common/Kconfig
+@@ -62,7 +62,7 @@ config RTK_FAN
+ 	help
+ 	  Realtek Fan driver
+ 
+-config REALTK_CRT
++config REALTEK_CRT
+ 	tristate "Realtek CRT driver"
+ 	default n
+ 	help
+diff --git a/drivers/soc/realtek/common/Makefile b/drivers/soc/realtek/common/Makefile
+index 3891f337cd51..5dc8767f8571 100644
+--- a/drivers/soc/realtek/common/Makefile
++++ b/drivers/soc/realtek/common/Makefile
+@@ -4,7 +4,7 @@ obj-$(CONFIG_RTK_AVCPU_LOG) += rtk_avcpulog.o
+ obj-$(CONFIG_RTK_BOOTSTATUS) += rtk_bootstatus.o
+ obj-$(CONFIG_RTK_BUFLOCK) += buflock/
+ obj-$(CONFIG_REALTEK_CHIP_INFO) += rtk_chip.o
+-obj-$(CONFIG_REALTK_CRT) += rtk_crt.o
++obj-$(CONFIG_REALTEK_CRT) += rtk_crt.o
+ obj-$(CONFIG_RTK_DBGPROT) += rtk_dbgprot.o
+ obj-$(CONFIG_RTK_DEMOD) += rtk_demod.o
+ obj-$(CONFIG_RTK_DPI_COORD) += dpi/
+-- 
+2.45.2
+

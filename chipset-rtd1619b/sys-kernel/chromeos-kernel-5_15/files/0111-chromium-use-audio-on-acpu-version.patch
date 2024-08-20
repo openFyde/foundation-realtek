@@ -1,0 +1,91 @@
+From 5a8c5c99865d04a06f1e25e714db7e3577319434 Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Tue, 20 Aug 2024 13:33:22 +0800
+Subject: [PATCH 10/10] chromium: use audio on acpu version
+
+Change-Id: I5414f7c6ffe21a294b6a3d55b8bbd5765699fe14
+---
+ arch/arm64/boot/dts/realtek/rtd16xxb.dtsi                | 9 ++++++---
+ .../chromeos/arm64/chromiumos-realtek.flavour.config     | 4 ----
+ 2 files changed, 6 insertions(+), 7 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi b/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
+index 8ca3dcf0b4bb..12133301017a 100644
+--- a/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
++++ b/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
+@@ -942,7 +942,7 @@ pm_hifi: pm-hifi {
+ 	};
+ 
+ 	sound: sound {
+-		compatible = "realtek,rtk-alsa-hifi";
++		compatible = "realtek,rtk-alsa-pcm";
+ 		realtek,krpc-agent = <&acpu_kernel_agent>,
+ 				     <&hifi_kernel_agent>;
+ 		status = "disabled";
+@@ -1353,10 +1353,12 @@ vcpu-intr-channel {
+ 				rx-fifo-size = <0x200>;
+ 			};
+ 		};
++
+ 		hifi-rpc {
+ 			interrupts = <0 104 4>;
+ 			big-endian = <0>;
+ 			rproc = <&hifi_rproc>;
++			status = "disabled";
+ 			hifi-kernel-channel {
+ 				compatible = "realtek,rpc-kernel-hifi";
+ 				name = "hifi-kernel-channel";
+@@ -1558,7 +1560,7 @@ rtk_rproc: rtk_rproc {
+ 		acpu_rproc: acpu-rproc {
+ 			compatible = "acpu-rproc";
+ 			type-firmware = "acpu";
+-			name-firmware = "bluecore.audio.enc.A00-stark-noaudio-nonsecure-0112";
++			name-firmware = "bluecore.audio.enc.A00-stark-audio-nonsecure";
+ 		};
+ 
+ 		vcpu_rproc: vcpu-rproc {
+@@ -1571,6 +1573,7 @@ hifi_rproc: hifi-rproc {
+ 			compatible = "hifi-rproc";
+ 			type-firmware = "hifi";
+ 			name-firmware = "HIFI.bin-stark-nonsecure-allcache";
++			status = "disabled";
+ 		};
+ 	};
+ };
+@@ -1637,7 +1640,7 @@ fss: fss@b70 {
+ / {
+ 	audio_out: audio-out {
+ 		compatible = "realtek,audio-out";
+-		remote-cpu = <1>; /* 0: AFW 1: HIFI */
++		remote-cpu = <0>; /* 0: AFW 1: HIFI */
+ 		realtek,krpc-agent = <&acpu_kernel_agent>,
+ 				     <&hifi_kernel_agent>;
+ 		status = "disabled";
+diff --git a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+index df10d5ca92ff..c5e027ccb644 100644
+--- a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
++++ b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+@@ -47,7 +47,6 @@ CONFIG_RTK_EFUSE=y
+ CONFIG_RTK_FAN=y
+ CONFIG_RTK_FW_REMOTEPROC=m
+ CONFIG_RTK_HDMI_CEC=y
+-CONFIG_RTK_PM_HIFI=m
+ CONFIG_RTK_REBOOT_MODE=y
+ CONFIG_RTK_WATCHDOG=y
+ CONFIG_SERIAL_8250=y
+@@ -80,12 +79,9 @@ CONFIG_SND_HDA_PREALLOC_SIZE=64
+ CONFIG_SND_SOC=y
+ CONFIG_SND_SOC_COMPRESS=y
+ CONFIG_SND_ACPU_AO=m
+-CONFIG_SND_HIFI_AO=m
+ CONFIG_SND_SOC_REALTEK=m
+ CONFIG_SND_SOC_REALTEK_NOTIFY=m
+ CONFIG_SND_SOC_REALTEK_FL3236=m
+-CONFIG_RTK_PM_HIFI=m
+-CONFIG_RTK_CACHEABLE_HEADER=y
+ CONFIG_ATA=y
+ CONFIG_USB_CONFIGFS=m
+ CONFIG_USB_CONFIGFS_F_FS=y
+-- 
+2.45.2
+

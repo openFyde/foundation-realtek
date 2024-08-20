@@ -1,0 +1,63 @@
+From a361dbcc3347060202d52ae28da2672c72563ca0 Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Tue, 20 Aug 2024 13:25:25 +0800
+Subject: [PATCH 09/10] sound: soc: realtek: support HDMI jack on acpu
+
+Change-Id: I6a5838d9051eff6139d60372b606a5326f63500f
+---
+ sound/soc/realtek/common/snd-realtek.c | 18 +++++++++++++++++-
+ 1 file changed, 17 insertions(+), 1 deletion(-)
+
+diff --git a/sound/soc/realtek/common/snd-realtek.c b/sound/soc/realtek/common/snd-realtek.c
+index d9975d7f387a..9297cbca786d 100644
+--- a/sound/soc/realtek/common/snd-realtek.c
++++ b/sound/soc/realtek/common/snd-realtek.c
+@@ -34,6 +34,7 @@
+ #include <soc/realtek/rtk_media_heap.h>
+ #include "snd-realtek.h"
+ #include <asm/cacheflush.h>
++#include <sound/jack.h>
+ 
+ #define PCM_SUBSTREAM_CHECK(sub) snd_BUG_ON(!(sub) || !(sub)->runtime)
+ #define SHARE_MEM_SIZE 8
+@@ -122,7 +123,7 @@ static spinlock_t playback_lock;
+ static spinlock_t capture_lock;
+ static int mtotal_latency;
+ static bool is_suspend;
+-
++struct snd_jack *hdmi_jack = NULL;
+ static char gRtkDriverName[] = SND_REALTEK_DRIVER_HDMI_IN;
+ 
+ struct rtk_krpc_ept_info *acpu_ept_info;
+@@ -3609,6 +3610,17 @@ static int snd_card_mars_new_mixer(struct RTK_snd_card *pRTK_card)
+ 	return 0;
+ }
+ 
++void rtk_snd_hotplug_notify(int hotplug)
++{
++	if (!hdmi_jack) {
++		pr_err("hdmi jack no found, can't notify\n");
++		return;
++	}
++	pr_err("%s %d\n", __func__, hotplug);
++	snd_jack_report(hdmi_jack, hotplug ? SND_JACK_LINEOUT : 0);
++}
++EXPORT_SYMBOL_GPL(rtk_snd_hotplug_notify);
++
+ static int snd_RTK_volume_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
+ {
+ 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+@@ -3924,6 +3936,10 @@ static int snd_card_probe(struct platform_device *devptr)
+ 		pr_info("%s: unable to create sysfs entry\n", __func__);
+ #endif
+ 
++	err = snd_jack_new(card, "HDMI Jack", SND_JACK_LINEOUT, &hdmi_jack, true, false);
++	if (err < 0)
++		goto __nodev;
++
+ 	err = snd_card_register(card);
+ 	if (err == 0) {
+ 		snd_RTK_cards[card->number] = card;
+-- 
+2.45.2
+
