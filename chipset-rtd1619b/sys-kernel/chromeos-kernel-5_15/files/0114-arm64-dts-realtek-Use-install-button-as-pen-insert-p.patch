@@ -1,0 +1,45 @@
+From e921abadddf2b579ecadca0af3d4f49baaf9ee1f Mon Sep 17 00:00:00 2001
+From: Edward Wu <edwardwu@realtek.com>
+Date: Wed, 21 Aug 2024 10:18:55 +0800
+Subject: [PATCH] arm64: dts: realtek: Use install button as pen insert power
+ key for 'bleedingedge' EVB
+
+Change-Id: I2a6ba7604f6855c90217b0e850631752c88d3b60
+---
+ .../boot/dts/realtek/rtd1619b-bleedingedge.dtsi     | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi b/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi
+index 1b801b35176b..d4b0c150ddb5 100644
+--- a/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi
++++ b/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi
+@@ -8,6 +8,7 @@
+ #include <dt-bindings/regulator/anpec,apw888x.h>
+ #include <dt-bindings/soc/realtek,pm.h>
+ #include <dt-bindings/thermal/thermal.h>
++#include <dt-bindings/input/input.h>
+ #include "rtd16xxb.dtsi"
+ 
+ / {
+@@ -42,6 +43,18 @@ gpu_supp: gpu-supply {
+ 		regulator-min-microvolt = <800000>;
+ 		regulator-max-microvolt = <800000>;
+ 	};
++
++	gpio_keys: gpio-keys {
++		compatible = "gpio-keys";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pwm0_0_pins>;
++
++		pen_insert: button@0 {
++			linux,code = <KEY_POWER>;
++			label = "install-button-pen-insert";
++			gpios = <&gpio 26 GPIO_ACTIVE_LOW>;
++		};
++	};
+ };
+ 
+ &audio_in_i2s {
+-- 
+2.45.2
+
