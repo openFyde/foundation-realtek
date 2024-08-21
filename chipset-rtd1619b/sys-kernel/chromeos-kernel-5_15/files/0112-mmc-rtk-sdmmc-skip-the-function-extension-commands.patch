@@ -1,0 +1,52 @@
+From d3f9d4287e8b69a77832eee37c58ae2d4eb9ffa7 Mon Sep 17 00:00:00 2001
+From: zhenrcaaron <zhenrcaaron@realtek.com>
+Date: Tue, 20 Aug 2024 16:36:06 +0800
+Subject: [PATCH 1/2] mmc: rtk-sdmmc: skip the function extension commands
+
+Change-Id: I536fa4bad22835184d34766a118259929f2bbda3
+---
+ drivers/mmc/host/rtk-sdmmc.c | 21 ++++-----------------
+ 1 file changed, 4 insertions(+), 17 deletions(-)
+
+diff --git a/drivers/mmc/host/rtk-sdmmc.c b/drivers/mmc/host/rtk-sdmmc.c
+index 519ea3ff6ead..01c787907883 100644
+--- a/drivers/mmc/host/rtk-sdmmc.c
++++ b/drivers/mmc/host/rtk-sdmmc.c
+@@ -2396,7 +2396,6 @@ static void rtk_sdmmc_request(struct mmc_host *host, struct mmc_request *mrq)
+ {
+ 	struct rtk_sdmmc_host *rtk_host = mmc_priv(host);
+ 	struct mmc_command *cmd;
+-	unsigned char card_cmd = 0;
+ 
+ 	BUG_ON(rtk_host->mrq != NULL);
+ 	//down_write(&cr_sd_rw_sem);
+@@ -2408,22 +2407,10 @@ static void rtk_sdmmc_request(struct mmc_host *host, struct mmc_request *mrq)
+ 	if(cmd->opcode == 2)
+ 		writel(readl(rtk_host->sdmmc + 0x20) & (~0x02), rtk_host->sdmmc  + 0x20);  //Enable L4 gate
+ 
+-	if (cmd->opcode == 58 || cmd->opcode == 59) {
+-		card_cmd = host->card->raw_scr[0] & 0x0F;
+-		if ((card_cmd & 0x08) != 0x08) {
+-			cmd->error = -110;
+-			tasklet_schedule(&rtk_host->req_end_tasklet);
+-			goto done;
+-		}
+-	}
+-
+-	if (cmd->opcode == 48 || cmd->opcode == 49) {
+-		card_cmd = host->card->raw_scr[0] & 0xF;
+-		if ((card_cmd & 0x8) != 0x8 && (card_cmd & 0x4) != 0x4) {
+-			cmd->error = -110;
+-			tasklet_schedule(&rtk_host->req_end_tasklet);
+-			goto done;
+-		}
++	if (cmd->opcode == 48 || cmd->opcode == 49 || cmd->opcode == 58 || cmd->opcode == 59) {
++		pr_err("%s: skip function extension commands %d\n", __func__, cmd->opcode);
++		tasklet_schedule(&rtk_host->req_end_tasklet);
++		goto done;
+ 	}
+ 
+ 	if (!(rtk_host->rtflags & RTKCR_FCARD_DETECTED)) {
+-- 
+2.45.2
+
