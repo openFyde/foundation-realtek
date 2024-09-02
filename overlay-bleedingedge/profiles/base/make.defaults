@@ -1,5 +1,6 @@
 USE=""
 USE="has_chromeos_config_bsp"
+USE="${USE} touchview -legacy_keyboard -legacy_power_button touch_centric_device stylus"
 CHROMEOS_DTBS="rtd1619b-bleedingedge-4gb.dtb"
 
 TTY_CONSOLE="ttyS0"

@@ -1,0 +1,235 @@
+Index: kernel-5_15/drivers/usb/Kconfig
+===================================================================
+--- kernel-5_15.orig/drivers/usb/Kconfig
++++ kernel-5_15/drivers/usb/Kconfig
+@@ -53,7 +53,7 @@ config USB
+ 	  traditional PC serial port.  The bus supplies power to peripherals
+ 	  and allows for hot swapping.  Up to 127 USB peripherals can be
+ 	  connected to a single USB host in a tree structure.
+-	  
++
+ 	  The USB host is the root of the tree, the peripherals are the
+ 	  leaves and the inner nodes are special USB devices called hubs.
+ 	  Most PCs now have USB host ports, used to connect peripherals
+@@ -174,4 +174,6 @@ source "drivers/usb/typec/Kconfig"
+ 
+ source "drivers/usb/roles/Kconfig"
+ 
++source "drivers/usb/tablet_mode/Kconfig"
++
+ endif # USB_SUPPORT
+Index: kernel-5_15/drivers/usb/Makefile
+===================================================================
+--- kernel-5_15.orig/drivers/usb/Makefile
++++ kernel-5_15/drivers/usb/Makefile
+@@ -7,6 +7,7 @@
+ 
+ obj-$(CONFIG_USB_COMMON)	+= common/
+ obj-$(CONFIG_USB)		+= core/
++obj-$(CONFIG_USB_KBD_DOCKER_EMULATOR) += tablet_mode/
+ obj-$(CONFIG_USB_SUPPORT)	+= phy/
+ 
+ obj-$(CONFIG_USB_DWC3)		+= dwc3/
+Index: kernel-5_15/drivers/usb/tablet_mode/Kconfig
+===================================================================
+--- /dev/null
++++ kernel-5_15/drivers/usb/tablet_mode/Kconfig
+@@ -0,0 +1,8 @@
++# SPDX-License-Identifier: GPL-2.0
++
++comment "USB keyboard-tablet mode driver"
++
++config USB_KBD_DOCKER_EMULATOR
++  tristate "Set tablet mode by any usb keyboard"
++  help
++    Say Y if you want to add a docker event when plug a usb keyboard.
+Index: kernel-5_15/drivers/usb/tablet_mode/Makefile
+===================================================================
+--- /dev/null
++++ kernel-5_15/drivers/usb/tablet_mode/Makefile
+@@ -0,0 +1 @@
++obj-$(CONFIG_USB_KBD_DOCKER_EMULATOR) += vdtb.o
+Index: kernel-5_15/drivers/usb/tablet_mode/vdtb.c
+===================================================================
+--- /dev/null
++++ kernel-5_15/drivers/usb/tablet_mode/vdtb.c
+@@ -0,0 +1,170 @@
++// SPDX-License-Identifier: GPL-2.0+
++/*
++ *  Fydeos detachable emulator driver
++ *
++ *  Copyright (C) 2019 Yang Tsao <yang@fydeos.io>
++ */
++#include <linux/input.h>
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/uaccess.h>
++#include <linux/notifier.h>
++#include <linux/usb.h>
++#include <linux/pm_domain.h>
++#include <uapi/linux/hid.h>
++#define VDTB_DEV_NAME "vdtb"
++
++MODULE_LICENSE("GPL");
++MODULE_AUTHOR("Yang Tsao <yang@fydeos.io>");
++MODULE_DESCRIPTION("Detachable device driver Emulator");
++
++static DEFINE_MUTEX(vdtb_lock);
++
++struct vdtb_priv {
++  atomic_t in_suspend;
++  struct input_dev *input_dev;
++  struct notifier_block nb;
++  struct usb_device *keyboard_dev;
++};
++
++struct input_dev *tablet_dev;
++
++void set_tablet_mode(struct vdtb_priv *priv, bool mode) {
++  input_report_switch(priv->input_dev, SW_TABLET_MODE, mode);
++  input_sync(priv->input_dev);
++}
++
++int vdtb_suspend(struct device *dev) {
++  struct vdtb_priv *priv = dev_get_drvdata(dev);
++  atomic_set(&priv->in_suspend, 1);
++  dev_info(dev, "enter suspend\n");
++  return 0;
++}
++
++int vdtb_resume(struct device *dev) {
++  struct vdtb_priv *priv = dev_get_drvdata(dev);
++  atomic_set(&priv->in_suspend, 0);
++  dev_info(dev, "quit suspend.\n");
++  return 0;
++}
++
++struct dev_pm_domain pm = {
++  .ops = {
++    .suspend = &vdtb_suspend,
++    .resume = &vdtb_resume,
++  },
++};
++
++static bool contains_kbd_interface(const struct usb_device* usb_dev) {
++  struct usb_interface *intf;
++  struct usb_host_interface *interface;
++  int i;
++  if (!usb_dev)
++    return false;
++#ifdef DEBUG
++  if (usb_dev->product)
++    dev_info(&usb_dev->dev, "check product:%s\n",usb_dev->product);
++#endif
++  if (usb_dev->product && !strcmp(usb_dev->product, "Surface Type Cover"))
++    return true;
++  if (!usb_dev->actconfig)
++    return false;
++  for ( i = 0; i < usb_dev->actconfig->desc.bNumInterfaces; i++) {
++    intf = usb_dev->actconfig->interface[i];
++    if ( !intf || !intf->cur_altsetting)
++      continue;
++    interface = intf->cur_altsetting;
++    if (interface->desc.bInterfaceClass != USB_INTERFACE_CLASS_HID)
++      continue;
++    if (interface->desc.bInterfaceSubClass == USB_INTERFACE_SUBCLASS_BOOT &&
++          interface->desc.bInterfaceProtocol== USB_INTERFACE_PROTOCOL_KEYBOARD)
++    return true;
++  }
++  return false;
++}
++
++int usb_notifier_nb(struct notifier_block *nb,
++      unsigned long action, void *data) {
++  struct usb_device *usb_dev = data;
++  struct vdtb_priv *priv = container_of(nb, struct vdtb_priv, nb);
++  int state_changed = 0;
++  if (atomic_read(&priv->in_suspend) || action > USB_DEVICE_REMOVE) {
++ #ifdef DEBUG
++    pr_info("vdtb suspend skip");
++ #endif
++    return 0;
++  }
++  mutex_lock(&vdtb_lock);
++  if (action == USB_DEVICE_ADD && contains_kbd_interface(usb_dev)) {
++    priv->keyboard_dev = usb_dev;
++    state_changed = 1;
++  } else if (action == USB_DEVICE_REMOVE && priv->keyboard_dev == usb_dev) {
++    priv->keyboard_dev = NULL;
++    state_changed = 1;
++  }
++  if (state_changed)
++    set_tablet_mode(priv, priv->keyboard_dev == NULL);
++  mutex_unlock(&vdtb_lock);
++#ifdef DEBUG
++  dev_info(&usb_dev->dev, " action:%s, state_changed:%d, keyboard_dev:%p usb_dev:%p\n", action == USB_DEVICE_ADD ? "ADD": "REMOVE",
++    state_changed, priv->keyboard_dev, usb_dev);
++#endif
++  return 0;
++}
++
++void remove_vdtb(void) {
++  struct vdtb_priv *priv;
++  if (!tablet_dev)
++    return;
++  priv = (struct vdtb_priv *)dev_get_drvdata(&tablet_dev->dev);
++  usb_unregister_notify(&priv->nb);
++  input_unregister_device(tablet_dev);
++  input_free_device(tablet_dev);
++}
++
++
++int __init init_vdtb_module(void) {
++  int err = 0;
++  struct vdtb_priv *priv;
++  tablet_dev = input_allocate_device();
++  if (!tablet_dev)
++    goto error_register;
++  priv = devm_kzalloc(&tablet_dev->dev, sizeof(*priv), GFP_KERNEL);
++  if (!priv)
++    goto error_alloc;
++  dev_set_drvdata(&tablet_dev->dev, priv);
++  tablet_dev->name = VDTB_DEV_NAME;
++  tablet_dev->id.bustype = BUS_HOST;
++  input_set_capability(tablet_dev, EV_MSC, MSC_SCAN);
++  input_set_capability(tablet_dev, EV_SW, SW_TABLET_MODE);
++  err = input_register_device(tablet_dev);
++  if (err)
++    goto error_alloc;
++  priv->input_dev = tablet_dev;
++  priv->keyboard_dev = NULL;
++  atomic_set(&priv->in_suspend, 0);
++  dev_pm_domain_set(&tablet_dev->dev, &pm);
++  priv->nb.notifier_call = usb_notifier_nb;
++  usb_register_notify(&priv->nb);
++  set_tablet_mode(priv, true);
++  dev_info(&tablet_dev->dev, "device is working.\n");
++  return 0;
++
++error_alloc:
++  err=-ENOMEM;
++  pr_err("failed to init module.");
++  remove_vdtb();
++error_register:
++  return err;
++}
++
++void __exit cleanup_vdtb_module(void) {
++  remove_vdtb();
++}
++
++module_init(init_vdtb_module);
++module_exit(cleanup_vdtb_module);
++
++MODULE_AUTHOR("yang@fydeos.io");
++MODULE_DESCRIPTION("Detect tablet mode by usb keyboard");
++MODULE_LICENSE("GPL");
+Index: kernel-5_15/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+===================================================================
+--- kernel-5_15.orig/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
++++ kernel-5_15/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+@@ -113,3 +113,4 @@ CONFIG_RTD16XXB_RTK_CODEC=y
+ CONFIG_RTD16XXB_VE1_CODEC=y
+ CONFIG_VIDEO_REALTEK=m
+ CONFIG_VIDEO_RTK_VCODEC=m
++CONFIG_USB_KBD_DOCKER_EMULATOR=y
