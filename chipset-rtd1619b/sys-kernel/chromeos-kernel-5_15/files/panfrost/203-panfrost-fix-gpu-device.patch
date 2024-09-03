@@ -12,7 +12,7 @@ Index: kernel-5_15/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
 ===================================================================
 --- kernel-5_15.orig/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
 +++ kernel-5_15/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
-@@ -621,15 +621,16 @@
+@@ -616,15 +616,16 @@
  				assigned-clock-rates = <702000000>;
  
  				gpu: gpu@0 {
@@ -31,7 +31,7 @@ Index: kernel-5_15/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
  
  					power_model {
  						compatible = "arm,mali-simple-power-model";
-@@ -990,6 +991,13 @@
+@@ -979,6 +980,13 @@
  	ac: rtd1xxx-ac.0 {
  		compatible = "realtek,rtd1xxx-ac";
  	};
@@ -45,3 +45,43 @@ Index: kernel-5_15/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
  };
  
  &crt {
+Index: kernel-5_15/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi
+===================================================================
+--- kernel-5_15.orig/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi
++++ kernel-5_15/arch/arm64/boot/dts/realtek/rtd1619b-bleedingedge.dtsi
+@@ -247,31 +247,30 @@
+ 		compatible = "operating-points-v2",
+ 			     "operating-points-v2-mali";
+ 		mali-supply = <&gpu_supp>;
+-		shadercores-supply = <&gpu_supp>;
+ 
+ 		opp-450000000 {
+ 			opp-hz = /bits/ 64 <450000000>;
+ 			opp-hz-real = /bits/ 64 <450000000>;
+-			opp-microvolt = <800000>, <800000>;
++			opp-microvolt = <800000>;
+ 			opp-suspend;
+ 		};
+ 
+ 		opp-550000000 {
+ 			opp-hz = /bits/ 64 <550000000>;
+ 			opp-hz-real = /bits/ 64 <550000000>;
+-			opp-microvolt = <800000>, <800000>;
++			opp-microvolt = <800000>;
+ 		};
+ 
+ 		opp-650000000 {
+ 			opp-hz = /bits/ 64 <650000000>;
+ 			opp-hz-real = /bits/ 64 <650000000>;
+-			opp-microvolt = <800000>, <800000>;
++			opp-microvolt = <800000>;
+ 		};
+ 
+ 		opp-702000000 {
+ 			opp-hz = /bits/ 64 <702000000>;
+ 			opp-hz-real = /bits/ 64 <702000000>;
+-			opp-microvolt = <800000>, <800000>;
++			opp-microvolt = <800000>;
+ 		};
+ 	};
+ };

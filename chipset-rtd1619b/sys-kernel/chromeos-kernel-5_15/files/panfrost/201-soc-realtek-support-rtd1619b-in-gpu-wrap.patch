@@ -8,68 +8,12 @@ Change-Id: I72dd577b6727382f6db56448eaad32b0971a5173
  drivers/soc/realtek/gpu/rtk-gpu_wrap.c | 68 ++++++++++++++++++++++----
  1 file changed, 59 insertions(+), 9 deletions(-)
 
-diff --git a/drivers/soc/realtek/gpu/rtk-gpu_wrap.c b/drivers/soc/realtek/gpu/rtk-gpu_wrap.c
-index 59558835bf8a..3872d23131c6 100644
---- a/drivers/soc/realtek/gpu/rtk-gpu_wrap.c
-+++ b/drivers/soc/realtek/gpu/rtk-gpu_wrap.c
-@@ -13,6 +13,7 @@
- #include <linux/mfd/syscon.h>
- #include <linux/regmap.h>
- #include <linux/module.h>
-+#include <linux/nvmem-consumer.h>
- #include <linux/of.h>
- #include <linux/of_platform.h>
- #include <linux/platform_device.h>
-@@ -41,15 +42,46 @@ struct rtk_gpu_wrap_data {
- struct rtk_gpu_wrap_desc {
- 	u32 has_bisr : 1;
- 	u32 request_syscon_dbgport : 1;
-+	u32 request_nvmem_bist_rst_ctrl : 1;
- 	int (*setup_bisr)(struct rtk_gpu_wrap_data *data);
- 	int (*do_bisr)(struct rtk_gpu_wrap_data *data);
- };
- 
-+static void rtd1619b_gpu_wrap_sram_fixup(struct rtk_gpu_wrap_data *data)
-+{
-+	u32 val = readl(data->reg_bist + 0xb0);
-+
-+	writel(val | 0x8051c364, data->reg_bist + 0xb0);
-+	writel(val & ~0x8051c364, data->reg_bist + 0xb0);
-+}
-+
-+static int rtd1619b_do_bisr(struct rtk_gpu_wrap_data *data)
-+{
-+	unsigned int regval;
-+	int ret;
-+
-+	rtd1619b_gpu_wrap_sram_fixup(data);
-+
-+	if (!data->auto_bist_enabled)
-+		writel(0x00003030, data->reg_bist + 0x10);
-+
-+	ret = readl_poll_timeout(data->reg_bist + 0x40, regval, (regval & 0x1001) == 0x1001, 0, 1000000);
-+	if (ret || regval != 0x1001)
-+		dev_warn(data->dev, "error %pe: bisr failed: status=%08x\n", ERR_PTR(ret), regval);
-+	return ret;
-+}
-+
-+static const struct rtk_gpu_wrap_desc rtd1619b_gpu_wrap_desc = {
-+	.has_bisr = 1,
-+	.request_nvmem_bist_rst_ctrl = 1,
-+	.do_bisr = rtd1619b_do_bisr,
-+};
-+
- static int rtd1319d_auto_bist_enabled(struct rtk_gpu_wrap_data *data)
- {
- 	unsigned int st1, st2;
- 
--	if (!data->dbgprot)
-+	if (WARN_ON(!data->dbgprot))
- 		return 0;
- 
- 	regmap_read(data->dbgprot, 0, &st1);
-@@ -250,6 +282,31 @@ static int rtk_gpu_wrap_probe(struct platform_device *pdev)
- 		return -EINVAL;
+Index: kernel-5_15/drivers/soc/realtek/gpu/rtk-gpu_wrap.c
+===================================================================
+--- kernel-5_15.orig/drivers/soc/realtek/gpu/rtk-gpu_wrap.c
++++ kernel-5_15/drivers/soc/realtek/gpu/rtk-gpu_wrap.c
+@@ -299,6 +299,31 @@ static int rtk_gpu_wrap_probe(struct pla
+ 		nvmem_cell_put(cell);
  	}
  
 +	if (data->desc->request_syscon_dbgport) {
@@ -100,7 +44,7 @@ index 59558835bf8a..3872d23131c6 100644
  	if (data->desc->has_bisr) {
  		data->reg_bist = devm_platform_ioremap_resource_byname(pdev, "bist");
  		if (IS_ERR(data->reg_bist))
-@@ -270,14 +327,6 @@ static int rtk_gpu_wrap_probe(struct platform_device *pdev)
+@@ -319,14 +344,6 @@ static int rtk_gpu_wrap_probe(struct pla
  	if (IS_ERR(data->rstc_bist))
  		return dev_err_probe(dev, PTR_ERR(data->rstc_bist), "failed to get bist reset\n");
  
@@ -115,14 +59,3 @@ index 59558835bf8a..3872d23131c6 100644
  
  	platform_set_drvdata(pdev, data);
  
-@@ -307,6 +356,7 @@ static void rtk_gpu_wrap_shutdown(struct platform_device *pdev)
- }
- 
- static const struct of_device_id rtk_gpu_wrap_match[] = {
-+	{ .compatible = "realtek,rtd1619b-gpu-wrap", .data = &rtd1619b_gpu_wrap_desc, },
- 	{ .compatible = "realtek,rtd1319d-gpu-wrap", .data = &rtd1319d_gpu_wrap_desc, },
- 	{ .compatible = "realtek,rtd1315e-gpu-wrap", .data = &rtd1315e_gpu_wrap_desc, },
- 	{}
--- 
-2.42.0
-
