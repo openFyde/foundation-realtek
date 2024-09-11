@@ -14,6 +14,7 @@ IUSE=""
 RDEPEND="
   chromeos-base/chromeos-bsp-baseboard-bleedingedge
   chromeos-base/device-appid
+  app-i18n/chromeos-keyboards
 "
 
 DEPEND="${RDEPEND}"
