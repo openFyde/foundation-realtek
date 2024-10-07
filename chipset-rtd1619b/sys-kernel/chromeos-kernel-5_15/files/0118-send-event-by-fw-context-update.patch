@@ -1,0 +1,202 @@
+From 2ca13051cb4580d09149ea5f308d2b45be00a19a Mon Sep 17 00:00:00 2001
+From: yaozenhu <yaozenhu@realtek.com>
+Date: Mon, 7 Oct 2024 13:53:13 +0800
+Subject: [PATCH] send event by fw context update
+
+---
+ drivers/gpu/drm/realtek/rtk_drm_crtc.c  |  8 +--
+ drivers/gpu/drm/realtek/rtk_drm_crtc.h  |  9 +--
+ drivers/gpu/drm/realtek/rtk_drm_plane.c | 86 ++++++-------------------
+ 3 files changed, 24 insertions(+), 79 deletions(-)
+
+diff --git a/drivers/gpu/drm/realtek/rtk_drm_crtc.c b/drivers/gpu/drm/realtek/rtk_drm_crtc.c
+index 92bfaf184..4d8a60b16 100644
+--- a/drivers/gpu/drm/realtek/rtk_drm_crtc.c
++++ b/drivers/gpu/drm/realtek/rtk_drm_crtc.c
+@@ -207,7 +207,6 @@ void rtk_crtc_finish_page_flip(struct drm_crtc *crtc)
+ 		drm_crtc_vblank_put(crtc);
+ 		rtk_crtc->event = NULL;
+ 		rtk_crtc->pending_needs_vblank = false;
+-		rtk_plane_clear_buflock(&rtk_crtc->nplanes[0], 0);
+ 	}
+ 	spin_unlock_irqrestore(&drm->event_lock, flags);
+ }
+@@ -315,11 +314,10 @@ irqreturn_t rtk_crtc_isr(int irq, void *dev_id)
+ 
+ 	drm_crtc_handle_vblank(crtc);
+ 
+-	if (!rtk_crtc->present_time_en) {
++	if (rtk_plane_check_page_flip(&rtk_crtc->nplanes[0])) {
+ 		rtk_crtc_finish_page_flip(crtc);
+-	} else if (ktime_get() >= rtk_crtc->present_time) {
+-		rtk_crtc_finish_page_flip(crtc);
+-		rtk_crtc->present_time_en = 0;
++	} else {
++		DRM_DEBUG_DRIVER("Not page flip yet\n");
+ 	}
+ 
+ 	return IRQ_HANDLED;
+diff --git a/drivers/gpu/drm/realtek/rtk_drm_crtc.h b/drivers/gpu/drm/realtek/rtk_drm_crtc.h
+index 0c0b04db9..526685180 100644
+--- a/drivers/gpu/drm/realtek/rtk_drm_crtc.h
++++ b/drivers/gpu/drm/realtek/rtk_drm_crtc.h
+@@ -23,11 +23,6 @@ enum {
+ 	VSYNC_FORCE_LOCK = (1U << 7),
+ };
+ 
+-struct plane_buf_lock {
+-	unsigned int status;
+-	struct dma_buf *dmabuf;
+-};
+-
+ struct crtc_plane_data {
+ 	enum VO_VIDEO_PLANE layer_nr;
+ 	enum drm_plane_type type;
+@@ -73,8 +68,8 @@ struct rtk_drm_plane {
+ 	unsigned int mixer;
+ 
+ 	unsigned int buflock_idx;
+-	struct plane_buf_lock buflock[BUFLOCK_MAX];
+ 	ktime_t update_time;
++	unsigned int context;
+ };
+ 
+ struct rtk_drm_crtc {
+@@ -107,8 +102,8 @@ struct rtk_crtc_state {
+ int rtk_plane_init(struct drm_device *drm, struct rtk_drm_plane *rtk_plane,
+ 		   unsigned long possible_crtcs, enum drm_plane_type type,
+ 		   enum VO_VIDEO_PLANE layer_nr);
++bool rtk_plane_check_page_flip(struct rtk_drm_plane *rtk_plane);
+ extern void rtk_plane_destroy(struct drm_plane *plane);
+-extern void rtk_plane_clear_buflock(struct rtk_drm_plane *rtk_plane, unsigned int mode);
+ extern void rtk_crtc_finish_page_flip(struct drm_crtc *crtc);
+ extern int rtk_fence_init(struct rtk_drm_plane *rtk_plane);
+ extern int rtk_fence_uninit(struct rtk_drm_plane *rtk_plane);
+diff --git a/drivers/gpu/drm/realtek/rtk_drm_plane.c b/drivers/gpu/drm/realtek/rtk_drm_plane.c
+index 067729af1..c647dc4c6 100644
+--- a/drivers/gpu/drm/realtek/rtk_drm_plane.c
++++ b/drivers/gpu/drm/realtek/rtk_drm_plane.c
+@@ -279,69 +279,6 @@ static void init_video_object(struct video_object *obj)
+ 	obj->pLock_Right = 0xffffffff;
+ }
+ 
+-void rtk_plane_queue_buflock(struct rtk_drm_plane *rtk_plane, struct drm_framebuffer *fb)
+-{
+-	enum drm_plane_type type = rtk_plane->plane.type;
+-	struct drm_gem_object *gem;
+-	unsigned int idx;
+-
+-	if (type != DRM_PLANE_TYPE_PRIMARY) {
+-		DRM_DEBUG_KMS("%s plane type not support yet!!\n", __func__);
+-		return;
+-	}
+-
+-	if (IS_ERR_OR_NULL(fb))
+-		return;
+-
+-	gem = rtk_fb_get_gem_obj(fb, 0);
+-
+-	if (IS_ERR_OR_NULL(gem->import_attach))
+-		return;
+-
+-	DRM_DEBUG_KMS("queue buffer lock 0x%p!!\n", gem->import_attach->dmabuf);
+-
+-	get_dma_buf(gem->import_attach->dmabuf);
+-
+-	idx = rtk_plane->buflock_idx;
+-	rtk_plane->buflock[idx].dmabuf = gem->import_attach->dmabuf;
+-	rtk_plane->buflock[idx].status = 1;
+-
+-	rtk_plane->buflock_idx++;
+-	if (rtk_plane->buflock_idx >= BUFLOCK_MAX)
+-		rtk_plane->buflock_idx = 0;
+-}
+-
+-void rtk_plane_clear_buflock(struct rtk_drm_plane *rtk_plane, unsigned int mode)
+-{
+-	enum drm_plane_type type = rtk_plane->plane.type;
+-	int i, lock, unlock;
+-
+-	if (type != DRM_PLANE_TYPE_PRIMARY)
+-		return;
+-
+-	if (mode) {
+-		unlock = lock = 0;
+-		DRM_DEBUG_KMS("clear all buflock\n");
+-	} else {
+-		unlock = htonl(rtk_plane->refclock->videoContext);
+-		lock = rtk_plane->buflock_idx;
+-	}
+-
+-	for(i = 0; i < BUFLOCK_MAX; i++) {
+-		if ((lock > unlock) && (i > unlock && i <= lock))
+-			continue;
+-		if ((lock < unlock) && (i > unlock || i <= lock))
+-			continue;
+-
+-		if (rtk_plane->buflock[i].status) {
+-			dma_buf_put(rtk_plane->buflock[i].dmabuf);
+-			rtk_plane->buflock[i].dmabuf = NULL;
+-			rtk_plane->buflock[i].status = 0;
+-			DRM_DEBUG_KMS("clear buflock %d, lock-%d, unlock-%d\n", i, lock, unlock);
+-		}
+-	}
+-}
+-
+ static int rtk_plane_inband_config_disp_win(struct drm_plane *plane, struct rpc_config_disp_win *disp_win)
+ {
+ 	struct rtk_drm_plane *rtk_plane = to_rtk_plane(plane);
+@@ -551,7 +488,15 @@ static int rtk_plane_update_graphic_obj(struct drm_plane *plane)
+ 		flags |= eBuffer_AFBC_Enable | eBuffer_AFBC_YUV_Transform;
+ 	}
+ 
++	if (rtk_plane->buflock_idx >= 1024) {
++		rtk_plane->buflock_idx = 0;
++	}
++
+ 	obj->context = rtk_plane->buflock_idx;
++
++	rtk_plane->context = obj->context;
++	rtk_plane->buflock_idx++;
++
+ 	obj->width = fb->width;
+ 	obj->height = fb->height;
+ 	obj->pitch = fb->pitches[0];
+@@ -561,14 +506,23 @@ static int rtk_plane_update_graphic_obj(struct drm_plane *plane)
+ //     obj->afbc_block_split = (flags & eBuffer_AFBC_Split)?1:0;
+ 	obj->afbc_yuv_transform = (flags & eBuffer_AFBC_YUV_Transform)?1:0;
+ 
+-	rtk_plane_queue_buflock(rtk_plane, fb);
+-
+ 	write_cmd_to_ringbuffer(rtk_plane, obj);
+ 
+ 	kfree(obj);
+ 	return 0;
+ }
+ 
++bool rtk_plane_check_page_flip(struct rtk_drm_plane *rtk_plane)
++{
++	int refContext = -1;
++	if (rtk_plane->refclock) {
++		refContext = htonl(rtk_plane->refclock->videoContext);
++		if (refContext == rtk_plane->context) {
++			return true;
++		}
++	}
++	return false;
++}
+ 
+ static int rtk_plane_rpc_init(struct rtk_drm_plane *rtk_plane,
+ 			      enum VO_VIDEO_PLANE layer_nr)
+@@ -948,8 +902,6 @@ static void rtk_plane_atomic_disable(struct drm_plane *plane,
+ 
+ 	if (rpc_video_config_disp_win(rpc_info, &rtk_plane->disp_win))
+ 		DRM_ERROR("rpc_video_config_disp_win RPC fail\n");
+-
+-	rtk_plane_clear_buflock(rtk_plane, 1);
+ }
+ 
+ static int rtk_plane_atomic_async_check(struct drm_plane *plane,
+-- 
+2.34.1
+
