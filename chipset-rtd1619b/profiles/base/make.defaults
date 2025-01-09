@@ -15,9 +15,13 @@ USE="${USE} -coreboot -cros_ec -rgbkbd"
 USE="${USE} direncryption direncription_allow_v2"
 USE="${USE} -tpm tpm2 tpm2_simulator tpm_insecure_fallback vtpm_proxy tpm2_simulator_manufacturer"
 USE="${USE} kvm_host crosvm-gpu virtio_gpu"
-USE="${USE} disable_explicit_dma_fences"
+USE="${USE} disable_explicit_dma_fences march_armv8-a"
 #switch gpu driver from mali to panfrost
 #USE="${USE} panfrost"
 
 ACCEPT_LICENSE="${ACCEPT_LICENSE} Google-TOS"
 VIDEO_CARDS="realtek"
+
+UBOOT_CONFIG="rtd1619b_bleedingedge"
+# DDR TYPE: ddr4 | lpddr4
+UBOOT_DDR_TYPE="ddr4"

@@ -27,6 +27,11 @@ cros_post_src_install_add_rawimage_dtbs() {
     insinto ${install_prefix}/realtek/overlay
     doins "${dtb_dir}"/realtek/overlay/*.dtbo || die
   fi
+  local kernel_bin="${install_dir}/vmlinuz-${version}.signed"
+  local its_script="${kernel_dir}/its_script"
+  mkimage -D "-I dts -O dtb -p 2048" -f "${its_script}" \
+      -k ${ROOT}/build/u-boot/rtd1619b/keys  -g dev -o sha256,rsa2048 "${kernel_bin}" || die
+  ln -sf vmlinuz-${version}.signed ${install_dir}/vmlinuz.signed
 }
 
 cros_post_src_prepare_add_additional_patches() {

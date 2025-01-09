@@ -43,11 +43,11 @@ Change-Id: I4c83f8268d904998b4bb34cdc7167b6e200199dd
  drivers/gpu/drm/realtek/rtk_hdmi.c            | 5 +++++
  6 files changed, 31 insertions(+), 1 deletion(-)
 
-diff --git a/arch/arm64/boot/dts/realtek/rtd16xxb-drm.dtsi b/arch/arm64/boot/dts/realtek/rtd16xxb-drm.dtsi
-index 37468b4e40de..af19199387b0 100644
---- a/arch/arm64/boot/dts/realtek/rtd16xxb-drm.dtsi
-+++ b/arch/arm64/boot/dts/realtek/rtd16xxb-drm.dtsi
-@@ -5,6 +5,7 @@ display_subsystem: display-subsystem {
+Index: kernel-5_15/arch/arm64/boot/dts/realtek/rtd16xxb-drm.dtsi
+===================================================================
+--- kernel-5_15.orig/arch/arm64/boot/dts/realtek/rtd16xxb-drm.dtsi
++++ kernel-5_15/arch/arm64/boot/dts/realtek/rtd16xxb-drm.dtsi
+@@ -5,6 +5,7 @@
  		ports = <&vo_out>;
  		realtek,krpc-agent = <&acpu_kernel_agent>, <&hifi_kernel_agent>;
  		status = "disabled";
@@ -55,7 +55,7 @@ index 37468b4e40de..af19199387b0 100644
  	};
  
  	vo: vo@98080000 {
-@@ -12,6 +13,7 @@ vo: vo@98080000 {
+@@ -12,6 +13,7 @@
  		reg = <0x98080000 0x2000>;
  		interrupts = <0 33 4>;
  		hwlocks = <&sb2_lock5 1>;
@@ -63,7 +63,7 @@ index 37468b4e40de..af19199387b0 100644
  		vo_out: port {
  			#address-cells = <1>;
  			#size-cells = <0>;
-@@ -38,6 +40,7 @@ hdmi: hdmi {
+@@ -38,6 +40,7 @@
  		rxsense-mode = <1>;
  		hdcp = <2>;
  		realtek,krpc-agent = <&acpu_kernel_agent>;
@@ -71,7 +71,7 @@ index 37468b4e40de..af19199387b0 100644
  		hdmi_in: port {
  			hdmi_vo: endpoint {
  				remote-endpoint = <&vo_hdmi>;
-@@ -48,6 +51,7 @@ hdmi_vo: endpoint {
+@@ -48,6 +51,7 @@
  	cvbs: cvbs {
  		compatible = "realtek,rtk-cvbs";
  		status = "disabled";
@@ -79,10 +79,10 @@ index 37468b4e40de..af19199387b0 100644
  		cvbs_in: port {
  			cvbs_vo: endpoint {
  				remote-endpoint = <&vo_cvbs>;
-diff --git a/drivers/gpu/drm/realtek/rtk_cvbs.c b/drivers/gpu/drm/realtek/rtk_cvbs.c
-index 7221194abf8d..73355bfdef12 100644
---- a/drivers/gpu/drm/realtek/rtk_cvbs.c
-+++ b/drivers/gpu/drm/realtek/rtk_cvbs.c
+Index: kernel-5_15/drivers/gpu/drm/realtek/rtk_cvbs.c
+===================================================================
+--- kernel-5_15.orig/drivers/gpu/drm/realtek/rtk_cvbs.c
++++ kernel-5_15/drivers/gpu/drm/realtek/rtk_cvbs.c
 @@ -7,6 +7,7 @@
  
  #include <linux/platform_device.h>
@@ -91,7 +91,7 @@ index 7221194abf8d..73355bfdef12 100644
  
  #include "rtk_drm_drv.h"
  
-@@ -211,6 +212,10 @@ static int rtk_cvbs_bind(struct device *dev, struct device *master,
+@@ -211,6 +212,10 @@ static int rtk_cvbs_bind(struct device *
  	cvbs->drm_dev = drm;
  	cvbs->dev = dev;
  
@@ -102,10 +102,10 @@ index 7221194abf8d..73355bfdef12 100644
  	encoder = &cvbs->encoder;
  	encoder->possible_crtcs = drm_of_find_possible_crtcs(drm, dev->of_node);
  	if (encoder->possible_crtcs == 0) {
-diff --git a/drivers/gpu/drm/realtek/rtk_dptx_core.c b/drivers/gpu/drm/realtek/rtk_dptx_core.c
-index 2c48ff2d0115..f6f328e88a98 100644
---- a/drivers/gpu/drm/realtek/rtk_dptx_core.c
-+++ b/drivers/gpu/drm/realtek/rtk_dptx_core.c
+Index: kernel-5_15/drivers/gpu/drm/realtek/rtk_dptx_core.c
+===================================================================
+--- kernel-5_15.orig/drivers/gpu/drm/realtek/rtk_dptx_core.c
++++ kernel-5_15/drivers/gpu/drm/realtek/rtk_dptx_core.c
 @@ -18,6 +18,7 @@
  
  #include <linux/of_irq.h>
@@ -114,7 +114,7 @@ index 2c48ff2d0115..f6f328e88a98 100644
  #include <linux/clk.h>
  #include <linux/clk-provider.h>
  
-@@ -536,6 +537,10 @@ static int rtk_dptx_bind(struct device *dev, struct device *master,
+@@ -536,6 +537,10 @@ static int rtk_dptx_bind(struct device *
  	dptx->drm_dev = drm;
  	dptx->dev = dev;
  
@@ -125,10 +125,10 @@ index 2c48ff2d0115..f6f328e88a98 100644
  	clk = devm_clk_get(dev, "clk_en_edp");
  	if (IS_ERR(clk)) {
  		dev_err(dev, "failed to get clock\n");
-diff --git a/drivers/gpu/drm/realtek/rtk_drm_crtc.c b/drivers/gpu/drm/realtek/rtk_drm_crtc.c
-index b15ede1620fe..380c735ed400 100644
---- a/drivers/gpu/drm/realtek/rtk_drm_crtc.c
-+++ b/drivers/gpu/drm/realtek/rtk_drm_crtc.c
+Index: kernel-5_15/drivers/gpu/drm/realtek/rtk_drm_crtc.c
+===================================================================
+--- kernel-5_15.orig/drivers/gpu/drm/realtek/rtk_drm_crtc.c
++++ kernel-5_15/drivers/gpu/drm/realtek/rtk_drm_crtc.c
 @@ -23,6 +23,7 @@
  #include <linux/interrupt.h>
  #include <linux/of_irq.h>
@@ -137,7 +137,7 @@ index b15ede1620fe..380c735ed400 100644
  
  #include "rtk_drm_drv.h"
  #include "rtk_drm_crtc.h"
-@@ -324,10 +325,14 @@ static int rtk_crtc_bind(struct device *dev, struct device *master, void *data)
+@@ -324,10 +325,14 @@ static int rtk_crtc_bind(struct device *
  	enum VO_VIDEO_PLANE layer_nr;
  	struct rtk_drm_crtc *rtk_crtc;
  	int lock_id;
@@ -153,10 +153,10 @@ index b15ede1620fe..380c735ed400 100644
  	rtk_crtc->rpc_info = &priv->rpc_info;
  	dev_set_drvdata(dev, rtk_crtc);
  
-diff --git a/drivers/gpu/drm/realtek/rtk_drm_drv.c b/drivers/gpu/drm/realtek/rtk_drm_drv.c
-index 618bebb16604..409d22206e11 100644
---- a/drivers/gpu/drm/realtek/rtk_drm_drv.c
-+++ b/drivers/gpu/drm/realtek/rtk_drm_drv.c
+Index: kernel-5_15/drivers/gpu/drm/realtek/rtk_drm_drv.c
+===================================================================
+--- kernel-5_15.orig/drivers/gpu/drm/realtek/rtk_drm_drv.c
++++ kernel-5_15/drivers/gpu/drm/realtek/rtk_drm_drv.c
 @@ -24,6 +24,7 @@
  #include <drm/drm_vblank.h>
  #include <linux/component.h>
@@ -165,7 +165,7 @@ index 618bebb16604..409d22206e11 100644
  
  #include "../drm_internal.h"
  #include <drm/realtek_drm.h>
-@@ -88,6 +89,11 @@ static int rtk_drm_bind(struct device *dev)
+@@ -88,6 +89,11 @@ static int rtk_drm_bind(struct device *d
  		ret = -ENOMEM;
  		goto err_free_drm;
  	}
@@ -177,10 +177,10 @@ index 618bebb16604..409d22206e11 100644
  	drm->dev_private = priv;
  	mutex_init(&priv->obj_lock);
  	ret = rtk_rpc_init(dev, &priv->rpc_info);
-diff --git a/drivers/gpu/drm/realtek/rtk_hdmi.c b/drivers/gpu/drm/realtek/rtk_hdmi.c
-index 8f2f70260c0a..7d27d5b0bdff 100644
---- a/drivers/gpu/drm/realtek/rtk_hdmi.c
-+++ b/drivers/gpu/drm/realtek/rtk_hdmi.c
+Index: kernel-5_15/drivers/gpu/drm/realtek/rtk_hdmi.c
+===================================================================
+--- kernel-5_15.orig/drivers/gpu/drm/realtek/rtk_hdmi.c
++++ kernel-5_15/drivers/gpu/drm/realtek/rtk_hdmi.c
 @@ -20,6 +20,7 @@
  #include <linux/regmap.h>
  #include <linux/delay.h>
@@ -189,7 +189,7 @@ index 8f2f70260c0a..7d27d5b0bdff 100644
  
  #include "rtk_hdmi.h"
  #include "rtk_hdmi_reg.h"
-@@ -1565,6 +1566,10 @@ static int rtk_hdmi_bind(struct device *dev, struct device *master,
+@@ -1565,6 +1566,10 @@ static int rtk_hdmi_bind(struct device *
  	if (!hdmi)
  		return -ENOMEM;
  
@@ -200,6 +200,11 @@ index 8f2f70260c0a..7d27d5b0bdff 100644
  	hdmi->drm_dev = drm;
  	hdmi->dev = dev;
  	dev_set_drvdata(dev, hdmi);
--- 
-2.45.2
-
+@@ -1932,6 +1937,7 @@ static void rtk_hdmi_shutdown(struct pla
+ 
+ static int rtk_hdmi_probe(struct platform_device *pdev)
+ {
++  pr_info("%s\n", __func__);
+ 	return component_add(&pdev->dev, &rtk_hdmi_ops);
+ }
+ 

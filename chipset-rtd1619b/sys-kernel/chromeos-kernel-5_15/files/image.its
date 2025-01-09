@@ -36,6 +36,11 @@
             description = "Normal boot with FDT blob";
             kernel = "kernel-1";
             fdt = "fdt-1";
+						signature {
+                algo = "sha256,rsa2048";
+                key-name-hint = "dev";
+                sign-images = "fdt", "kernel";
+            };
         };
     };
 };

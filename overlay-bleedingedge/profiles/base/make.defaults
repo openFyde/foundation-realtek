@@ -4,5 +4,5 @@ USE="${USE} touchview -legacy_keyboard -legacy_power_button touch_centric_device
 CHROMEOS_DTBS="rtd1619b-bleedingedge-4gb.dtb"
 
 TTY_CONSOLE="ttyS0"
-#CHROME_ORIGIN=LOCAL_SOURCE
-#CHROME_ROOT=/var/cache/chromeos-cache/distfiles/chrome-src
+CHROME_ORIGIN=LOCAL_SOURCE
+CHROME_ROOT=/home/yang/chrome_root

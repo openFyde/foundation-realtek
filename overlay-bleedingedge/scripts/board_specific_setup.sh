@@ -23,7 +23,7 @@ install_realtek_boot_scr() {
   rmdir "${efi_dir}"
 
   info "Installed /boot/boot.scr.uimg"
-
+  dd if=${ROOT}/boot/u-boot.bin-rtd1619b_emmc of=${image} seek=$((0x280)) conv=fdatasync,notrunc
 }
 
 board_setup() {

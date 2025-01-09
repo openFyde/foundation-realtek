@@ -1,0 +1,41 @@
+Index: kernel-5_15/drivers/bluetooth/btintel.c
+===================================================================
+--- kernel-5_15.orig/drivers/bluetooth/btintel.c
++++ kernel-5_15/drivers/bluetooth/btintel.c
+@@ -2709,6 +2709,7 @@ static int btintel_setup_combined(struct
+ 			 * Use packet size 24 for the chip
+ 			 */
+ 			hdev->wbs_pkt_len = 24;
++      fallthrough;
+ 		case 0x11:      /* JfP */
+ 		case 0x12:      /* ThP */
+ 		case 0x13:      /* HrP */
+Index: kernel-5_15/kernel/sched/deadline.c
+===================================================================
+--- kernel-5_15.orig/kernel/sched/deadline.c
++++ kernel-5_15/kernel/sched/deadline.c
+@@ -1368,9 +1368,11 @@ s64 dl_scalled_delta_exec(struct rq *rq,
+ 	return scaled_delta_exec;
+ }
+ 
++#if 0
+ static inline void
+ update_stats_dequeue_dl(struct dl_rq *dl_rq, struct sched_dl_entity *dl_se,
+ 			int flags);
++#endif
+ static void update_curr_dl_se(struct rq *rq, struct sched_dl_entity *dl_se, s64 delta_exec)
+ {
+ 	s64 scaled_delta_exec;
+Index: kernel-5_15/kernel/trace/trace_events.c
+===================================================================
+--- kernel-5_15.orig/kernel/trace/trace_events.c
++++ kernel-5_15/kernel/trace/trace_events.c
+@@ -2036,7 +2036,7 @@ ftrace_set_trace_pidns_read(struct file
+ 
+ 	mutex_lock(&event_mutex);
+ 	if (tr->filtered_ns)
+-		snprintf(buf, sizeof(buf), "pid:%lu", tr->filtered_ns->ns.inum);
++		snprintf(buf, sizeof(buf), "pid:%u", tr->filtered_ns->ns.inum);
+ 	else
+ 		strcpy(buf, "not set");
+ 	mutex_unlock(&event_mutex);
