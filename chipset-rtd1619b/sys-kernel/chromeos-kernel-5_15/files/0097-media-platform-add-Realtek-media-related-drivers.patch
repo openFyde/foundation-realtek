@@ -25,7 +25,7 @@ diff --git a/drivers/media/platform/Makefile b/drivers/media/platform/Makefile
 index f50587cd5b71..9bfd74e9284a 100644
 --- a/drivers/media/platform/Makefile
 +++ b/drivers/media/platform/Makefile
-@@ -85,8 +85,14 @@ obj-$(CONFIG_VIDEO_QCOM_CAMSS)		+= qcom/camss/
+@@ -85,6 +85,12 @@ obj-$(CONFIG_VIDEO_QCOM_CAMSS)		+= qcom/camss/
  
  obj-$(CONFIG_VIDEO_QCOM_VENUS)		+= qcom/venus/
  
@@ -34,12 +34,10 @@ index f50587cd5b71..9bfd74e9284a 100644
  obj-y					+= sunxi/
  
  obj-$(CONFIG_VIDEO_MESON_GE2D)		+= meson/ge2d/
- 
++ 
 +obj-$(CONFIG_RTK_DSI)			+= rtk_dsi/
 +
 +obj-$(CONFIG_RTK_TPDEMUX)		+= rtk_tpdemux/
-+
- obj-y					+= camx/
 -- 
 2.45.2
 

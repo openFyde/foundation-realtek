@@ -3,6 +3,8 @@
 
 EAPI=7
 
+CROS_WORKON_COMMIT="24f0ed64d6075381740a63e57eba966d031a44f2"
+CROS_WORKON_TREE="af009a41714d90b434845317c0cb26cda88c6bea"
 CROS_WORKON_PROJECT="chromiumos/third_party/kernel"
 CROS_WORKON_LOCALNAME="kernel/v5.15"
 CROS_WORKON_EGIT_BRANCH="chromeos-5.15"
@@ -37,7 +39,7 @@ inherit cros-workon cros-kernel
 
 HOMEPAGE="https://www.chromium.org/chromium-os/chromiumos-design-docs/chromium-os-kernel"
 DESCRIPTION="Chrome OS Linux Kernel 5.15"
-KEYWORDS="~*"
+KEYWORDS="*"
 
 IUSE="${IUSE} panfrost aic_wifi"
 CONFIG_FRAGMENTS+=( panfrost aic_wifi )
@@ -61,6 +63,3 @@ CONFIG_BT_HCIUART_H4=y
 CONFIG_BT_HCIUART_ATH3K=y
 "
 
-cros-kernel_apply_patches() {
-  einfo "skip patches"
-}
