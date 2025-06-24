@@ -1,0 +1,15 @@
+--- a/chromeos-install.sh
++++ b/chromeos-install.sh
+@@ -428,11 +428,7 @@
+   # When the stateful partition is wiped the TPM ownership must be reset.
+   # This command will not work on Flex devices which do not support it.
+   # In that case the result will be ignored.
+-  if [ "$(crossystem mainfw_type)" != "nonchrome" ]; then
+-    crossystem clear_tpm_owner_request=1
+-  else
+-    crossystem clear_tpm_owner_request=1 || true
+-  fi
++  crossystem clear_tpm_owner_request=1 || true
+ }
+ 
+ # Install the stateful partition content
