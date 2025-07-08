@@ -9,10 +9,10 @@ Change-Id: I21d9634b9579b0705bee88f149574f98afa54c8b
  drivers/rpmsg/rpmsg_rtk.c | 52 ++++++++++++++++++++++++++++++++++-----
  1 file changed, 46 insertions(+), 6 deletions(-)
 
-diff --git a/drivers/rpmsg/rpmsg_rtk.c b/drivers/rpmsg/rpmsg_rtk.c
-index a9fab2cd522e..07f782c4f7c2 100644
---- a/drivers/rpmsg/rpmsg_rtk.c
-+++ b/drivers/rpmsg/rpmsg_rtk.c
+Index: kernel-5_15/drivers/rpmsg/rpmsg_rtk.c
+===================================================================
+--- kernel-5_15.orig/drivers/rpmsg/rpmsg_rtk.c
++++ kernel-5_15/drivers/rpmsg/rpmsg_rtk.c
 @@ -182,6 +182,7 @@ struct rtk_rcpu {
  	int big_endian;
  	irqreturn_t (*isr)(int irq, void *data);
@@ -21,7 +21,7 @@ index a9fab2cd522e..07f782c4f7c2 100644
  };
  
  struct rtk_rpmsg_device {
-@@ -1253,7 +1254,7 @@ static const struct file_operations rpmsg_debug_ops = {
+@@ -1253,7 +1254,7 @@ static const struct file_operations rpms
  	.release = single_release,
  };
  
@@ -30,7 +30,7 @@ index a9fab2cd522e..07f782c4f7c2 100644
  					struct device_node *node,
  					struct dentry *rpmsg_dir)
  {
-@@ -1267,7 +1268,7 @@ static int rtk_register_rcpu(struct device *parent,
+@@ -1267,7 +1268,7 @@ static int rtk_register_rcpu(struct devi
  
  	rcpu = kzalloc(sizeof(*rcpu), GFP_KERNEL);
  	if (!rcpu)
@@ -39,7 +39,7 @@ index a9fab2cd522e..07f782c4f7c2 100644
  
  	rcpu->dev.parent = parent;
  	rcpu->dev.release = rtk_rcpu_release;
-@@ -1428,7 +1429,7 @@ static int rtk_register_rcpu(struct device *parent,
+@@ -1428,7 +1429,7 @@ static int rtk_register_rcpu(struct devi
  	}
  	dev_info(&rcpu->dev, "probed\n");
  
@@ -48,7 +48,7 @@ index a9fab2cd522e..07f782c4f7c2 100644
  
  unregister_dev:
  	device_unregister(&rcpu->dev);
-@@ -1436,7 +1437,7 @@ static int rtk_register_rcpu(struct device *parent,
+@@ -1436,7 +1437,7 @@ unregister_dev:
  err:
  	kfree(rcpu);
  
@@ -57,7 +57,7 @@ index a9fab2cd522e..07f782c4f7c2 100644
  }
  
  int rcpu_endian_check(struct device *dev)
-@@ -1569,6 +1570,8 @@ static int rtk_rcpu_probe(struct platform_device *pdev)
+@@ -1569,6 +1570,8 @@ static int rtk_rcpu_probe(struct platfor
  	int ret = 0;
  	struct device_node *node;
  	struct dentry *rpmsg_dir;
@@ -66,7 +66,7 @@ index a9fab2cd522e..07f782c4f7c2 100644
  
  	if (IS_ENABLED(CONFIG_RTK_FW_REMOTEPROC)) {
  		ret = is_rprocs_boot(&pdev->dev);
-@@ -1580,8 +1583,16 @@ static int rtk_rcpu_probe(struct platform_device *pdev)
+@@ -1580,8 +1583,16 @@ static int rtk_rcpu_probe(struct platfor
  
  	raw_notifier_chain_register(&rtk_rpmsg_chain_head, &rtk_rpmsg_notifier_block);
  
@@ -85,7 +85,7 @@ index a9fab2cd522e..07f782c4f7c2 100644
  
  	return ret;
  }
-@@ -1595,6 +1606,34 @@ static int rtk_rcpu_remove(struct platform_device *pdev)
+@@ -1595,6 +1606,34 @@ static int rtk_rcpu_remove(struct platfo
  	return ret;
  }
  
@@ -120,7 +120,7 @@ index a9fab2cd522e..07f782c4f7c2 100644
  static const struct of_device_id rtk_rcpu_of_match[] = {
  	{ .compatible = "rtk-rpmsg" },
  	{},
-@@ -1607,6 +1646,7 @@ static struct platform_driver rtk_rcpu_driver = {
+@@ -1607,6 +1646,7 @@ static struct platform_driver rtk_rcpu_d
  	.driver = {
  		.name = "rtk-rpmsg",
  		.of_match_table = rtk_rcpu_of_match,
@@ -128,6 +128,3 @@ index a9fab2cd522e..07f782c4f7c2 100644
  	},
  };
  
--- 
-2.45.2
-

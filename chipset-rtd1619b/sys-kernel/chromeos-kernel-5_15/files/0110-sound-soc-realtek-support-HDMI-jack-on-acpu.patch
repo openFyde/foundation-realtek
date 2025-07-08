@@ -8,10 +8,10 @@ Change-Id: I6a5838d9051eff6139d60372b606a5326f63500f
  sound/soc/realtek/common/snd-realtek.c | 18 +++++++++++++++++-
  1 file changed, 17 insertions(+), 1 deletion(-)
 
-diff --git a/sound/soc/realtek/common/snd-realtek.c b/sound/soc/realtek/common/snd-realtek.c
-index d9975d7f387a..9297cbca786d 100644
---- a/sound/soc/realtek/common/snd-realtek.c
-+++ b/sound/soc/realtek/common/snd-realtek.c
+Index: kernel-5_15/sound/soc/realtek/common/snd-realtek.c
+===================================================================
+--- kernel-5_15.orig/sound/soc/realtek/common/snd-realtek.c
++++ kernel-5_15/sound/soc/realtek/common/snd-realtek.c
 @@ -34,6 +34,7 @@
  #include <soc/realtek/rtk_media_heap.h>
  #include "snd-realtek.h"
@@ -29,7 +29,7 @@ index d9975d7f387a..9297cbca786d 100644
  static char gRtkDriverName[] = SND_REALTEK_DRIVER_HDMI_IN;
  
  struct rtk_krpc_ept_info *acpu_ept_info;
-@@ -3609,6 +3610,17 @@ static int snd_card_mars_new_mixer(struct RTK_snd_card *pRTK_card)
+@@ -3609,6 +3610,17 @@ static int snd_card_mars_new_mixer(struc
  	return 0;
  }
  
@@ -47,7 +47,7 @@ index d9975d7f387a..9297cbca786d 100644
  static int snd_RTK_volume_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
  {
  	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
-@@ -3924,6 +3936,10 @@ static int snd_card_probe(struct platform_device *devptr)
+@@ -3924,6 +3936,10 @@ static int snd_card_probe(struct platfor
  		pr_info("%s: unable to create sysfs entry\n", __func__);
  #endif
  
@@ -58,6 +58,3 @@ index d9975d7f387a..9297cbca786d 100644
  	err = snd_card_register(card);
  	if (err == 0) {
  		snd_RTK_cards[card->number] = card;
--- 
-2.45.2
-

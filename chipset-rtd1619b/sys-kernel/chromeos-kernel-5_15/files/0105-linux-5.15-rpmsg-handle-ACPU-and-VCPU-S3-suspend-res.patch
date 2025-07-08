@@ -14,11 +14,11 @@ Change-Id: I967e745e2fa75984859b46470f58b6f171eeb860
  drivers/rpmsg/rpmsg_rtk.c | 35 +++++++++++++++++++++++++++++++++--
  1 file changed, 33 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/rpmsg/rpmsg_rtk.c b/drivers/rpmsg/rpmsg_rtk.c
-index 07f782c4f7c2..d85e738c29ff 100644
---- a/drivers/rpmsg/rpmsg_rtk.c
-+++ b/drivers/rpmsg/rpmsg_rtk.c
-@@ -1609,6 +1609,31 @@ static int rtk_rcpu_remove(struct platform_device *pdev)
+Index: kernel-5_15/drivers/rpmsg/rpmsg_rtk.c
+===================================================================
+--- kernel-5_15.orig/drivers/rpmsg/rpmsg_rtk.c
++++ kernel-5_15/drivers/rpmsg/rpmsg_rtk.c
+@@ -1609,6 +1609,31 @@ static int rtk_rcpu_remove(struct platfo
  #ifdef CONFIG_PM_SLEEP
  static int rtk_rcpu_suspend(struct device *dev)
  {
@@ -50,7 +50,7 @@ index 07f782c4f7c2..d85e738c29ff 100644
  	return 0;
  }
  
-@@ -1622,13 +1647,19 @@ static int rtk_rcpu_resume(struct device *dev)
+@@ -1622,13 +1647,19 @@ static int rtk_rcpu_resume(struct device
  
  		rcpu = list_entry(list, struct rtk_rcpu, list);
  		writel(rcpu->info.intr_en | RPC_INT_WRITE_EN, rcpu->rcpu_intr_base + RPC_SB2_INT_EN);
@@ -72,6 +72,3 @@ index 07f782c4f7c2..d85e738c29ff 100644
  #else
  static const struct dev_pm_ops rtk_rcpu_pm_ops = {};
  #endif
--- 
-2.45.2
-

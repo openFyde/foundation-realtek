@@ -8,11 +8,11 @@ Change-Id: I2316111cc1a93be0f156867c299225c7a135b66b
  drivers/remoteproc/rtk_fw_remoteproc.c | 5 +++--
  1 file changed, 3 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/remoteproc/rtk_fw_remoteproc.c b/drivers/remoteproc/rtk_fw_remoteproc.c
-index 6cfd2a5e8eb8..2428a7f99a00 100644
---- a/drivers/remoteproc/rtk_fw_remoteproc.c
-+++ b/drivers/remoteproc/rtk_fw_remoteproc.c
-@@ -323,9 +323,10 @@ static int acpu_stop(struct rproc *rproc)
+Index: kernel-5_15/drivers/remoteproc/rtk_fw_remoteproc.c
+===================================================================
+--- kernel-5_15.orig/drivers/remoteproc/rtk_fw_remoteproc.c
++++ kernel-5_15/drivers/remoteproc/rtk_fw_remoteproc.c
+@@ -323,9 +323,10 @@ static int acpu_stop(struct rproc *rproc
  };
  
  #define SYS_VE_CKSEL	0x9800004C
@@ -25,6 +25,3 @@ index 6cfd2a5e8eb8..2428a7f99a00 100644
  #define PLL_VE_FREQ_648 0x088012d0
  #define SYS_PLL_VE2_1	0x980001D0
  #define SYS_PLL_VE2_2	0x980001D4
--- 
-2.45.2
-

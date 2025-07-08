@@ -9,11 +9,11 @@ Change-Id: I5414f7c6ffe21a294b6a3d55b8bbd5765699fe14
  .../chromeos/arm64/chromiumos-realtek.flavour.config     | 4 ----
  2 files changed, 6 insertions(+), 7 deletions(-)
 
-diff --git a/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi b/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
-index 8ca3dcf0b4bb..12133301017a 100644
---- a/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
-+++ b/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
-@@ -942,7 +942,7 @@ pm_hifi: pm-hifi {
+Index: kernel-5_15/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
+===================================================================
+--- kernel-5_15.orig/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
++++ kernel-5_15/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
+@@ -942,7 +942,7 @@
  	};
  
  	sound: sound {
@@ -22,7 +22,7 @@ index 8ca3dcf0b4bb..12133301017a 100644
  		realtek,krpc-agent = <&acpu_kernel_agent>,
  				     <&hifi_kernel_agent>;
  		status = "disabled";
-@@ -1353,10 +1353,12 @@ vcpu-intr-channel {
+@@ -1353,10 +1353,12 @@
  				rx-fifo-size = <0x200>;
  			};
  		};
@@ -35,7 +35,7 @@ index 8ca3dcf0b4bb..12133301017a 100644
  			hifi-kernel-channel {
  				compatible = "realtek,rpc-kernel-hifi";
  				name = "hifi-kernel-channel";
-@@ -1558,7 +1560,7 @@ rtk_rproc: rtk_rproc {
+@@ -1558,7 +1560,7 @@
  		acpu_rproc: acpu-rproc {
  			compatible = "acpu-rproc";
  			type-firmware = "acpu";
@@ -44,7 +44,7 @@ index 8ca3dcf0b4bb..12133301017a 100644
  		};
  
  		vcpu_rproc: vcpu-rproc {
-@@ -1571,6 +1573,7 @@ hifi_rproc: hifi-rproc {
+@@ -1571,6 +1573,7 @@
  			compatible = "hifi-rproc";
  			type-firmware = "hifi";
  			name-firmware = "HIFI.bin-stark-nonsecure-allcache";
@@ -52,7 +52,7 @@ index 8ca3dcf0b4bb..12133301017a 100644
  		};
  	};
  };
-@@ -1637,7 +1640,7 @@ fss: fss@b70 {
+@@ -1637,7 +1640,7 @@
  / {
  	audio_out: audio-out {
  		compatible = "realtek,audio-out";
@@ -61,10 +61,10 @@ index 8ca3dcf0b4bb..12133301017a 100644
  		realtek,krpc-agent = <&acpu_kernel_agent>,
  				     <&hifi_kernel_agent>;
  		status = "disabled";
-diff --git a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
-index df10d5ca92ff..c5e027ccb644 100644
---- a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
-+++ b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+Index: kernel-5_15/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+===================================================================
+--- kernel-5_15.orig/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
++++ kernel-5_15/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
 @@ -47,7 +47,6 @@ CONFIG_RTK_EFUSE=y
  CONFIG_RTK_FAN=y
  CONFIG_RTK_FW_REMOTEPROC=m
@@ -86,6 +86,3 @@ index df10d5ca92ff..c5e027ccb644 100644
  CONFIG_ATA=y
  CONFIG_USB_CONFIGFS=m
  CONFIG_USB_CONFIGFS_F_FS=y
--- 
-2.45.2
-

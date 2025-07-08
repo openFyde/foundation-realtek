@@ -16,11 +16,11 @@ Change-Id: Ic09d9830d017ee15a25aa9a05ded4cb15e6b1e52
  include/soc/realtek/rtk_pm.h               |  1 +
  4 files changed, 23 insertions(+)
 
-diff --git a/drivers/soc/realtek/common/rtk_pm.c b/drivers/soc/realtek/common/rtk_pm.c
-index 2cbd392ad089..3fa2f9c28f57 100644
---- a/drivers/soc/realtek/common/rtk_pm.c
-+++ b/drivers/soc/realtek/common/rtk_pm.c
-@@ -81,6 +81,8 @@ static int rtk_pm_prepare(struct device *dev)
+Index: kernel-5_15/drivers/soc/realtek/common/rtk_pm.c
+===================================================================
+--- kernel-5_15.orig/drivers/soc/realtek/common/rtk_pm.c
++++ kernel-5_15/drivers/soc/realtek/common/rtk_pm.c
+@@ -81,6 +81,8 @@ static int rtk_pm_prepare(struct device
  	struct pm_dev_param *lan_node = rtk_pm_get_param(LAN);
  	int ret = 0;
  
@@ -29,11 +29,11 @@ index 2cbd392ad089..3fa2f9c28f57 100644
  	if (lan_node == NULL)
  		goto skip_set_dco_param;
  
-diff --git a/drivers/soc/realtek/common/rtk_pm_common.c b/drivers/soc/realtek/common/rtk_pm_common.c
-index e7139b2a2d92..99b487a9f433 100644
---- a/drivers/soc/realtek/common/rtk_pm_common.c
-+++ b/drivers/soc/realtek/common/rtk_pm_common.c
-@@ -40,6 +40,21 @@ struct pm_dev_param *rtk_pm_get_param(unsigned int id)
+Index: kernel-5_15/drivers/soc/realtek/common/rtk_pm_common.c
+===================================================================
+--- kernel-5_15.orig/drivers/soc/realtek/common/rtk_pm_common.c
++++ kernel-5_15/drivers/soc/realtek/common/rtk_pm_common.c
+@@ -40,6 +40,21 @@ struct pm_dev_param *rtk_pm_get_param(un
  }
  EXPORT_SYMBOL(rtk_pm_get_param);
  
@@ -55,11 +55,11 @@ index e7139b2a2d92..99b487a9f433 100644
  void rtk_pm_set_pcpu_param(struct device *dev)
  {
  	struct pm_private *dev_pm = dev_get_drvdata(dev);
-diff --git a/drivers/soc/realtek/common/rtk_pm_sysfs.c b/drivers/soc/realtek/common/rtk_pm_sysfs.c
-index afbae6187e3e..a352014323cc 100644
---- a/drivers/soc/realtek/common/rtk_pm_sysfs.c
-+++ b/drivers/soc/realtek/common/rtk_pm_sysfs.c
-@@ -156,8 +156,12 @@ static ssize_t rtk_pm_wakeup_show(struct kobject *kobj,
+Index: kernel-5_15/drivers/soc/realtek/common/rtk_pm_sysfs.c
+===================================================================
+--- kernel-5_15.orig/drivers/soc/realtek/common/rtk_pm_sysfs.c
++++ kernel-5_15/drivers/soc/realtek/common/rtk_pm_sysfs.c
+@@ -156,8 +156,12 @@ static ssize_t rtk_pm_wakeup_show(struct
  	struct pm_dev_param *pm_param = rtk_pm_get_param(PM);
  	struct pm_private *dev_pm = dev_get_drvdata(pm_param->dev);
  	unsigned int n = 0;
@@ -72,7 +72,7 @@ index afbae6187e3e..a352014323cc 100644
  		if (dev_pm->pcpu_param->wakeup_source & BIT(i))
  			n += snprintf(buf + n, PAGE_SIZE, " * ");
  		else
-@@ -181,6 +185,7 @@ static ssize_t rtk_pm_wakeup_store(struct kobject *kobj,
+@@ -181,6 +185,7 @@ static ssize_t rtk_pm_wakeup_store(struc
  
  	if (wakeup < MAX_EVENT) {
  		dev_pm->pcpu_param->wakeup_source ^= BIT(wakeup);
@@ -80,10 +80,10 @@ index afbae6187e3e..a352014323cc 100644
  		return count;
  	}
  
-diff --git a/include/soc/realtek/rtk_pm.h b/include/soc/realtek/rtk_pm.h
-index ed12c0daec58..342a04aec542 100644
---- a/include/soc/realtek/rtk_pm.h
-+++ b/include/soc/realtek/rtk_pm.h
+Index: kernel-5_15/include/soc/realtek/rtk_pm.h
+===================================================================
+--- kernel-5_15.orig/include/soc/realtek/rtk_pm.h
++++ kernel-5_15/include/soc/realtek/rtk_pm.h
 @@ -58,6 +58,7 @@ struct mem_check {
  extern void rtk_pm_init_list(void);
  extern void rtk_pm_add_list(struct pm_dev_param *pm_node);
@@ -92,6 +92,3 @@ index ed12c0daec58..342a04aec542 100644
  extern int rtk_pm_create_sysfs(void);
  extern void rtk_pm_set_pcpu_param(struct device *dev);
  extern void rtk_pm_del_list(struct pm_dev_param *pm_node);
--- 
-2.45.2
-

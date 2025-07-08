@@ -12,7 +12,7 @@ Index: kernel-5_15/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
 ===================================================================
 --- kernel-5_15.orig/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
 +++ kernel-5_15/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
-@@ -616,15 +616,16 @@
+@@ -613,15 +613,16 @@
  				assigned-clock-rates = <702000000>;
  
  				gpu: gpu@0 {
@@ -31,7 +31,7 @@ Index: kernel-5_15/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
  
  					power_model {
  						compatible = "arm,mali-simple-power-model";
-@@ -979,6 +980,13 @@
+@@ -981,6 +982,13 @@
  	ac: rtd1xxx-ac.0 {
  		compatible = "realtek,rtd1xxx-ac";
  	};

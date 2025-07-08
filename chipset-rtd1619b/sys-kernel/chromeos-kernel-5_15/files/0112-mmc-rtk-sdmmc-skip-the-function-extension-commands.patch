@@ -8,11 +8,11 @@ Change-Id: I536fa4bad22835184d34766a118259929f2bbda3
  drivers/mmc/host/rtk-sdmmc.c | 21 ++++-----------------
  1 file changed, 4 insertions(+), 17 deletions(-)
 
-diff --git a/drivers/mmc/host/rtk-sdmmc.c b/drivers/mmc/host/rtk-sdmmc.c
-index 519ea3ff6ead..01c787907883 100644
---- a/drivers/mmc/host/rtk-sdmmc.c
-+++ b/drivers/mmc/host/rtk-sdmmc.c
-@@ -2396,7 +2396,6 @@ static void rtk_sdmmc_request(struct mmc_host *host, struct mmc_request *mrq)
+Index: kernel-5_15/drivers/mmc/host/rtk-sdmmc.c
+===================================================================
+--- kernel-5_15.orig/drivers/mmc/host/rtk-sdmmc.c
++++ kernel-5_15/drivers/mmc/host/rtk-sdmmc.c
+@@ -2396,7 +2396,6 @@ static void rtk_sdmmc_request(struct mmc
  {
  	struct rtk_sdmmc_host *rtk_host = mmc_priv(host);
  	struct mmc_command *cmd;
@@ -20,7 +20,7 @@ index 519ea3ff6ead..01c787907883 100644
  
  	BUG_ON(rtk_host->mrq != NULL);
  	//down_write(&cr_sd_rw_sem);
-@@ -2408,22 +2407,10 @@ static void rtk_sdmmc_request(struct mmc_host *host, struct mmc_request *mrq)
+@@ -2408,22 +2407,10 @@ static void rtk_sdmmc_request(struct mmc
  	if(cmd->opcode == 2)
  		writel(readl(rtk_host->sdmmc + 0x20) & (~0x02), rtk_host->sdmmc  + 0x20);  //Enable L4 gate
  
@@ -47,6 +47,3 @@ index 519ea3ff6ead..01c787907883 100644
  	}
  
  	if (!(rtk_host->rtflags & RTKCR_FCARD_DETECTED)) {
--- 
-2.45.2
-

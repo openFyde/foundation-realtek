@@ -9,11 +9,11 @@ Change-Id: Iab21c2a0dbc1136733af2ae538d3841bb222ed68
  drivers/mmc/host/rtk-sdmmc.c | 22 +++++++++++++++++-----
  1 file changed, 17 insertions(+), 5 deletions(-)
 
-diff --git a/drivers/mmc/host/rtk-sdmmc.c b/drivers/mmc/host/rtk-sdmmc.c
-index 01c787907883..b37123072d33 100644
---- a/drivers/mmc/host/rtk-sdmmc.c
-+++ b/drivers/mmc/host/rtk-sdmmc.c
-@@ -395,7 +395,6 @@ static int __maybe_unused rtk_sdmmc_pm_resume(struct device *dev)
+Index: kernel-5_15/drivers/mmc/host/rtk-sdmmc.c
+===================================================================
+--- kernel-5_15.orig/drivers/mmc/host/rtk-sdmmc.c
++++ kernel-5_15/drivers/mmc/host/rtk-sdmmc.c
+@@ -395,7 +395,6 @@ static int __maybe_unused rtk_sdmmc_pm_r
  	//in 1395 platform, system will turn off the SD clock if there is no SD card. Therefore, we must add this check for fear that invalid address access
  	reginfo = readl(rtk_host->gpiodir + GPDATI1);
  	if (reginfo & 0x8) {
@@ -21,7 +21,7 @@ index 01c787907883..b37123072d33 100644
  		void __iomem *gpiodir_base = rtk_host->gpiodir;
  
  		if (chip_id == CHIP_ID_RTD1319)
-@@ -404,6 +403,7 @@ static int __maybe_unused rtk_sdmmc_pm_resume(struct device *dev)
+@@ -404,6 +403,7 @@ static int __maybe_unused rtk_sdmmc_pm_r
  			writel(readl(gpiodir_base + 0xc4) | 0xc, gpiodir_base + 0xc4);
  
  		writel(0x00000007, pll_base + CR_PLL_SD4);
@@ -29,7 +29,7 @@ index 01c787907883..b37123072d33 100644
  
  		if (chip_id == CHIP_ID_RTD1319) {
  			while((readl(rtk_host->sdmmc+0x2c)&0x1)==0)
-@@ -413,7 +413,8 @@ static int __maybe_unused rtk_sdmmc_pm_resume(struct device *dev)
+@@ -413,7 +413,8 @@ static int __maybe_unused rtk_sdmmc_pm_r
  				pr_info("wait until clk open...\n");
  		}
  
@@ -39,7 +39,7 @@ index 01c787907883..b37123072d33 100644
  		re_initialize = true;
  	}
  
-@@ -475,6 +476,8 @@ static int __maybe_unused rtk_sdmmc_pm_resume(struct device *dev)
+@@ -475,6 +476,8 @@ static int __maybe_unused rtk_sdmmc_pm_r
  			writel(readl(gpiodir_base + 0x64) & 0xfffffff3, gpiodir_base + 0x64);  //close the ldo enable to power saving
  		else if (chip_id == CHIP_ID_RTD1619B)
  			writel(readl(gpiodir_base + 0xc4) & 0xfffffff3, gpiodir_base + 0xc4);
@@ -48,7 +48,7 @@ index 01c787907883..b37123072d33 100644
  	}
  
  	return ret;
-@@ -2468,7 +2471,10 @@ void rtk_sdmmc_open_clk(struct mmc_host *host)
+@@ -2468,7 +2471,10 @@ void rtk_sdmmc_open_clk(struct mmc_host
  	void __iomem *gpiodir_base = rtk_host->gpiodir;
  	int card_exist = readl(rtk_host->gpiodir+GPDATI1);
  
@@ -60,20 +60,20 @@ index 01c787907883..b37123072d33 100644
  		pr_info("SD card exists and sd clk is enabled...\n");
  		reset_control_deassert(rstc_cr);
  		clk_prepare_enable(clk_cr);
-@@ -2503,6 +2509,12 @@ void rtk_sdmmc_open_clk(struct mmc_host *host)
- 			}
+@@ -2504,6 +2510,12 @@ void rtk_sdmmc_open_clk(struct mmc_host
  		}
  
-+		clk_disabled = 0;
+ 		clk_disabled = 0;
 +	} else {
 +		pr_info("%s sd clk is enabled...\n", __func__);
 +		reset_control_deassert(rstc_cr);
 +		clk_prepare_enable(clk_cr);
 +		clk_prepare_enable(clk_sd_ip);
- 		clk_disabled = 0;
++		clk_disabled = 0;
  	}
  }
-@@ -2521,6 +2533,7 @@ static int rtk_sdmmc_get_cd(struct mmc_host *host)
+ 
+@@ -2521,6 +2533,7 @@ static int rtk_sdmmc_get_cd(struct mmc_h
  			u32 det_time = 0;
  
  			compatible_flag = false;
@@ -81,7 +81,7 @@ index 01c787907883..b37123072d33 100644
  			rtk_host->ops->card_power(rtk_host, 1); //power on, Jim add
  
  			rtk_host->ins_event = EVENT_INSER;
-@@ -2979,8 +2992,7 @@ static irqreturn_t rtk_sdmmc_cd_irq(int irq, void *data)
+@@ -2979,8 +2992,7 @@ static irqreturn_t rtk_sdmmc_cd_irq(int
  			rtk_sdmmc_pad_pwrctrl(rtk_host, MMC_SIGNAL_VOLTAGE_330);
  
  		pr_err("SD card is being removed now...!!!\n");
@@ -91,6 +91,3 @@ index 01c787907883..b37123072d33 100644
  		rtk_sdmmc_open_clk(rtk_host->mmc);
  		rtk_host->ops->card_power(rtk_host, 1); //power on, Jim add
  		if(clk_disabled==0) {
--- 
-2.45.2
-

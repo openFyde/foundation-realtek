@@ -11,11 +11,11 @@ Subject: [PATCH] support raspberrypi touchscreen
  4 files changed, 274 insertions(+), 25 deletions(-)
  create mode 100644 drivers/input/touchscreen/dfr0550-ts.c
 
-diff --git a/drivers/gpu/drm/panel/panel-raspberrypi-touchscreen.c b/drivers/gpu/drm/panel/panel-raspberrypi-touchscreen.c
-index a6dc5ab18..212dbe032 100644
---- a/drivers/gpu/drm/panel/panel-raspberrypi-touchscreen.c
-+++ b/drivers/gpu/drm/panel/panel-raspberrypi-touchscreen.c
-@@ -218,10 +218,10 @@ static struct rpi_touchscreen *panel_to_ts(struct drm_panel *panel)
+Index: kernel-5_15/drivers/gpu/drm/panel/panel-raspberrypi-touchscreen.c
+===================================================================
+--- kernel-5_15.orig/drivers/gpu/drm/panel/panel-raspberrypi-touchscreen.c
++++ kernel-5_15/drivers/gpu/drm/panel/panel-raspberrypi-touchscreen.c
+@@ -218,10 +218,10 @@ static struct rpi_touchscreen *panel_to_
  	return container_of(panel, struct rpi_touchscreen, base);
  }
  
@@ -30,7 +30,7 @@ index a6dc5ab18..212dbe032 100644
  
  static void rpi_touchscreen_i2c_write(struct rpi_touchscreen *ts,
  				      u8 reg, u8 val)
-@@ -269,14 +269,16 @@ static int rpi_touchscreen_noop(struct drm_panel *panel)
+@@ -269,14 +269,16 @@ static int rpi_touchscreen_noop(struct d
  static int rpi_touchscreen_prepare(struct drm_panel *panel)
  {
  	struct rpi_touchscreen *ts = panel_to_ts(panel);
@@ -52,7 +52,7 @@ index a6dc5ab18..212dbe032 100644
  
  	rpi_touchscreen_write(ts, DSI_LANEENABLE,
  			      DSI_LANEENABLE_CLOCK |
-@@ -288,7 +290,16 @@ static int rpi_touchscreen_prepare(struct drm_panel *panel)
+@@ -288,7 +290,16 @@ static int rpi_touchscreen_prepare(struc
  	rpi_touchscreen_write(ts, PPI_LPTXTIMECNT, 0x03);
  
  	rpi_touchscreen_write(ts, SPICMR, 0x00);
@@ -69,7 +69,7 @@ index a6dc5ab18..212dbe032 100644
  	rpi_touchscreen_write(ts, SYSCTRL, 0x040f);
  	msleep(100);
  
-@@ -311,7 +322,7 @@ static int rpi_touchscreen_enable(struct drm_panel *panel)
+@@ -311,7 +322,7 @@ static int rpi_touchscreen_enable(struct
  	 * configuration will be supported using VC4's plane
  	 * orientation bits.
  	 */
@@ -78,7 +78,7 @@ index a6dc5ab18..212dbe032 100644
  
  	return 0;
  }
-@@ -369,7 +380,7 @@ static int rpi_touchscreen_probe(struct i2c_client *i2c,
+@@ -369,7 +380,7 @@ static int rpi_touchscreen_probe(struct
  	struct rpi_touchscreen *ts;
  	struct device_node *endpoint, *dsi_host_node;
  	struct mipi_dsi_host *host;
@@ -87,7 +87,7 @@ index a6dc5ab18..212dbe032 100644
  	struct mipi_dsi_device_info info = {
  		.type = RPI_DSI_DRIVER_NAME,
  		.channel = 0,
-@@ -384,20 +395,20 @@ static int rpi_touchscreen_probe(struct i2c_client *i2c,
+@@ -384,20 +395,20 @@ static int rpi_touchscreen_probe(struct
  
  	ts->i2c = i2c;
  
@@ -122,10 +122,10 @@ index a6dc5ab18..212dbe032 100644
  
  	/* Turn off at boot, so we can cleanly sequence powering on. */
  	rpi_touchscreen_i2c_write(ts, REG_POWERON, 0);
-diff --git a/drivers/input/touchscreen/Kconfig b/drivers/input/touchscreen/Kconfig
-index d4e74738c..8fbf3bf09 100644
---- a/drivers/input/touchscreen/Kconfig
-+++ b/drivers/input/touchscreen/Kconfig
+Index: kernel-5_15/drivers/input/touchscreen/Kconfig
+===================================================================
+--- kernel-5_15.orig/drivers/input/touchscreen/Kconfig
++++ kernel-5_15/drivers/input/touchscreen/Kconfig
 @@ -309,6 +309,18 @@ config TOUCHSCREEN_DA9052
  	  To compile this driver as a module, choose M here: the
  	  module will be called da9052_tsi.
@@ -145,11 +145,11 @@ index d4e74738c..8fbf3bf09 100644
  config TOUCHSCREEN_DYNAPRO
  	tristate "Dynapro serial touchscreen"
  	select SERIO
-diff --git a/drivers/input/touchscreen/Makefile b/drivers/input/touchscreen/Makefile
-index 7d34100f7..7e274137b 100644
---- a/drivers/input/touchscreen/Makefile
-+++ b/drivers/input/touchscreen/Makefile
-@@ -31,6 +31,7 @@ obj-$(CONFIG_TOUCHSCREEN_CYTTSP4_I2C)	+= cyttsp4_i2c.o cyttsp_i2c_common.o
+Index: kernel-5_15/drivers/input/touchscreen/Makefile
+===================================================================
+--- kernel-5_15.orig/drivers/input/touchscreen/Makefile
++++ kernel-5_15/drivers/input/touchscreen/Makefile
+@@ -31,6 +31,7 @@ obj-$(CONFIG_TOUCHSCREEN_CYTTSP4_I2C)	+=
  obj-$(CONFIG_TOUCHSCREEN_CYTTSP4_SPI)	+= cyttsp4_spi.o
  obj-$(CONFIG_TOUCHSCREEN_DA9034)	+= da9034-ts.o
  obj-$(CONFIG_TOUCHSCREEN_DA9052)	+= da9052_tsi.o
@@ -157,11 +157,10 @@ index 7d34100f7..7e274137b 100644
  obj-$(CONFIG_TOUCHSCREEN_DYNAPRO)	+= dynapro.o
  obj-$(CONFIG_TOUCHSCREEN_EDT_FT5X06)	+= edt-ft5x06.o
  obj-$(CONFIG_TOUCHSCREEN_HAMPSHIRE)	+= hampshire.o
-diff --git a/drivers/input/touchscreen/dfr0550-ts.c b/drivers/input/touchscreen/dfr0550-ts.c
-new file mode 100644
-index 000000000..6bc6ab674
+Index: kernel-5_15/drivers/input/touchscreen/dfr0550-ts.c
+===================================================================
 --- /dev/null
-+++ b/drivers/input/touchscreen/dfr0550-ts.c
++++ kernel-5_15/drivers/input/touchscreen/dfr0550-ts.c
 @@ -0,0 +1,225 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
@@ -388,6 +387,3 @@ index 000000000..6bc6ab674
 +module_exit(dfr0550_ts_exit);
 +MODULE_LICENSE("GPL");
 +MODULE_DESCRIPTION("DFR0550 touchscreen kernel module");
--- 
-2.34.1
-

@@ -11,10 +11,10 @@ Change-Id: Ie47c2948cd1830f74c6b5df117834157d2018f90
  drivers/rpmsg/rpmsg_rtk.c | 2 +-
  2 files changed, 2 insertions(+), 1 deletion(-)
 
-diff --git a/drivers/rpmsg/Kconfig b/drivers/rpmsg/Kconfig
-index cff32007298e..6fdb0826bb26 100644
---- a/drivers/rpmsg/Kconfig
-+++ b/drivers/rpmsg/Kconfig
+Index: kernel-5_15/drivers/rpmsg/Kconfig
+===================================================================
+--- kernel-5_15.orig/drivers/rpmsg/Kconfig
++++ kernel-5_15/drivers/rpmsg/Kconfig
 @@ -83,6 +83,7 @@ config RPMSG_VIRTIO
  
  config RPMSG_RTK_RPC
@@ -23,11 +23,11 @@ index cff32007298e..6fdb0826bb26 100644
  	select RPMSG
  
  endmenu
-diff --git a/drivers/rpmsg/rpmsg_rtk.c b/drivers/rpmsg/rpmsg_rtk.c
-index d85e738c29ff..70a4579bed97 100644
---- a/drivers/rpmsg/rpmsg_rtk.c
-+++ b/drivers/rpmsg/rpmsg_rtk.c
-@@ -1657,7 +1657,7 @@ static int rtk_rcpu_resume(struct device *dev)
+Index: kernel-5_15/drivers/rpmsg/rpmsg_rtk.c
+===================================================================
+--- kernel-5_15.orig/drivers/rpmsg/rpmsg_rtk.c
++++ kernel-5_15/drivers/rpmsg/rpmsg_rtk.c
+@@ -1657,7 +1657,7 @@ static int rtk_rcpu_resume(struct device
  }
  
  static const struct dev_pm_ops rtk_rcpu_pm_ops = {
@@ -36,6 +36,3 @@ index d85e738c29ff..70a4579bed97 100644
  			 rtk_rcpu_resume)
  };
  #else
--- 
-2.45.2
-

@@ -11,11 +11,11 @@ Change-Id: Ie388157778c912389f4a3f8c44a4c40a670e493f
  drivers/remoteproc/rtk_fw_remoteproc.c | 53 +++++++++++++++++++++++++-
  1 file changed, 51 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/remoteproc/rtk_fw_remoteproc.c b/drivers/remoteproc/rtk_fw_remoteproc.c
-index 2428a7f99a00..7f53f2cf4c4e 100644
---- a/drivers/remoteproc/rtk_fw_remoteproc.c
-+++ b/drivers/remoteproc/rtk_fw_remoteproc.c
-@@ -319,6 +319,19 @@ static int acpu_start(struct rproc *rproc)
+Index: kernel-5_15/drivers/remoteproc/rtk_fw_remoteproc.c
+===================================================================
+--- kernel-5_15.orig/drivers/remoteproc/rtk_fw_remoteproc.c
++++ kernel-5_15/drivers/remoteproc/rtk_fw_remoteproc.c
+@@ -319,6 +319,19 @@ static int acpu_start(struct rproc *rpro
  
  static int acpu_stop(struct rproc *rproc)
  {
@@ -35,7 +35,7 @@ index 2428a7f99a00..7f53f2cf4c4e 100644
  	return 0;
  };
  
-@@ -391,6 +404,24 @@ static int vcpu_start(struct rproc *rproc)
+@@ -391,6 +404,24 @@ static int vcpu_start(struct rproc *rpro
  
  static int vcpu_stop(struct rproc *rproc)
  {
@@ -60,7 +60,7 @@ index 2428a7f99a00..7f53f2cf4c4e 100644
  	return 0;
  };
  
-@@ -787,18 +818,36 @@ MODULE_DEVICE_TABLE(of, rtk_rproc_of_match);
+@@ -787,18 +818,36 @@ MODULE_DEVICE_TABLE(of, rtk_rproc_of_mat
  #ifdef CONFIG_PM
  static int rtk_fw_rpm_suspend(struct device *dev)
  {
@@ -99,6 +99,3 @@ index 2428a7f99a00..7f53f2cf4c4e 100644
  
  static struct platform_driver rtk_rproc_driver = {
  	.probe = rtk_rproc_probe,
--- 
-2.45.2
-

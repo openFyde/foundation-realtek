@@ -9,11 +9,11 @@ Change-Id: I0982c7d7975a94e40fd49d005a0e16fa6d1ae80e
  .../dts/realtek/rtd1619b-backinblack.dtsi     | 75 +++++++++++++------
  1 file changed, 53 insertions(+), 22 deletions(-)
 
-diff --git a/arch/arm64/boot/dts/realtek/rtd1619b-backinblack.dtsi b/arch/arm64/boot/dts/realtek/rtd1619b-backinblack.dtsi
-index 17485ee51e8b..136ff6126077 100644
---- a/arch/arm64/boot/dts/realtek/rtd1619b-backinblack.dtsi
-+++ b/arch/arm64/boot/dts/realtek/rtd1619b-backinblack.dtsi
-@@ -228,6 +228,10 @@ &cpu_tm {
+Index: kernel-5_15/arch/arm64/boot/dts/realtek/rtd1619b-backinblack.dtsi
+===================================================================
+--- kernel-5_15.orig/arch/arm64/boot/dts/realtek/rtd1619b-backinblack.dtsi
++++ kernel-5_15/arch/arm64/boot/dts/realtek/rtd1619b-backinblack.dtsi
+@@ -228,6 +228,10 @@
  	status = "okay";
  };
  
@@ -24,7 +24,7 @@ index 17485ee51e8b..136ff6126077 100644
  &emmc {
  	status = "okay";
  };
-@@ -267,6 +271,14 @@ opp-702000000 {
+@@ -267,6 +271,14 @@
  	};
  };
  
@@ -39,7 +39,7 @@ index 17485ee51e8b..136ff6126077 100644
  &hse {
  	status = "okay";
  };
-@@ -292,6 +304,7 @@ &i2c_5 {
+@@ -292,6 +304,7 @@
  };
  
  &irda {
@@ -47,7 +47,7 @@ index 17485ee51e8b..136ff6126077 100644
  	status = "okay";
  };
  
-@@ -330,12 +343,24 @@ pwm_2 {
+@@ -330,12 +343,24 @@
  	};
  };
  
@@ -73,7 +73,7 @@ index 17485ee51e8b..136ff6126077 100644
  	status = "okay";
  };
  
-@@ -347,16 +372,21 @@ &rng {
+@@ -347,16 +372,21 @@
  	status = "okay";
  };
  
@@ -98,7 +98,7 @@ index 17485ee51e8b..136ff6126077 100644
  	status = "okay";
  };
  
-@@ -392,24 +422,6 @@ &tp {
+@@ -392,24 +422,6 @@
  	status = "okay";
  };
  
@@ -123,7 +123,7 @@ index 17485ee51e8b..136ff6126077 100644
  &usb_port2_usb2phy {
  	status = "okay";
  };
-@@ -420,6 +432,10 @@ &usb_port2_usb3phy {
+@@ -420,6 +432,10 @@
  
  &usb_port2 {
  	status = "okay";
@@ -134,7 +134,7 @@ index 17485ee51e8b..136ff6126077 100644
  };
  
  /* debug console (J1) */
-@@ -459,3 +475,18 @@ &watchdog {
+@@ -459,3 +475,18 @@
  &rtk_smcc {
  	status = "okay";
  };
@@ -153,6 +153,3 @@ index 17485ee51e8b..136ff6126077 100644
 +};
 +
 +/delete-node/ &type_c;
--- 
-2.45.2
-

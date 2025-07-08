@@ -13,10 +13,10 @@ Change-Id: I32039dd94ec78bec91e05fb1003eb6f7b84c676f
  drivers/soc/realtek/common/Makefile                             | 2 +-
  3 files changed, 3 insertions(+), 2 deletions(-)
 
-diff --git a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
-index ae5be238bc34..df10d5ca92ff 100644
---- a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
-+++ b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+Index: kernel-5_15/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+===================================================================
+--- kernel-5_15.orig/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
++++ kernel-5_15/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
 @@ -93,6 +93,7 @@ CONFIG_USB_GADGET=y
  CONFIG_USB_ULPI=y
  CONFIG_USB_STORAGE=y
@@ -25,10 +25,10 @@ index ae5be238bc34..df10d5ca92ff 100644
  CONFIG_TMPFS=y
  CONFIG_RTW89=m
  CONFIG_RTW89_CORE=m
-diff --git a/drivers/soc/realtek/common/Kconfig b/drivers/soc/realtek/common/Kconfig
-index 74829a06ea0e..e683ce1d5ca9 100644
---- a/drivers/soc/realtek/common/Kconfig
-+++ b/drivers/soc/realtek/common/Kconfig
+Index: kernel-5_15/drivers/soc/realtek/common/Kconfig
+===================================================================
+--- kernel-5_15.orig/drivers/soc/realtek/common/Kconfig
++++ kernel-5_15/drivers/soc/realtek/common/Kconfig
 @@ -62,7 +62,7 @@ config RTK_FAN
  	help
  	  Realtek Fan driver
@@ -38,11 +38,11 @@ index 74829a06ea0e..e683ce1d5ca9 100644
  	tristate "Realtek CRT driver"
  	default n
  	help
-diff --git a/drivers/soc/realtek/common/Makefile b/drivers/soc/realtek/common/Makefile
-index 3891f337cd51..5dc8767f8571 100644
---- a/drivers/soc/realtek/common/Makefile
-+++ b/drivers/soc/realtek/common/Makefile
-@@ -4,7 +4,7 @@ obj-$(CONFIG_RTK_AVCPU_LOG) += rtk_avcpulog.o
+Index: kernel-5_15/drivers/soc/realtek/common/Makefile
+===================================================================
+--- kernel-5_15.orig/drivers/soc/realtek/common/Makefile
++++ kernel-5_15/drivers/soc/realtek/common/Makefile
+@@ -4,7 +4,7 @@ obj-$(CONFIG_RTK_AVCPU_LOG) += rtk_avcpu
  obj-$(CONFIG_RTK_BOOTSTATUS) += rtk_bootstatus.o
  obj-$(CONFIG_RTK_BUFLOCK) += buflock/
  obj-$(CONFIG_REALTEK_CHIP_INFO) += rtk_chip.o
@@ -51,6 +51,3 @@ index 3891f337cd51..5dc8767f8571 100644
  obj-$(CONFIG_RTK_DBGPROT) += rtk_dbgprot.o
  obj-$(CONFIG_RTK_DEMOD) += rtk_demod.o
  obj-$(CONFIG_RTK_DPI_COORD) += dpi/
--- 
-2.45.2
-
