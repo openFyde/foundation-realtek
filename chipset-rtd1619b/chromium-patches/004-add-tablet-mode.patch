@@ -1,0 +1,18 @@
+diff --git a/ash/wm/tablet_mode/tablet_mode_controller.cc b/ash/wm/tablet_mode/tablet_mode_controller.cc
+index 18f4af5bf9664..df171a841593c 100644
+--- a/ash/wm/tablet_mode/tablet_mode_controller.cc
++++ b/ash/wm/tablet_mode/tablet_mode_controller.cc
+@@ -1407,11 +1407,11 @@ bool TabletModeController::CalculateIsInTabletPhysicalState() const {
+     case ForcePhysicalTabletState::kForceClamshellMode:
+       return false;
+   }
+-
++#if 0
+   if (!HasActiveInternalDisplay()) {
+     return false;
+   }
+-
++#endif
+   // For updated EC, the tablet mode switch activates at 200 degrees, and
+   // deactivates at 160 degrees.
+   // For old EC, the tablet mode switch activates at 300 degrees, so it's

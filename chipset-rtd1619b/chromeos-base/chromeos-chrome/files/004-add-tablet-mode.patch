@@ -1,16 +1,1 @@
-diff --git a/ash/wm/tablet_mode/tablet_mode_controller.cc b/ash/wm/tablet_mode/tablet_mode_controller.cc
-index 490095b871af7..85e00e8eadd0a 100644
---- a/ash/wm/tablet_mode/tablet_mode_controller.cc
-+++ b/ash/wm/tablet_mode/tablet_mode_controller.cc
-@@ -1358,9 +1358,10 @@ bool TabletModeController::CalculateIsInTabletPhysicalState() const {
-     case ForcePhysicalTabletState::kForceClamshellMode:
-       return false;
-   }
--
-+#if 0
-   if (!HasActiveInternalDisplay())
-     return false;
-+#endif
- 
-   // For updated EC, the tablet mode switch activates at 200 degrees, and
-   // deactivates at 160 degrees.
+../../../chromium-patches/004-add-tablet-mode.patch

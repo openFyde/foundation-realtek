@@ -17,9 +17,8 @@ cros_post_src_install_remove_fakefiles() {
 
 PATCHES=(
   ${CHIPSET_RTD1619B_BASHRC_FILESDIR}/001-disalbe-fieldtrial-testing-config.patch
-  ${CHIPSET_RTD1619B_BASHRC_FILESDIR}/002-add-support-for-av1.patch
-  ${CHIPSET_RTD1619B_BASHRC_FILESDIR}/003-add-libwidevinecdm-info.patch
   ${CHIPSET_RTD1619B_BASHRC_FILESDIR}/002-workaround-support-two-v4l2-video-devices.patch
+  ${CHIPSET_RTD1619B_BASHRC_FILESDIR}/003-add-libwidevinecdm-info.patch
   ${CHIPSET_RTD1619B_BASHRC_FILESDIR}/004-add-IsRtkchipAfbc-to-handle-Modeset-flow.patch
   ${CHIPSET_RTD1619B_BASHRC_FILESDIR}/004-add-tablet-mode.patch
 )
