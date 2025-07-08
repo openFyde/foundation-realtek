@@ -23094,7 +23094,7 @@ Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateless/rtkve/rtkve-stat
 ===================================================================
 --- /dev/null
 +++ kernel-5_15/drivers/media/platform/realtek/vpu/stateless/rtkve/rtkve-stateless-vpu-dec.c
-@@ -0,0 +1,1911 @@
+@@ -0,0 +1,1913 @@
 +// SPDX-License-Identifier: (GPL-2.0 OR BSD-3-Clause)
 +/*
 + * Realtek video decoder v4l2 driver
@@ -24976,6 +24976,8 @@ Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateless/rtkve/rtkve-stat
 +			struct v4l2_ctrl_config cfg = sl_ctrls->ctrls[j].cfg;
 +			cfg.ops = &rtkve_sl_dec_ctrl_ops;
 +			v4l2_ctrl_new_custom(hdl, &cfg, NULL);
++      if (hdl->error)
++        dev_err(inst->dev->dev, "Failed to create control_id:%u ret:%d\n", cfg.id, hdl->error);
 +		}
 +	}
 +

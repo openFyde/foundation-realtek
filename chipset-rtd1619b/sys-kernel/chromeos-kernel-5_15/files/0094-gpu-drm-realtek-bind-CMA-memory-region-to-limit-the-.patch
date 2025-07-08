@@ -200,11 +200,3 @@ Index: kernel-5_15/drivers/gpu/drm/realtek/rtk_hdmi.c
  	hdmi->drm_dev = drm;
  	hdmi->dev = dev;
  	dev_set_drvdata(dev, hdmi);
-@@ -1932,6 +1937,7 @@ static void rtk_hdmi_shutdown(struct pla
- 
- static int rtk_hdmi_probe(struct platform_device *pdev)
- {
-+  pr_info("%s\n", __func__);
- 	return component_add(&pdev->dev, &rtk_hdmi_ops);
- }
- 

@@ -105,10 +105,10 @@ Change-Id: Ib2cbc1ac8a3c16736e7406794658c828cadbb9d8
  create mode 100644 drivers/media/platform/realtek/vpu/stateful/vpu.h
  create mode 100644 drivers/media/platform/realtek/vpu/stateless/Makefile
 
-diff --git a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
-index 5b8663ff5f5a..e19d44d37fd4 100644
---- a/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
-+++ b/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+Index: kernel-5_15/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
+===================================================================
+--- kernel-5_15.orig/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
++++ kernel-5_15/chromeos/config/chromeos/arm64/chromiumos-realtek.flavour.config
 @@ -42,8 +42,6 @@ CONFIG_RPMSG_CTRL=y
  CONFIG_RPMSG_RTK_RPC=m
  CONFIG_RPMSG_VIRTIO=y
@@ -134,11 +134,11 @@ index 5b8663ff5f5a..e19d44d37fd4 100644
 +CONFIG_RTD16XXB_VE1_CODEC=y
 +CONFIG_VIDEO_REALTEK=m
 +CONFIG_VIDEO_RTK_VCODEC=m
-diff --git a/drivers/media/platform/Kconfig b/drivers/media/platform/Kconfig
-index 663b3092a10e..3a095e791b9d 100644
---- a/drivers/media/platform/Kconfig
-+++ b/drivers/media/platform/Kconfig
-@@ -43,6 +43,8 @@ source "drivers/media/platform/mediatek/vpu/Kconfig"
+Index: kernel-5_15/drivers/media/platform/Kconfig
+===================================================================
+--- kernel-5_15.orig/drivers/media/platform/Kconfig
++++ kernel-5_15/drivers/media/platform/Kconfig
+@@ -41,6 +41,8 @@ source "drivers/media/platform/mediatek/
  
  source "drivers/media/platform/omap/Kconfig"
  
@@ -147,24 +147,23 @@ index 663b3092a10e..3a095e791b9d 100644
  config VIDEO_ASPEED
  	tristate "Aspeed AST2400 and AST2500 Video Engine driver"
  	depends on VIDEO_V4L2
-diff --git a/drivers/media/platform/Makefile b/drivers/media/platform/Makefile
-index 9bfd74e9284a..f22e0583a175 100644
---- a/drivers/media/platform/Makefile
-+++ b/drivers/media/platform/Makefile
-@@ -85,6 +85,8 @@ obj-$(CONFIG_VIDEO_QCOM_CAMSS)		+= qcom/camss/
+Index: kernel-5_15/drivers/media/platform/Makefile
+===================================================================
+--- kernel-5_15.orig/drivers/media/platform/Makefile
++++ kernel-5_15/drivers/media/platform/Makefile
+@@ -85,6 +85,8 @@ obj-$(CONFIG_VIDEO_QCOM_CAMSS)		+= qcom/
  
  obj-$(CONFIG_VIDEO_QCOM_VENUS)		+= qcom/venus/
  
-+obj-$(CONFIG_VIDEO_REALTEK)		+= realtek/vpu/
++obj-$(CONFIG_VIDEO_REALTEK)    += realtek/vpu/
 +
- obj-$(CONFIG_RTK_HDMI_CEC)		+= rtk-cec/
+ obj-$(CONFIG_RTK_HDMI_CEC)   += rtk-cec/
  
  obj-y					+= sunxi/
-diff --git a/drivers/media/platform/realtek/vpu/Kconfig b/drivers/media/platform/realtek/vpu/Kconfig
-new file mode 100644
-index 000000000000..1102a507928c
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/Kconfig
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/Kconfig
++++ kernel-5_15/drivers/media/platform/realtek/vpu/Kconfig
 @@ -0,0 +1,32 @@
 +# SPDX-License-Identifier: GPL-2.0-only
 +
@@ -198,20 +197,18 @@ index 000000000000..1102a507928c
 +	depends on ARCH_REALTEK || COMPILE_TEST
 +	help
 +	  Enable support for Realtek SoC VE2 decoder.
-diff --git a/drivers/media/platform/realtek/vpu/Makefile b/drivers/media/platform/realtek/vpu/Makefile
-new file mode 100644
-index 000000000000..0df621c3ac05
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/Makefile
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/Makefile
++++ kernel-5_15/drivers/media/platform/realtek/vpu/Makefile
 @@ -0,0 +1,3 @@
 +# SPDX-License-Identifier: GPL-2.0
 +obj-y += stateless/
 +obj-y += stateful/
-diff --git a/drivers/media/platform/realtek/vpu/stateful/Makefile b/drivers/media/platform/realtek/vpu/stateful/Makefile
-new file mode 100644
-index 000000000000..dc4e19276781
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/Makefile
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/Makefile
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/Makefile
 @@ -0,0 +1,30 @@
 +# SPDX-License-Identifier: GPL-2.0
 +subdir-ccflags-y += -DANDROID
@@ -243,11 +240,10 @@ index 000000000000..dc4e19276781
 +rtkve2-y += \
 +	ve2.o \
 +	ve2rpc.o
-diff --git a/drivers/media/platform/realtek/vpu/stateful/debug.h b/drivers/media/platform/realtek/vpu/stateful/debug.h
-new file mode 100644
-index 000000000000..7c6bfc7073fd
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/debug.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/debug.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/debug.h
 @@ -0,0 +1,64 @@
 +/*
 + * Realtek video decoder v4l2 driver
@@ -314,11 +310,10 @@ index 000000000000..7c6bfc7073fd
 +
 +#endif
 \ No newline at end of file
-diff --git a/drivers/media/platform/realtek/vpu/stateful/drv_if.c b/drivers/media/platform/realtek/vpu/stateful/drv_if.c
-new file mode 100644
-index 000000000000..12a2f3d29129
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/drv_if.c
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/drv_if.c
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/drv_if.c
 @@ -0,0 +1,1256 @@
 +/*
 + * Realtek video decoder v4l2 driver
@@ -1576,11 +1571,10 @@ index 000000000000..12a2f3d29129
 +MODULE_LICENSE("GPL");
 +MODULE_AUTHOR("William Lee <william.lee@realtek.com>");
 +MODULE_DESCRIPTION("Realtek V4L2 VE2 Codec Driver");
-diff --git a/drivers/media/platform/realtek/vpu/stateful/drv_if.h b/drivers/media/platform/realtek/vpu/stateful/drv_if.h
-new file mode 100644
-index 000000000000..aa5e13b61f5d
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/drv_if.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/drv_if.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/drv_if.h
 @@ -0,0 +1,79 @@
 +/*
 + * Realtek video decoder v4l2 driver
@@ -1661,11 +1655,10 @@ index 000000000000..aa5e13b61f5d
 +__u32 cc_getCCReaderPid(void);
 +#endif
 +#endif
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_config.h b/drivers/media/platform/realtek/vpu/stateful/ve1_config.h
-new file mode 100644
-index 000000000000..a95a3a7340ae
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_config.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_config.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_config.h
 @@ -0,0 +1,61 @@
 +//------------------------------------------------------------------------------
 +// File: config.h
@@ -1728,11 +1721,10 @@ index 000000000000..a95a3a7340ae
 +#define SUPPORT_GET_NAL_START_POS
 +
 +#endif /* __CONFIG_H__ */
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_decode.c b/drivers/media/platform/realtek/vpu/stateful/ve1_decode.c
-new file mode 100644
-index 000000000000..14934a136051
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_decode.c
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_decode.c
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_decode.c
 @@ -0,0 +1,648 @@
 +
 +#include <linux/kernel.h>
@@ -2382,11 +2374,10 @@ index 000000000000..14934a136051
 +	.seq_end_work = ve1_seq_end_work,
 +	.release = ve1_release,
 +};
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_fw.h b/drivers/media/platform/realtek/vpu/stateful/ve1_fw.h
-new file mode 100644
-index 000000000000..420c9753b539
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_fw.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_fw.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_fw.h
 @@ -0,0 +1,12978 @@
 +////////////////////////////////////////////
 +// BIT ASSEMBLY CODE TABLE
@@ -15366,11 +15357,10 @@ index 000000000000..420c9753b539
 +	0xe190, 0xe190, 0xe190, 0xe190, 0xe190, 0xe190, 0xe190, 0xe190, 0xe190,
 +	0xe190, 0xe190, 0xe190, 0xe190, 0xe190, 0xe190,
 +};
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_mem.c b/drivers/media/platform/realtek/vpu/stateful/ve1_mem.c
-new file mode 100644
-index 000000000000..af4df2b49cc3
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_mem.c
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_mem.c
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_mem.c
 @@ -0,0 +1,324 @@
 +#include <linux/module.h>
 +#include <linux/kernel.h>
@@ -15696,11 +15686,10 @@ index 000000000000..af4df2b49cc3
 +	misc_deregister(&ve1_mem_miscdev);
 +}
 +
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_mem.h b/drivers/media/platform/realtek/vpu/stateful/ve1_mem.h
-new file mode 100644
-index 000000000000..3c9a785e9c70
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_mem.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_mem.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_mem.h
 @@ -0,0 +1,26 @@
 +#ifndef _RTK_VE1_MEM_H
 +#define _RTK_VE1_MEM_H
@@ -15728,11 +15717,10 @@ index 000000000000..3c9a785e9c70
 +void ve1_mem_device_destroy(void);
 +
 +#endif /* _RTK_VE1_MEM_H */
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_mem_compat.c b/drivers/media/platform/realtek/vpu/stateful/ve1_mem_compat.c
-new file mode 100644
-index 000000000000..36d97457c244
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_mem_compat.c
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_mem_compat.c
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_mem_compat.c
 @@ -0,0 +1,69 @@
 +#include <linux/compat.h>
 +#include <linux/fs.h>
@@ -15803,11 +15791,10 @@ index 000000000000..36d97457c244
 +}
 +
 +MODULE_LICENSE("GPL v2");
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_mem_compat.h b/drivers/media/platform/realtek/vpu/stateful/ve1_mem_compat.h
-new file mode 100644
-index 000000000000..30b9c18b0e2c
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_mem_compat.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_mem_compat.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_mem_compat.h
 @@ -0,0 +1,14 @@
 +#ifndef _LINUX_COMPAT_VE1_MEM_H
 +#define _LINUX_COMPAT_VE1_MEM_H
@@ -15823,11 +15810,10 @@ index 000000000000..30b9c18b0e2c
 +
 +#endif /* CONFIG_COMPAT */
 +#endif /* _LINUX_COMPAT_VE1_MEM_H */
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_mem_uapi.h b/drivers/media/platform/realtek/vpu/stateful/ve1_mem_uapi.h
-new file mode 100644
-index 000000000000..dcaea467d7db
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_mem_uapi.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_mem_uapi.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_mem_uapi.h
 @@ -0,0 +1,17 @@
 +#ifndef _RTK_VE1_MEM_UAPI_H
 +#define _RTK_VE1_MEM_UAPI_H
@@ -15846,11 +15832,10 @@ index 000000000000..dcaea467d7db
 +#define VE1_MEM_IOC_EXPORT _IOWR(VE1_MEM_IOC_MAGIC, 0, struct ve1_mem_fd_data)
 +
 +#endif /* _RTK_VE1_MEM_UAPI_H */
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_mm.c b/drivers/media/platform/realtek/vpu/stateful/ve1_mm.c
-new file mode 100644
-index 000000000000..0ddc5e9361ed
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_mm.c
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_mm.c
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_mm.c
 @@ -0,0 +1,580 @@
 +#include <linux/module.h>
 +#include <linux/kernel.h>
@@ -16432,11 +16417,10 @@ index 000000000000..0ddc5e9361ed
 +
 +	return 0;
 +}
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_mm.h b/drivers/media/platform/realtek/vpu/stateful/ve1_mm.h
-new file mode 100644
-index 000000000000..4fba7d489114
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_mm.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_mm.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_mm.h
 @@ -0,0 +1,70 @@
 +#ifndef __CNM_VIDEO_MEMORY_ALLOCATOR_H_
 +#define __CNM_VIDEO_MEMORY_ALLOCATOR_H_
@@ -16508,11 +16492,10 @@ index 000000000000..4fba7d489114
 +}
 +#endif
 +#endif /* __CNM_VIDEO_MEMORY_ALLOCATOR_H__ */
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_product.c b/drivers/media/platform/realtek/vpu/stateful/ve1_product.c
-new file mode 100644
-index 000000000000..f6e824340018
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_product.c
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_product.c
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_product.c
 @@ -0,0 +1,1138 @@
 +//--=========================================================================--
 +//  This file is a part of VPU Reference API project
@@ -17652,11 +17635,10 @@ index 000000000000..f6e824340018
 +
 +	return ret;
 +}
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_product.h b/drivers/media/platform/realtek/vpu/stateful/ve1_product.h
-new file mode 100644
-index 000000000000..9534eef68e26
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_product.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_product.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_product.h
 @@ -0,0 +1,220 @@
 +//--=========================================================================--
 +//  This file is a part of VPU Reference API project
@@ -17878,11 +17860,10 @@ index 000000000000..9534eef68e26
 +#endif /* __cplusplus */
 +
 +#endif /* __VPUAPI_PRODUCT_ABSTRACT_H__ */
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_regdefine.h b/drivers/media/platform/realtek/vpu/stateful/ve1_regdefine.h
-new file mode 100644
-index 000000000000..47c7361f5e9b
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_regdefine.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_regdefine.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_regdefine.h
 @@ -0,0 +1,595 @@
 +//--=========================================================================--
 +//  This file is a part of VPU Reference API project
@@ -18479,11 +18460,10 @@ index 000000000000..47c7361f5e9b
 +#define RET_FW_CODE_REV (BIT_BASE + 0x1c4)
 +
 +#endif
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.c b/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.c
-new file mode 100644
-index 000000000000..85e16eddacaa
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.c
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.c
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.c
 @@ -0,0 +1,1173 @@
 +
 +#include <linux/kernel.h>
@@ -19658,11 +19638,10 @@ index 000000000000..85e16eddacaa
 +MODULE_LICENSE("GPL");
 +MODULE_AUTHOR("Scarly.Cheng <scarly.cheng@realtek.com>");
 +MODULE_DESCRIPTION("V4L2 Realtek Video Engine 1 Codec Driver");
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.h b/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.h
-new file mode 100644
-index 000000000000..9b8ec45d7cea
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_v4l2.h
 @@ -0,0 +1,481 @@
 +
 +#ifndef __VE1_V4L2_H__
@@ -20145,11 +20124,10 @@ index 000000000000..9b8ec45d7cea
 +}
 +
 +#endif /* __VE1_V4L2_H__ */
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_vdi.c b/drivers/media/platform/realtek/vpu/stateful/ve1_vdi.c
-new file mode 100644
-index 000000000000..a3bd52d720ac
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vdi.c
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_vdi.c
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vdi.c
 @@ -0,0 +1,3054 @@
 +//------------------------------------------------------------------------------
 +// File: vdi.c
@@ -23205,11 +23183,10 @@ index 000000000000..a3bd52d720ac
 +	return ret;
 +}
 +
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_vdi.h b/drivers/media/platform/realtek/vpu/stateful/ve1_vdi.h
-new file mode 100644
-index 000000000000..1c821970bbea
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vdi.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_vdi.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vdi.h
 @@ -0,0 +1,209 @@
 +//------------------------------------------------------------------------------
 +// File: ve1_vdi.h
@@ -23420,11 +23397,10 @@ index 000000000000..1c821970bbea
 +#endif
 +
 +#endif //#ifndef _VDI_H_
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_vdi_osal.c b/drivers/media/platform/realtek/vpu/stateful/ve1_vdi_osal.c
-new file mode 100644
-index 000000000000..71b88c562207
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vdi_osal.c
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_vdi_osal.c
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vdi_osal.c
 @@ -0,0 +1,310 @@
 +//------------------------------------------------------------------------------
 +// File: ve1_vdi_osal.c
@@ -23736,11 +23712,10 @@ index 000000000000..71b88c562207
 +	return (c & 0xFFFF);
 +}
 +
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_vdi_osal.h b/drivers/media/platform/realtek/vpu/stateful/ve1_vdi_osal.h
-new file mode 100644
-index 000000000000..2f7f2b5f4150
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vdi_osal.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_vdi_osal.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vdi_osal.h
 @@ -0,0 +1,130 @@
 +//------------------------------------------------------------------------------
 +// File: log.h
@@ -23872,11 +23847,10 @@ index 000000000000..2f7f2b5f4150
 +#endif
 +
 +#endif //#ifndef _VDI_OSAL_H_
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_vpu.c b/drivers/media/platform/realtek/vpu/stateful/ve1_vpu.c
-new file mode 100644
-index 000000000000..c569e1fdae77
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpu.c
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_vpu.c
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpu.c
 @@ -0,0 +1,4511 @@
 +//--=========================================================================--
 +//  This file is a part of VPU Reference API project
@@ -28389,11 +28363,10 @@ index 000000000000..c569e1fdae77
 +
 +	return ret;
 +}
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_vpu.h b/drivers/media/platform/realtek/vpu/stateful/ve1_vpu.h
-new file mode 100644
-index 000000000000..30431aafbe5d
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpu.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_vpu.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpu.h
 @@ -0,0 +1,97 @@
 +//--=========================================================================--
 +//  This file is a part of VPU Reference API project
@@ -28492,11 +28465,10 @@ index 000000000000..30431aafbe5d
 +#endif /* __cplusplus */
 +
 +#endif /* __CODA9_FUNCTION_H__ */
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_vpu_md5.h b/drivers/media/platform/realtek/vpu/stateful/ve1_vpu_md5.h
-new file mode 100644
-index 000000000000..3f8c10547ecf
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpu_md5.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_vpu_md5.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpu_md5.h
 @@ -0,0 +1,15 @@
 +#ifndef _RVSD_DBG_MD5_H_
 +//#include <stdio.h>
@@ -28513,11 +28485,10 @@ index 000000000000..3f8c10547ecf
 +unsigned char *MD5(const unsigned char *d, size_t n, unsigned char *md);
 +
 +#endif
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapi.c b/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapi.c
-new file mode 100644
-index 000000000000..d307b2661b4e
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapi.c
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapi.c
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapi.c
 @@ -0,0 +1,5093 @@
 +//--=========================================================================--
 +//  This file is a part of VPU Reference API project
@@ -33613,11 +33584,10 @@ index 000000000000..d307b2661b4e
 +	return ret;
 +}
 \ No newline at end of file
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapi.h b/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapi.h
-new file mode 100644
-index 000000000000..cf030f789049
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapi.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapi.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapi.h
 @@ -0,0 +1,6538 @@
 +//--=========================================================================--
 +//  This file is a part of VPU Reference API project
@@ -40157,11 +40127,10 @@ index 000000000000..cf030f789049
 +#endif
 +
 +#endif
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapifunc.c b/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapifunc.c
-new file mode 100644
-index 000000000000..050cc7096777
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapifunc.c
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapifunc.c
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapifunc.c
 @@ -0,0 +1,5174 @@
 +//--=========================================================================--
 +//  This file is a part of VPU Reference API project
@@ -45337,11 +45306,10 @@ index 000000000000..050cc7096777
 +	return;
 +}
 +#endif
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapifunc.h b/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapifunc.h
-new file mode 100644
-index 000000000000..2d6837b151d2
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapifunc.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapifunc.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpuapifunc.h
 @@ -0,0 +1,751 @@
 +//--=========================================================================--
 +//  This file is a part of VPU Reference API project
@@ -46094,11 +46062,10 @@ index 000000000000..2d6837b151d2
 +#endif
 +
 +#endif // endif VPUAPI_UTIL_H_INCLUDED
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_vpuconfig.h b/drivers/media/platform/realtek/vpu/stateful/ve1_vpuconfig.h
-new file mode 100644
-index 000000000000..483378c09904
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpuconfig.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_vpuconfig.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpuconfig.h
 @@ -0,0 +1,147 @@
 +//--=========================================================================--
 +//  This file is a part of VPU Reference API project
@@ -46247,11 +46214,10 @@ index 000000000000..483378c09904
 +#define PREALLOC_MV_HEIGHT 1080
 +
 +#endif /* __CODA9_VPU_CONFIG_H__ */
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_vpuerror.h b/drivers/media/platform/realtek/vpu/stateful/ve1_vpuerror.h
-new file mode 100644
-index 000000000000..821b929c857f
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpuerror.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_vpuerror.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vpuerror.h
 @@ -0,0 +1,229 @@
 +//--=========================================================================--
 +//  This file is a part of VPU Reference API project
@@ -46482,11 +46448,10 @@ index 000000000000..821b929c857f
 +#define WAVE5_SYSERR_WATCHDOG_TIMEOUT 0x00008000
 +
 +#endif /* ERROR_CODE_H_INCLUDED */
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_vputypes.h b/drivers/media/platform/realtek/vpu/stateful/ve1_vputypes.h
-new file mode 100644
-index 000000000000..08b2b0068a0e
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vputypes.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_vputypes.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_vputypes.h
 @@ -0,0 +1,104 @@
 +//--=========================================================================--
 +//  This file is a part of VPU Reference API project
@@ -46592,11 +46557,10 @@ index 000000000000..08b2b0068a0e
 +#endif
 +
 +#endif /* _VPU_TYPES_H_ */
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.c b/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.c
-new file mode 100644
-index 000000000000..86fe63d271bc
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.c
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.c
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.c
 @@ -0,0 +1,3926 @@
 +#include <linux/kernel.h>
 +#include <linux/slab.h>
@@ -50525,11 +50489,10 @@ index 000000000000..86fe63d271bc
 +	return ret;
 +}
 \ No newline at end of file
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.h b/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.h
-new file mode 100644
-index 000000000000..51d070833f7c
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve1_wrapper.h
 @@ -0,0 +1,81 @@
 +#ifndef __VE1_WRAPPER_H__
 +#define __VE1_WRAPPER_H__
@@ -50612,11 +50575,10 @@ index 000000000000..51d070833f7c
 +int rtkve1_flush(void *pCtx);
 +void *rtkve1_find_dpb_undequeue(void *pCtx);
 +#endif // #define __VE1_WRAPPER_H__
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve2.c b/drivers/media/platform/realtek/vpu/stateful/ve2.c
-new file mode 100644
-index 000000000000..04c53f64bcdc
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve2.c
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve2.c
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve2.c
 @@ -0,0 +1,1137 @@
 +/*
 + * Realtek video decoder v4l2 driver
@@ -51755,11 +51717,10 @@ index 000000000000..04c53f64bcdc
 +MODULE_LICENSE("GPL");
 +MODULE_AUTHOR("William Lee <william.lee@realtek.com>");
 +MODULE_DESCRIPTION("V4L2 Realtek Video Engine 2 Codec Driver");
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve2.h b/drivers/media/platform/realtek/vpu/stateful/ve2.h
-new file mode 100644
-index 000000000000..d045925e4ac5
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve2.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve2.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve2.h
 @@ -0,0 +1,31 @@
 +/*
 + * Realtek video decoder v4l2 driver
@@ -51792,11 +51753,10 @@ index 000000000000..d045925e4ac5
 +};
 +
 +#endif
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve2_frame.h b/drivers/media/platform/realtek/vpu/stateful/ve2_frame.h
-new file mode 100644
-index 000000000000..e242f496ced5
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve2_frame.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve2_frame.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve2_frame.h
 @@ -0,0 +1,216 @@
 +/*
 + * Realtek video decoder v4l2 driver
@@ -52014,11 +51974,10 @@ index 000000000000..e242f496ced5
 +} ve2rpc_flash_frame_info_t;
 +
 +#endif
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve2rpc.c b/drivers/media/platform/realtek/vpu/stateful/ve2rpc.c
-new file mode 100644
-index 000000000000..c25427ce4dad
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve2rpc.c
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve2rpc.c
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve2rpc.c
 @@ -0,0 +1,2705 @@
 +/*
 + * Realtek video decoder v4l2 driver
@@ -54725,11 +54684,10 @@ index 000000000000..c25427ce4dad
 +	return ret;
 +}
 +#endif
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve2rpc.h b/drivers/media/platform/realtek/vpu/stateful/ve2rpc.h
-new file mode 100644
-index 000000000000..c181bb9a64c3
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve2rpc.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve2rpc.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve2rpc.h
 @@ -0,0 +1,293 @@
 +/*
 + * Realtek video decoder v4l2 driver
@@ -55024,11 +54982,10 @@ index 000000000000..c181bb9a64c3
 +void __maybe_unused dump_buflock(struct ve2rpc *cap_hndl);
 +
 +#endif
-diff --git a/drivers/media/platform/realtek/vpu/stateful/ve2rpc_cmd.h b/drivers/media/platform/realtek/vpu/stateful/ve2rpc_cmd.h
-new file mode 100644
-index 000000000000..2cc0e66dd947
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve2rpc_cmd.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/ve2rpc_cmd.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/ve2rpc_cmd.h
 @@ -0,0 +1,581 @@
 +/*
 + * Realtek video decoder v4l2 driver
@@ -55612,11 +55569,10 @@ index 000000000000..2cc0e66dd947
 +#define REPLYID 99 // for registering the Reply_Handler
 +#endif
 \ No newline at end of file
-diff --git a/drivers/media/platform/realtek/vpu/stateful/video_engine.h b/drivers/media/platform/realtek/vpu/stateful/video_engine.h
-new file mode 100644
-index 000000000000..d2bdfbbd7991
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/video_engine.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/video_engine.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/video_engine.h
 @@ -0,0 +1,17 @@
 +/*
 + * Realtek video decoder v4l2 driver
@@ -55635,11 +55591,10 @@ index 000000000000..d2bdfbbd7991
 +#define VIDEO_ENGINE_3 3
 +#define VIDEO_OUTPUT_1 4
 +#endif
-diff --git a/drivers/media/platform/realtek/vpu/stateful/vpu.c b/drivers/media/platform/realtek/vpu/stateful/vpu.c
-new file mode 100644
-index 000000000000..84f47831bb1d
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/vpu.c
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/vpu.c
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/vpu.c
 @@ -0,0 +1,1594 @@
 +/*
 + * Realtek video decoder v4l2 driver
@@ -57235,11 +57190,10 @@ index 000000000000..84f47831bb1d
 +	vpu_info("Unregistered video engine VE%d ops\n", id);
 +}
 +EXPORT_SYMBOL(vpu_ve_unregister);
-diff --git a/drivers/media/platform/realtek/vpu/stateful/vpu.h b/drivers/media/platform/realtek/vpu/stateful/vpu.h
-new file mode 100644
-index 000000000000..099b54031b52
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateful/vpu.h
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateful/vpu.h
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateful/vpu.h
 @@ -0,0 +1,153 @@
 +/*
 + * Realtek video decoder v4l2 driver
@@ -57394,11 +57348,10 @@ index 000000000000..099b54031b52
 +int vpu_keep_fm_info(int width, int height);
 +#endif // #ifdef ENABLE_SHOW_VIDEO_INFO
 +#endif
-diff --git a/drivers/media/platform/realtek/vpu/stateless/Makefile b/drivers/media/platform/realtek/vpu/stateless/Makefile
-new file mode 100644
-index 000000000000..4899d1fa6cd6
+Index: kernel-5_15/drivers/media/platform/realtek/vpu/stateless/Makefile
+===================================================================
 --- /dev/null
-+++ b/drivers/media/platform/realtek/vpu/stateless/Makefile
++++ kernel-5_15/drivers/media/platform/realtek/vpu/stateless/Makefile
 @@ -0,0 +1,12 @@
 +# SPDX-License-Identifier: GPL-2.0
 +
@@ -57412,10 +57365,10 @@ index 000000000000..4899d1fa6cd6
 +	vpu.o
 +
 +EXTRA_CFLAGS += -Wframe-larger-than=4096
-diff --git a/include/uapi/linux/v4l2-controls.h b/include/uapi/linux/v4l2-controls.h
-index a8c50c29a123..0f8cbdb421b2 100644
---- a/include/uapi/linux/v4l2-controls.h
-+++ b/include/uapi/linux/v4l2-controls.h
+Index: kernel-5_15/include/uapi/linux/v4l2-controls.h
+===================================================================
+--- kernel-5_15.orig/include/uapi/linux/v4l2-controls.h
++++ kernel-5_15/include/uapi/linux/v4l2-controls.h
 @@ -201,6 +201,9 @@ enum v4l2_colorfx {
   */
  #define V4L2_CID_USER_ATMEL_ISC_BASE		(V4L2_CID_USER_BASE + 0x10c0)
@@ -57426,6 +57379,3 @@ index a8c50c29a123..0f8cbdb421b2 100644
  /*
   * The base for the CODA driver controls.
   * We reserve 16 controls for this driver.
--- 
-2.45.2
-

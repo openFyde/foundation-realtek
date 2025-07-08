@@ -9,11 +9,11 @@ Change-Id: I04954e2a16d5804bccaf37db147659cb58e0baae
  drivers/media/platform/Makefile | 6 ++++++
  2 files changed, 10 insertions(+)
 
-diff --git a/drivers/media/platform/Kconfig b/drivers/media/platform/Kconfig
-index 451cd145d653..663b3092a10e 100644
---- a/drivers/media/platform/Kconfig
-+++ b/drivers/media/platform/Kconfig
-@@ -581,3 +581,7 @@ config VIDEO_RCAR_DRIF
+Index: kernel-5_15/drivers/media/platform/Kconfig
+===================================================================
+--- kernel-5_15.orig/drivers/media/platform/Kconfig
++++ kernel-5_15/drivers/media/platform/Kconfig
+@@ -579,3 +579,7 @@ config VIDEO_RCAR_DRIF
  	  will be called rcar_drif.
  
  endif # SDR_PLATFORM_DRIVERS
@@ -21,23 +21,20 @@ index 451cd145d653..663b3092a10e 100644
 +source "drivers/media/platform/rtk-cec/Kconfig"
 +source "drivers/media/platform/rtk_dsi/Kconfig"
 +source "drivers/media/platform/rtk_tpdemux/Kconfig"
-diff --git a/drivers/media/platform/Makefile b/drivers/media/platform/Makefile
-index f50587cd5b71..9bfd74e9284a 100644
---- a/drivers/media/platform/Makefile
-+++ b/drivers/media/platform/Makefile
-@@ -85,6 +85,12 @@ obj-$(CONFIG_VIDEO_QCOM_CAMSS)		+= qcom/camss/
+Index: kernel-5_15/drivers/media/platform/Makefile
+===================================================================
+--- kernel-5_15.orig/drivers/media/platform/Makefile
++++ kernel-5_15/drivers/media/platform/Makefile
+@@ -85,6 +85,12 @@ obj-$(CONFIG_VIDEO_QCOM_CAMSS)		+= qcom/
  
  obj-$(CONFIG_VIDEO_QCOM_VENUS)		+= qcom/venus/
  
-+obj-$(CONFIG_RTK_HDMI_CEC)		+= rtk-cec/
++obj-$(CONFIG_RTK_HDMI_CEC)   += rtk-cec/
 +
  obj-y					+= sunxi/
  
  obj-$(CONFIG_VIDEO_MESON_GE2D)		+= meson/ge2d/
-+ 
-+obj-$(CONFIG_RTK_DSI)			+= rtk_dsi/
 +
-+obj-$(CONFIG_RTK_TPDEMUX)		+= rtk_tpdemux/
--- 
-2.45.2
-
++obj-$(CONFIG_RTK_DSI)      += rtk_dsi/
++
++obj-$(CONFIG_RTK_TPDEMUX)    += rtk_tpdemux/

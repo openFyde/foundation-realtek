@@ -9,11 +9,11 @@ Change-Id: I12e9f120cdc4bbd5cf2e25b34d439136e30178ea
  include/uapi/linux/videodev2.h       | 1 +
  2 files changed, 2 insertions(+)
 
-diff --git a/drivers/media/v4l2-core/v4l2-ioctl.c b/drivers/media/v4l2-core/v4l2-ioctl.c
-index 1aba5517fa53..807c505b116c 100644
---- a/drivers/media/v4l2-core/v4l2-ioctl.c
-+++ b/drivers/media/v4l2-core/v4l2-ioctl.c
-@@ -1422,6 +1422,7 @@ static void v4l_fill_fmtdesc(struct v4l2_fmtdesc *fmt)
+Index: kernel-5_15/drivers/media/v4l2-core/v4l2-ioctl.c
+===================================================================
+--- kernel-5_15.orig/drivers/media/v4l2-core/v4l2-ioctl.c
++++ kernel-5_15/drivers/media/v4l2-core/v4l2-ioctl.c
+@@ -1422,6 +1422,7 @@ static void v4l_fill_fmtdesc(struct v4l2
  		case V4L2_PIX_FMT_VP8_FRAME:    descr = "VP8 Frame"; break;
  		case V4L2_PIX_FMT_VP9:		descr = "VP9"; break;
  		case V4L2_PIX_FMT_VP9_FRAME:    descr = "VP9 Frame"; break;
@@ -21,11 +21,19 @@ index 1aba5517fa53..807c505b116c 100644
  		case V4L2_PIX_FMT_HEVC:		descr = "HEVC"; break; /* aka H.265 */
  		case V4L2_PIX_FMT_HEVC_SLICE:	descr = "HEVC Parsed Slice Data"; break;
  		case V4L2_PIX_FMT_FWHT:		descr = "FWHT"; break; /* used in vicodec */
-diff --git a/include/uapi/linux/videodev2.h b/include/uapi/linux/videodev2.h
-index b309735036bd..b003f0d27eea 100644
---- a/include/uapi/linux/videodev2.h
-+++ b/include/uapi/linux/videodev2.h
-@@ -708,6 +708,7 @@ struct v4l2_pix_format {
+@@ -1445,6 +1446,7 @@ static void v4l_fill_fmtdesc(struct v4l2
+ 		case V4L2_PIX_FMT_SE401:	descr = "GSPCA SE401"; break;
+ 		case V4L2_PIX_FMT_S5C_UYVY_JPG:	descr = "S5C73MX interleaved UYVY/JPEG"; break;
+ 		case V4L2_PIX_FMT_MT21C:	descr = "Mediatek Compressed Format"; break;
++    case V4L2_PIX_FMT_AV1_FRAME:    descr = "AV1 Frame"; break;
+ 		case V4L2_PIX_FMT_QC08C:	descr = "QCOM Compressed 8-bit Format"; break;
+ 		case V4L2_PIX_FMT_QC10C:	descr = "QCOM Compressed 10-bit Format"; break;
+ 		default:
+Index: kernel-5_15/include/uapi/linux/videodev2.h
+===================================================================
+--- kernel-5_15.orig/include/uapi/linux/videodev2.h
++++ kernel-5_15/include/uapi/linux/videodev2.h
+@@ -708,11 +708,13 @@ struct v4l2_pix_format {
  #define V4L2_PIX_FMT_VP8_FRAME v4l2_fourcc('V', 'P', '8', 'F') /* VP8 parsed frame */
  #define V4L2_PIX_FMT_VP9      v4l2_fourcc('V', 'P', '9', '0') /* VP9 */
  #define V4L2_PIX_FMT_VP9_FRAME v4l2_fourcc('V', 'P', '9', 'F') /* VP9 parsed frame */
@@ -33,6 +41,9 @@ index b309735036bd..b003f0d27eea 100644
  #define V4L2_PIX_FMT_HEVC     v4l2_fourcc('H', 'E', 'V', 'C') /* HEVC aka H.265 */
  #define V4L2_PIX_FMT_FWHT     v4l2_fourcc('F', 'W', 'H', 'T') /* Fast Walsh Hadamard Transform (vicodec) */
  #define V4L2_PIX_FMT_FWHT_STATELESS     v4l2_fourcc('S', 'F', 'W', 'H') /* Stateless FWHT (vicodec) */
--- 
-2.45.2
-
+ #define V4L2_PIX_FMT_H264_SLICE v4l2_fourcc('S', '2', '6', '4') /* H264 parsed slices */
+ #define V4L2_PIX_FMT_HEVC_SLICE v4l2_fourcc('S', '2', '6', '5') /* HEVC parsed slices */
++#define V4L2_PIX_FMT_AV1_FRAME v4l2_fourcc('A', 'V', '1', 'F')
+ 
+ /*  Vendor-specific formats   */
+ #define V4L2_PIX_FMT_CPIA1    v4l2_fourcc('C', 'P', 'I', 'A') /* cpia1 YUV */
