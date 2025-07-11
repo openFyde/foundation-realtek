@@ -1,0 +1,11 @@
+--- a/drivers/gpu/drm/realtek/rtk_hdmi.c
++++ b/drivers/gpu/drm/realtek/rtk_hdmi.c
+@@ -1455,7 +1455,7 @@
+ 	if ((vic >= VIC_3840X2160P24) && (max_tmds_khz < 297000))
+ 		return MODE_CLOCK_HIGH;
+ 
+-	if (vic >= VIC_3840X2160P24)
++	if (vic > VIC_3840X2160P30)
+ 		return MODE_CLOCK_HIGH;
+ 
+ 	if (rtk_hdmi_valid_vic(vic))
