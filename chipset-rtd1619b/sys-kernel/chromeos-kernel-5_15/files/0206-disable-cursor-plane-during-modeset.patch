@@ -1,0 +1,48 @@
+--- a/drivers/gpu/drm/realtek/rtk_drm_fb.c
++++ b/drivers/gpu/drm/realtek/rtk_drm_fb.c
+@@ -22,6 +22,7 @@
+ #include "rtk_drm_gem.h"
+ #include "rtk_drm_drv.h"
+ #include "rtk_hdmi.h"
++#include "rtk_drm_plane.h"
+ 
+ #define to_rtk_drm_fb(x) container_of(x, struct rtk_drm_fb, fb)
+ 
+@@ -175,6 +176,18 @@
+ 	uint32_t i;
+ 	struct drm_device *dev = state->dev;
+ 
++	if (state->allow_modeset) {
++		struct drm_plane *plane = NULL;
++
++		if (state->crtcs && state->crtcs->ptr)
++			plane = state->crtcs->ptr->cursor;
++
++		if (plane) {
++			pr_debug("%s: Disable cursor plane before modeset\n", __func__);
++			rtk_plane_atomic_disable(plane, NULL);
++		}
++	}
++
+ 	drm_atomic_helper_commit_modeset_disables(dev, state);
+ 
+ 	drm_atomic_helper_commit_modeset_enables(dev, state);
+--- a/drivers/gpu/drm/realtek/rtk_drm_plane.c
++++ b/drivers/gpu/drm/realtek/rtk_drm_plane.c
+@@ -883,7 +883,7 @@
+ 	}
+ }
+ 
+-static void rtk_plane_atomic_disable(struct drm_plane *plane,
++void rtk_plane_atomic_disable(struct drm_plane *plane,
+ 				struct drm_atomic_state *old_state)
+ {
+ 	struct rtk_drm_plane *rtk_plane = to_rtk_plane(plane);
+--- a/drivers/gpu/drm/realtek/rtk_drm_plane.h
++++ b/drivers/gpu/drm/realtek/rtk_drm_plane.h
+@@ -45,4 +45,5 @@
+ int rtk_plane_set_dispout_format(struct drm_device *dev, void *data, struct drm_file *file);
+ int rtk_plane_get_dispout_format(struct drm_device *dev, void *data, struct drm_file *file);
+ int rtk_plane_set_hdmi_audio_mute(struct drm_device * dev, void *data, struct drm_file *file);
++void rtk_plane_atomic_disable(struct drm_plane *plane, struct drm_atomic_state *old_state);
+ #endif  /* _RTK_DRM_PLANE_H_ */
