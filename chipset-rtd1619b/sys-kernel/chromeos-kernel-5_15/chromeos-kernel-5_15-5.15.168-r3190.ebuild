@@ -41,8 +41,8 @@ HOMEPAGE="https://www.chromium.org/chromium-os/chromiumos-design-docs/chromium-o
 DESCRIPTION="Chrome OS Linux Kernel 5.15"
 KEYWORDS="*"
 
-IUSE="${IUSE} panfrost aic_wifi"
-CONFIG_FRAGMENTS+=( panfrost aic_wifi )
+IUSE="${IUSE} panfrost aic_wifi nvme"
+CONFIG_FRAGMENTS+=( panfrost aic_wifi nvme )
 
 panfrost_desc="Enable GPU panfrost"
 panfrost_config="
@@ -63,3 +63,8 @@ CONFIG_BT_HCIUART_H4=y
 CONFIG_BT_HCIUART_ATH3K=y
 "
 
+nvme_desc="Enable NVME device support"
+nvme_config="
+CONFIG_BLK_DEV_NVME=y
+CONFIG_NVME_CORE=y
+"
