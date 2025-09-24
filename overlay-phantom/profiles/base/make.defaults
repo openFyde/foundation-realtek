@@ -1,0 +1,7 @@
+USE=""
+USE="has_chromeos_config_bsp"
+USE="${USE} touchview -legacy_keyboard -legacy_power_button touch_centric_device stylus"
+
+TTY_CONSOLE="ttyS0"
+CHROME_ORIGIN=LOCAL_SOURCE
+CHROMEOS_DTBS="rtd1501s-phantom-8gb.dtb"

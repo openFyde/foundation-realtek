@@ -1,0 +1,138 @@
+--- a/drivers/dma-buf/dma-heap.c
++++ b/drivers/dma-buf/dma-heap.c
+@@ -298,7 +298,6 @@
+ struct dma_heap *dma_heap_add(const struct dma_heap_export_info *exp_info)
+ {
+ 	struct dma_heap *heap, *h, *err_ret;
+-	struct device *dev_ret;
+ 	int minor;
+ 	int ret;
+ 
+--- a/drivers/dma-buf/heaps/rtk_protect.c
++++ b/drivers/dma-buf/heaps/rtk_protect.c
+@@ -9,9 +9,9 @@
+ #include <soc/realtek/rtk_tee.h>
+ #include "rtk_protect.h"
+ 
++#ifdef CONFIG_OPTEE_MEM_API
+ static struct tee_mem_device *memdev;
+ 
+-#ifdef CONFIG_OPTEE_MEM_API
+ int rtk_protect_create(struct rtk_protect_create_info *info)
+ {
+ 	struct tee_mem_protected_slot *slot;
+--- a/drivers/mmc/host/dw_mmc_cqe-rtk.c
++++ b/drivers/mmc/host/dw_mmc_cqe-rtk.c
+@@ -565,6 +565,7 @@
+ 	case 60:
+ 		pr_err("loop cnt %d: %s = 0x%08x, cannot find a proper phase\n",
+ 			loop_cnt, w_type, window);
++		break;
+ 	default:
+ 		break;
+ 	}
+--- a/drivers/soc/realtek/common/sysdbg/sysdbg_drv.c
++++ b/drivers/soc/realtek/common/sysdbg/sysdbg_drv.c
+@@ -137,6 +137,7 @@
+ 			for (i = 1; i < V3_TOT_NR_REG_SETS; i++)
+ 				iounmap(maps[i]);
+ 		}
++		break;
+ 	default:
+ 		break;
+ 	}
+@@ -265,14 +266,16 @@
+ 	case 1:
+ 	case 2:
+ 		return readl((maps[index] + LEGACY_ATOM_INC_RO_OFST));
++		break;
+ 	case 3:
+ 		if (index == 0)
+ 			return readl((maps[index] + LEGACY_ATOM_INC_RO_OFST));
+ 		else if (index == 2)
+ 			return readl((maps[index] + V3_ATOM_INC_RO_OFST + offset));
+-	default:
+-		return 0xDEADBEEF;
++		break;
+ 	}
++
++	return 0xDEADBEEF;
+ }
+ 
+ void sysdbg_atom_inc_ro_write(uint8_t index, uint8_t offset, uint32_t value)
+@@ -300,14 +303,16 @@
+ 	case 1:
+ 	case 2:
+ 		return readl((maps[index] + LEGACY_ATOM_INC_RW_OFST));
++		break;
+ 	case 3:
+ 		if (index == 0)
+ 			return readl((maps[index] + LEGACY_ATOM_INC_RW_OFST));
+ 		else if (index == 2)
+ 			return readl((maps[index] + V3_ATOM_INC_RW_OFST + offset));
+-	default:
+-		return 0xDEADBEEF;
++		break;
+ 	}
++
++	return 0xDEADBEEF;
+ }
+ 
+ void sysdbg_atom_inc_rw_write(uint8_t index, uint8_t offset, uint32_t value)
+@@ -334,17 +339,20 @@
+ 	switch (hw_ver) {
+ 	case 1:
+ 		return readl((maps[index] + LEGACY_SCRATCH_OFST));
++		break;
+ 	case 2:
+ 		return readl((maps[index] + offset));
++		break;
+ 	case 3:
+ 		if (index == 0)
+ 			return readl(
+ 				(maps[index] + LEGACY_SCRATCH_OFST + offset));
+ 		else if (index == 3)
+ 			return readl((maps[index] + offset));
+-	default:
+-		return 0xDEADBEEF;
++		break;
+ 	}
++
++	return 0xDEADBEEF;
+ }
+ 
+ void sysdbg_scratch_write(uint8_t index, uint8_t offset, uint32_t value)
+--- a/drivers/soc/realtek/kent/rtk_ve/ve1/ve1.c
++++ b/drivers/soc/realtek/kent/rtk_ve/ve1/ve1.c
+@@ -412,7 +412,7 @@
+ 		interrupt_reason_ve1 = ReadVpuRegister(BIT_INT_REASON, core);
+ 		WriteVpuRegister(BIT_INT_CLEAR, 0x1, core);
+ 		if (interrupt_reason_ve1 == 0) {
+-			pr_err("%s %d.DHCFAE-12940.interrupt_reason_ve1:%d\n",DEV_NAME,__LINE__,interrupt_reason_ve1);
++			pr_err("%s %d.DHCFAE-12940.interrupt_reason_ve1:%lu\n",DEV_NAME,__LINE__,interrupt_reason_ve1);
+ 		}
+ 	}
+ 
+--- a/drivers/soc/realtek/rtd16xxb/rtk_ve/ve1/ve1.c
++++ b/drivers/soc/realtek/rtd16xxb/rtk_ve/ve1/ve1.c
+@@ -416,7 +416,7 @@
+ 		interrupt_reason_ve1 = ReadVpuRegister(BIT_INT_REASON, core);
+ 		WriteVpuRegister(BIT_INT_CLEAR, 0x1, core);
+ 		if (interrupt_reason_ve1 == 0) {
+-			pr_err("%s %d.DHCFAE-12940.interrupt_reason_ve1:%d\n",DEV_NAME,__LINE__,interrupt_reason_ve1);
++			pr_err("%s %d.DHCFAE-12940.interrupt_reason_ve1:%lu\n",DEV_NAME,__LINE__,interrupt_reason_ve1);
+ 		}
+ 	}
+ 
+--- a/drivers/dma-buf/heaps/rtk_heap_debug.c
++++ b/drivers/dma-buf/heaps/rtk_heap_debug.c
+@@ -803,7 +803,9 @@
+ {
+ 	struct dentry *tmp;
+ 	struct cma *cma;
++#ifdef CONFIG_CMA_DEBUGFS
+ 	char name[100];
++#endif
+ 
+ 	tmp = debugfs_create_dir(dma_heap_get_name(ch->heap), root_dentry);
+ 	if (IS_ERR_OR_NULL(tmp))

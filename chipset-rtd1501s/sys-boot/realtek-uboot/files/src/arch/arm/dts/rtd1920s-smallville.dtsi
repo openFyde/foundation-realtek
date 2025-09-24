@@ -1,0 +1,22 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Realtek RTD1920S Smallville EVB
+ *
+ * Copyright (c) 2024 Realtek Semiconductor Corp.
+ */
+
+/dts-v1/;
+
+//#include <dt-bindings/thermal/thermal.h>
+#include "rtd1920.dtsi"
+//#include "rtd1920s-smallville.rds.dtsi"
+
+/ {
+	chosen {
+		stdout-path = "serial0:460800n8";
+	};
+
+	aliases {
+		serial0 = &uart0;
+	};
+};

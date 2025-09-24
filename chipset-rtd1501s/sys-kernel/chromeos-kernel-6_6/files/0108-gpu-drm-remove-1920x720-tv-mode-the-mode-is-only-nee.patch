@@ -1,0 +1,23 @@
+From 05da1fec0e0c2e022f35cde98e49963dccde9400 Mon Sep 17 00:00:00 2001
+From: yaozenhu <yaozenhu@realtek.com>
+Date: Wed, 14 May 2025 03:45:44 -0400
+Subject: [PATCH] gpu: drm: remove 1920x720 tv mode, the mode is only needed by
+ android system
+
+---
+ drivers/gpu/drm/realtek/rtk_hdmi.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+--- a/drivers/gpu/drm/realtek/rtk_hdmi.c
++++ b/drivers/gpu/drm/realtek/rtk_hdmi.c
+@@ -3013,8 +3013,10 @@
+ 	if (rtk_hdmi_valid_vic(vic))
+ 		return MODE_OK;
+ 
++#if 0
+ 	if (is_rtk_non_cea_mode(mode))
+ 		return MODE_OK;
++#endif
+ 
+ 	return MODE_ERROR;
+ }

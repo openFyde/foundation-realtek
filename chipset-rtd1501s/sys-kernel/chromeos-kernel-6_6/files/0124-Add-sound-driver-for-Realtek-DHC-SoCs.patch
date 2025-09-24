@@ -1,0 +1,31 @@
+From 471b280ddbcdd3baf8e6d173fe7156af5a35b282 Mon Sep 17 00:00:00 2001
+From: James Tai <james.tai@realtek.com>
+Date: Mon, 12 Dec 2022 13:05:41 +0800
+Subject: [PATCH] sound: soc: add sound driver for Realtek DHC SoCs
+
+Change-Id: Ica907805bb3fc5f6c12d9113457ab98a6e61d417
+---
+ sound/soc/Kconfig  | 1 +
+ sound/soc/Makefile | 1 +
+ 2 files changed, 2 insertions(+)
+
+--- a/sound/soc/Kconfig
++++ b/sound/soc/Kconfig
+@@ -98,6 +98,7 @@
+ source "sound/soc/mxs/Kconfig"
+ source "sound/soc/pxa/Kconfig"
+ source "sound/soc/qcom/Kconfig"
++source "sound/soc/realtek/Kconfig"
+ source "sound/soc/rockchip/Kconfig"
+ source "sound/soc/samsung/Kconfig"
+ source "sound/soc/sh/Kconfig"
+--- a/sound/soc/Makefile
++++ b/sound/soc/Makefile
+@@ -55,6 +55,7 @@
+ obj-$(CONFIG_SND_SOC)	+= kirkwood/
+ obj-$(CONFIG_SND_SOC)	+= pxa/
+ obj-$(CONFIG_SND_SOC)	+= qcom/
++obj-$(CONFIG_SND_SOC)	+= realtek/
+ obj-$(CONFIG_SND_SOC)	+= rockchip/
+ obj-$(CONFIG_SND_SOC)	+= samsung/
+ obj-$(CONFIG_SND_SOC)	+= sh/

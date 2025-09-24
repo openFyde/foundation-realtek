@@ -1,0 +1,28 @@
+From 57f166ada9c2c867ef35fc3628c6b2d86774e3e2 Mon Sep 17 00:00:00 2001
+From: phelic <phelic@realtek.com>
+Date: Fri, 26 Mar 2021 18:20:07 +0800
+Subject: [PATCH] perf: realtek: Support 1619b Dbus PMU
+
+Change-Id: Ie3e72733283dda16fa6aff68298facd480eec1e0
+---
+ drivers/perf/Kconfig                  |    1 +
+ drivers/perf/Makefile                 |    1 +
+ 2 files changed, 3169 insertions(+)
+
+--- a/drivers/perf/Kconfig
++++ b/drivers/perf/Kconfig
+@@ -209,6 +209,7 @@
+ 	  Sub-system.
+ 
+ source "drivers/perf/hisilicon/Kconfig"
++source "drivers/perf/realtek/Kconfig"
+ 
+ config MARVELL_CN10K_DDR_PMU
+ 	tristate "Enable MARVELL CN10K DRAM Subsystem(DSS) PMU Support"
+--- a/drivers/perf/Makefile
++++ b/drivers/perf/Makefile
+@@ -26,3 +26,4 @@
+ obj-$(CONFIG_ARM_CORESIGHT_PMU_ARCH_SYSTEM_PMU) += arm_cspmu/
+ obj-$(CONFIG_MESON_DDR_PMU) += amlogic/
+ obj-$(CONFIG_CXL_PMU) += cxl_pmu.o
++obj-$(CONFIG_ARCH_REALTEK) += realtek/

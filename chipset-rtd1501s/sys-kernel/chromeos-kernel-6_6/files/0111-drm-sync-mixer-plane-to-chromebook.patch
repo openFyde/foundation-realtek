@@ -1,0 +1,218 @@
+From b59cdd00b98e4d89366e3793b4b097f907762d3e Mon Sep 17 00:00:00 2001
+From: yaozenhu <yaozenhu@realtek.com>
+Date: Tue, 1 Jul 2025 04:25:00 -0400
+Subject: [PATCH] drm: sync mixer plane to chromebook
+
+---
+ drivers/gpu/drm/realtek/rtk_drm_crtc.c | 93 ++++++++++++++++++++------
+ drivers/gpu/drm/realtek/rtk_drm_rpc.c  |  2 +-
+ 2 files changed, 72 insertions(+), 23 deletions(-)
+
+--- a/drivers/gpu/drm/realtek/rtk_drm_crtc.c
++++ b/drivers/gpu/drm/realtek/rtk_drm_crtc.c
+@@ -38,7 +38,7 @@
+ #endif
+ #define to_rtk_crtc_state(s) container_of(s, struct rtk_crtc_state, base)
+ 
+-#ifdef CONFIG_CHROME_PLATFORMS
++#if defined(CONFIG_CHROME_PLATFORMS) || defined(CONFIG_YOCTO_PLATFORMS)
+ static int rtk_crtc_set_mixer_order(struct rtk_rpc_info *rpc_info,
+                struct rpc_disp_mixer_order *mixer_order)
+ {
+@@ -583,7 +583,7 @@
+ 		else
+ 			cursor = &rtk_crtc->nplanes[i].plane;
+ 
+-#ifdef CONFIG_CHROME_PLATFORMS
++#if defined(CONFIG_CHROME_PLATFORMS) || defined(CONFIG_YOCTO_PLATFORMS)
+ 		if (plane->layer_nr == VO_VIDEO_PLANE_OSD1) {
+ 			rtk_crtc->mixer_order.osd1 = plane->plane_order;
+ 		} else if (plane->layer_nr == VO_VIDEO_PLANE_SUB1) {
+@@ -626,7 +626,7 @@
+ 		}
+ 
+ 
+-#ifdef CONFIG_CHROME_PLATFORMS
++#if defined(CONFIG_CHROME_PLATFORMS) || defined(CONFIG_YOCTO_PLATFORMS)
+ 		if (plane->layer_nr == VO_VIDEO_PLANE_V1) {
+ 			rtk_crtc->mixer_order.v1 = plane->plane_order;
+ 		} else if (plane->layer_nr == VO_VIDEO_PLANE_V2) {
+@@ -635,7 +635,7 @@
+ #endif
+ 	}
+ 
+-#ifdef CONFIG_CHROME_PLATFORMS
++#if defined(CONFIG_CHROME_PLATFORMS) || defined(CONFIG_YOCTO_PLATFORMS)
+ 	if (rtk_crtc_set_mixer_order(rtk_crtc->rpc_info, &rtk_crtc->mixer_order)) {
+ 		DRM_ERROR("rtk crtc set mixer order fail\n");
+ 		return -1;
+@@ -718,6 +718,31 @@
+ 	return 0;
+ }
+ 
++#define FIRST_DISPLAY_CURSOR 3
++#define FIRST_DISPLAY_PRIMARY 2
++#define FIRST_DISPLAY_OVERLAY 1
++
++#define SECOND_DISPLAY_CURSOR 6
++#define SECOND_DISPLAY_PRIMARY 5
++#define SECOND_DISPLAY_OVERLAY 4
++
++#define THIRD_DISPLAY_CURSOR 9
++#define THIRD_DISPLAY_PRIMARY 8
++#define THIRD_DISPLAY_OVERLAY 7
++
++#if defined(CONFIG_CHROME_PLATFORMS) || defined(CONFIG_YOCTO_PLATFORMS)
++static const struct crtc_plane_data rtd_crtc_plane_all[] = {
++	{ .layer_nr = VO_VIDEO_PLANE_OSD1,
++	  .type = DRM_PLANE_TYPE_PRIMARY,
++	  .plane_order = FIRST_DISPLAY_PRIMARY },
++	{ .layer_nr = VO_VIDEO_PLANE_SUB1,
++	  .type = DRM_PLANE_TYPE_CURSOR,
++	  .plane_order = FIRST_DISPLAY_CURSOR },
++	{ .layer_nr = VO_VIDEO_PLANE_V1,
++	  .type = DRM_PLANE_TYPE_OVERLAY,
++	  .plane_order = FIRST_DISPLAY_OVERLAY },
++};
++#else
+ static const struct crtc_plane_data rtd_crtc_plane_all[] = {
+ 	{ .layer_nr = VO_VIDEO_PLANE_OSD1,
+ 	  .type = DRM_PLANE_TYPE_PRIMARY },
+@@ -728,75 +753,97 @@
+ 	{ .layer_nr = VO_VIDEO_PLANE_V2,
+ 	  .type = DRM_PLANE_TYPE_OVERLAY },
+ };
++#endif
+ 
+-#ifdef CONFIG_CHROME_PLATFORMS
++#if defined(CONFIG_CHROME_PLATFORMS) || defined(CONFIG_YOCTO_PLATFORMS)
+ static const struct crtc_plane_data rtd_crtc_plane_data_main[] = {
+ 	{ .layer_nr = VO_VIDEO_PLANE_OSD1,
+ 	  .type = DRM_PLANE_TYPE_PRIMARY,
+-	  .plane_order = 2 },
++	  .plane_order = FIRST_DISPLAY_PRIMARY },
+ 	{ .layer_nr = VO_VIDEO_PLANE_OSD3,
+ 	  .type = DRM_PLANE_TYPE_CURSOR,
+-	  .plane_order = 3 },
++	  .plane_order = FIRST_DISPLAY_CURSOR },
++	{ .layer_nr = VO_VIDEO_PLANE_V1,
++	  .type = DRM_PLANE_TYPE_OVERLAY,
++	  .plane_order = FIRST_DISPLAY_OVERLAY },
+ };
+ #else
+ static const struct crtc_plane_data rtd_crtc_plane_data_main[] = {
+ 	{ .layer_nr = VO_VIDEO_PLANE_OSD1,
+ 	  .type = DRM_PLANE_TYPE_PRIMARY,
+-	  .plane_order = 2 },
++	  .plane_order = FIRST_DISPLAY_PRIMARY },
+ 	{ .layer_nr = VO_VIDEO_PLANE_V1,
+ 	  .type = DRM_PLANE_TYPE_OVERLAY,
+-	  .plane_order = 1 },
++	  .plane_order = FIRST_DISPLAY_OVERLAY },
+ };
+ #endif
+ 
+ static const struct crtc_plane_data rtd_crtc_plane_main[] = {
+ 	{ .layer_nr = VO_VIDEO_PLANE_OSD1,
+ 	  .type = DRM_PLANE_TYPE_PRIMARY,
+-	  .plane_order = 2 },
++	  .plane_order = FIRST_DISPLAY_PRIMARY },
++	{ .layer_nr = VO_VIDEO_PLANE_V1,
++	  .type = DRM_PLANE_TYPE_OVERLAY,
++	  .plane_order = FIRST_DISPLAY_OVERLAY },
+ };
+ 
+-#ifdef CONFIG_CHROME_PLATFORMS
++#if defined(CONFIG_CHROME_PLATFORMS) || defined(CONFIG_YOCTO_PLATFORMS)
+ static const struct crtc_plane_data rtd_crtc_plane_data_ext[] = {
+ 	{ .layer_nr = VO_VIDEO_PLANE_SUB1,
+ 	  .type = DRM_PLANE_TYPE_PRIMARY,
+-	  .plane_order = 2 },
++	  .plane_order = SECOND_DISPLAY_PRIMARY },
+ 	{ .layer_nr = VO_VIDEO_PLANE_OSD4,
+ 	  .type = DRM_PLANE_TYPE_CURSOR,
+-	  .plane_order = 3 },
++	  .plane_order = SECOND_DISPLAY_CURSOR },
++	{ .layer_nr = VO_VIDEO_PLANE_V2,
++	  .type = DRM_PLANE_TYPE_OVERLAY,
++	  .plane_order = SECOND_DISPLAY_OVERLAY },
+ };
+ #else
+ static const struct crtc_plane_data rtd_crtc_plane_data_ext[] = {
+ 	{ .layer_nr = VO_VIDEO_PLANE_SUB1,
+ 	  .type = DRM_PLANE_TYPE_PRIMARY,
+-	  .plane_order = 2 },
++	  .plane_order = SECOND_DISPLAY_PRIMARY },
+ };
+ #endif
+ 
+ static const struct crtc_plane_data rtd_crtc_plane_ext[] = {
+ 	{ .layer_nr = VO_VIDEO_PLANE_SUB1,
+ 	  .type = DRM_PLANE_TYPE_PRIMARY,
+-	  .plane_order = 2 },
++	  .plane_order = SECOND_DISPLAY_PRIMARY },
++	{ .layer_nr = VO_VIDEO_PLANE_V2,
++	  .type = DRM_PLANE_TYPE_OVERLAY,
++	  .plane_order = SECOND_DISPLAY_OVERLAY },
+ };
+ 
+-#ifdef CONFIG_CHROME_PLATFORMS
++#if defined(CONFIG_CHROME_PLATFORMS) || defined(CONFIG_YOCTO_PLATFORMS)
+ static const struct crtc_plane_data rtd_crtc_plane_data_third[] = {
+ 	{ .layer_nr = VO_VIDEO_PLANE_OSD1,
+ 	  .type = DRM_PLANE_TYPE_PRIMARY,
+-	  .plane_order = 2 },
++	  .plane_order = THIRD_DISPLAY_PRIMARY },
+ 	{ .layer_nr = VO_VIDEO_PLANE_OSD3,
+ 	  .type = DRM_PLANE_TYPE_CURSOR,
+-	  .plane_order = 3 },
++	  .plane_order = THIRD_DISPLAY_CURSOR },
+ };
+ #else
+ static const struct crtc_plane_data rtd_crtc_plane_data_third[] = {
+ 	{ .layer_nr = VO_VIDEO_PLANE_OSD3,
+ 	  .type = DRM_PLANE_TYPE_PRIMARY,
+-	  .plane_order = 2 },
++	  .plane_order = THIRD_DISPLAY_PRIMARY },
+ };
+ #endif
+ 
+-static const struct crtc_data rtd_crtc_all = {
++static const struct crtc_data rtd_crtc_main_all = {
+ 	.version = 0,
++	.mixer = 0,
++	.plane = rtd_crtc_plane_all,
++	.plane_size = ARRAY_SIZE(rtd_crtc_plane_all),
++	.rpc_bind = NULL,
++};
++
++static const struct crtc_data rtd_crtc_ext_all = {
++	.version = 0,
++	.mixer = 1,
+ 	.plane = rtd_crtc_plane_all,
+ 	.plane_size = ARRAY_SIZE(rtd_crtc_plane_all),
+ 	.rpc_bind = NULL,
+@@ -854,8 +901,10 @@
+ 	  .data = &rtd_crtc_pipe_second },
+ 	{ .compatible = "realtek,rtd-crtc-pipe-third",
+ 	  .data = &rtd_crtc_pipe_third },
+-	{ .compatible = "realtek,rtd-crtc-all",
+-	  .data = &rtd_crtc_all },
++	{ .compatible = "realtek,rtd-crtc-main-all",
++	  .data = &rtd_crtc_main_all },
++	{ .compatible = "realtek,rtd-crtc-ext-all",
++	  .data = &rtd_crtc_ext_all },
+ 	{},
+ };
+ MODULE_DEVICE_TABLE(of, rtk_crtc_of_ids);
+--- a/drivers/gpu/drm/realtek/rtk_drm_rpc.c
++++ b/drivers/gpu/drm/realtek/rtk_drm_rpc.c
+@@ -2611,7 +2611,7 @@
+ 	return ret;
+ }
+ 
+-#ifdef CONFIG_CHROME_PLATFORMS
++#if defined(CONFIG_CHROME_PLATFORMS) || defined(CONFIG_YOCTO_PLATFORMS)
+ int rpc_set_mixer_order(struct rtk_rpc_info *rpc_info,
+            struct rpc_disp_mixer_order *arg)
+ {

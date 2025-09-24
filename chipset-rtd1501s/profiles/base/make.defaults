@@ -1,0 +1,27 @@
+BOARD_COMPILER_FLAGS="-march=armv8.2-a+crc+crypto -mtune=cortex-a78 -mfpu=crypto-neon-fp-armv8 -mfloat-abi=hard -ftree-vectorize"
+BOARD_RUSTFLAGS="-Ctarget-feature=+a78,+crc"
+CHROMEOS_KERNEL_SPLITCONFIG="chromiumos-realtek"
+CHROMEOS_KERNEL_ARCH="arm64"
+
+USE=""
+USE="${USE} drm_atomic"
+USE="${USE} hardfp"
+USE="${USE} kernel-6_6 include_vmlinuz"
+USE="${USE} neon"
+USE="${USE} v4l2_codec mosys_platform_generic chrome_media vulkan"
+USE="${USE} disable_cros_video_decoder hevc_codec"
+USE="${USE} native_gpu_memory_buffers video_capture_use_gpu_memory_buffer"
+USE="${USE} -coreboot -cros_ec -rgbkbd"
+USE="${USE} direncryption direncription_allow_v2"
+USE="${USE} -tpm tpm2 tpm2_simulator tpm_insecure_fallback vtpm_proxy tpm2_simulator_manufacturer"
+USE="${USE} kvm_host crosvm-gpu virtio_gpu"
+USE="${USE} disable_explicit_dma_fences march_armv8-a"
+#switch gpu driver from mali to panfrost
+USE="${USE} panfrost"
+
+ACCEPT_LICENSE="${ACCEPT_LICENSE} Google-TOS"
+VIDEO_CARDS="realtek"
+
+UBOOT_CONFIG="rtd1625_phantom"
+# DDR TYPE: ddr4 | lpddr4
+UBOOT_DDR_TYPE="lpddr4x"

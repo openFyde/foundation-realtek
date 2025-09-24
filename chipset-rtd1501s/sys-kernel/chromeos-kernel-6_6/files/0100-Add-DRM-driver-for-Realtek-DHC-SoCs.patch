@@ -1,0 +1,32 @@
+From 8cfbff0592081672f384eadbb1eb1ac95a297fc2 Mon Sep 17 00:00:00 2001
+From: James Tai <james.tai@realtek.com>
+Date: Fri, 2 Dec 2022 14:29:14 +0800
+Subject: [PATCH] gpu: drm: add DRM driver for Realtek DHC SoCs
+
+Change-Id: If894101b2c1f6ae5975bae6060d77cc69dc1ba8c
+---
+ drivers/gpu/drm/Kconfig                   |    2 +
+ drivers/gpu/drm/Makefile                  |    1 +
+ 2 files changed, 12679 insertions(+)
+
+--- a/drivers/gpu/drm/Kconfig
++++ b/drivers/gpu/drm/Kconfig
+@@ -367,6 +367,8 @@
+ 
+ source "drivers/gpu/drm/pl111/Kconfig"
+ 
++source "drivers/gpu/drm/realtek/Kconfig"
++
+ source "drivers/gpu/drm/tve200/Kconfig"
+ 
+ source "drivers/gpu/drm/xen/Kconfig"
+--- a/drivers/gpu/drm/Makefile
++++ b/drivers/gpu/drm/Makefile
+@@ -177,6 +177,7 @@
+ obj-$(CONFIG_DRM_MEDIATEK) += mediatek/
+ obj-$(CONFIG_DRM_POWERVR_ROGUE_1_17) += img-rogue/1.17/
+ obj-$(CONFIG_DRM_MESON)	+= meson/
++obj-$(CONFIG_DRM_RTK) += realtek/
+ obj-y			+= i2c/
+ obj-y			+= panel/
+ obj-y			+= bridge/

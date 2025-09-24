@@ -1,0 +1,46 @@
+From cb4083f94bb00d214ed731671bec6f96be22110e Mon Sep 17 00:00:00 2001
+From: Edgar Lee <cylee12@realtek.com>
+Date: Tue, 12 Nov 2024 14:26:46 +0800
+Subject: [PATCH] cpufreq: add rtk-cpufreq-dt for rtd1319d with
+ get/target_intermediate
+
+Change-Id: Ieaec9dc7c1ffa2261cae8f0bf505f9d53f93d319
+---
+ drivers/cpufreq/Kconfig.arm          |  6 +++
+ drivers/cpufreq/Makefile             |  1 +
+ drivers/cpufreq/cpufreq-dt-platdev.c |  2 +
+ 3 files changed, 78 insertions(+)
+
+--- a/drivers/cpufreq/Kconfig.arm
++++ b/drivers/cpufreq/Kconfig.arm
+@@ -286,3 +286,9 @@
+ 	  This add the CPUFreq driver support for Intel PXA2xx SOCs.
+ 
+ 	  If in doubt, say N.
++
++config ARM_RTK_CPUFREQ_DT
++	tristate "Realtek cpufreq support"
++	depends on ARCH_REALTEK
++	help
++	  This adds cpufreq driver support for Realtek SoCs based on cpufreq-dt.
+--- a/drivers/cpufreq/Makefile
++++ b/drivers/cpufreq/Makefile
+@@ -91,6 +91,7 @@
+ obj-$(CONFIG_ARM_TEGRA194_CPUFREQ)	+= tegra194-cpufreq.o
+ obj-$(CONFIG_ARM_TI_CPUFREQ)		+= ti-cpufreq.o
+ obj-$(CONFIG_ARM_VEXPRESS_SPC_CPUFREQ)	+= vexpress-spc-cpufreq.o
++obj-$(CONFIG_ARM_RTK_CPUFREQ_DT)	+= rtk-cpufreq-dt.o
+ 
+ 
+ ##################################################################################
+--- a/drivers/cpufreq/cpufreq-dt-platdev.c
++++ b/drivers/cpufreq/cpufreq-dt-platdev.c
+@@ -182,6 +182,8 @@
+ 	{ .compatible = "qcom,msm8974", },
+ 	{ .compatible = "qcom,msm8960", },
+ 
++	{ .compatible = "realtek,rtd1319d", },
++
+ 	{ }
+ };
+ 

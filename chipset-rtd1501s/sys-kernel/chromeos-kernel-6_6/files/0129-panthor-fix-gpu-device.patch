@@ -1,0 +1,112 @@
+From 6fb7335f3429ef30fbc6bf0e4072001a7ea223d4 Mon Sep 17 00:00:00 2001
+From: Edgar Lee <cylee12@realtek.com>
+Date: Wed, 14 May 2025 13:05:23 +0800
+Subject: [PATCH] [panthor] fix gpu device
+
+---
+ arch/arm64/boot/dts/realtek/kent.dtsi                | 9 +++++----
+ arch/arm64/boot/dts/realtek/rtd1501s-phantom.dtsi    | 9 ++++-----
+ arch/arm64/boot/dts/realtek/rtd1920s-smallville.dtsi | 9 ++++-----
+ 3 files changed, 13 insertions(+), 14 deletions(-)
+
+--- a/arch/arm64/boot/dts/realtek/kent.dtsi
++++ b/arch/arm64/boot/dts/realtek/kent.dtsi
+@@ -1086,11 +1086,12 @@
+ 				status = "disabled";
+ 
+ 				gpu: gpu@0 {
+-					compatible = "arm,mali-midgard";
++					compatible = "arm,mali-valhall-csf";
+ 					reg = <0x0 0x4f0000>;
+-					clock-name = "clk_mali";
+-					clocks = <&cc RTD1625_CRT_CLK_EN_GPU>;
+-					interrupt-names = "JOB", "MMU", "GPU";
++					clock-name = "clk_mali", "core";
++					clocks = <&cc RTD1625_CRT_CLK_EN_GPU>,
++						 <&cc RTD1625_CRT_CLK_EN_GPU>;
++					interrupt-names = "job", "mmu", "gpu";
+ 					interrupts = <GIC_SPI 76 IRQ_TYPE_LEVEL_HIGH>,
+ 						     <GIC_SPI 77 IRQ_TYPE_LEVEL_HIGH>,
+ 						     <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>;
+--- a/arch/arm64/boot/dts/realtek/rtd1501s-phantom.dtsi
++++ b/arch/arm64/boot/dts/realtek/rtd1501s-phantom.dtsi
+@@ -150,7 +150,6 @@
+ 
+ &gpu {
+ 	mali-supply = <&gpu_supp>;
+-	shadercores-supply = <&gpu_supp>;
+ 	operating-points-v2 = <&gpu_opps>;
+ };
+ 
+@@ -168,26 +167,26 @@
+ 		opp-405000000 {
+ 			opp-hz = /bits/ 64 <405000000>;
+ 			opp-hz-real = /bits/ 64 <405000000>;
+-			opp-microvolt = <800000>, <800000>;
++			opp-microvolt = <800000>;
+ 			opp-suspend;
+ 		};
+ 
+ 		opp-540000000 {
+ 			opp-hz = /bits/ 64 <540000000>;
+ 			opp-hz-real = /bits/ 64 <540000000>;
+-			opp-microvolt = <800000>, <800000>;
++			opp-microvolt = <800000>;
+ 		};
+ 
+ 		opp-729000000 {
+ 			opp-hz = /bits/ 64 <729000000>;
+ 			opp-hz-real = /bits/ 64 <729000000>;
+-			opp-microvolt = <800000>, <800000>;
++			opp-microvolt = <800000>;
+ 		};
+ 
+ 		opp-850500000 {
+ 			opp-hz = /bits/ 64 <850500000>;
+ 			opp-hz-real = /bits/ 64 <850500000>;
+-			opp-microvolt = <800000>, <800000>;
++			opp-microvolt = <800000>;
+ 		};
+ 	};
+ };
+--- a/arch/arm64/boot/dts/realtek/rtd1920s-smallville.dtsi
++++ b/arch/arm64/boot/dts/realtek/rtd1920s-smallville.dtsi
+@@ -191,7 +191,6 @@
+ 
+ &gpu {
+ 	mali-supply = <&gpu_supp>;
+-	shadercores-supply = <&gpu_supp>;
+ 	operating-points-v2 = <&gpu_opps>;
+ };
+ 
+@@ -274,26 +273,26 @@
+ 		opp-405000000 {
+ 			opp-hz = /bits/ 64 <405000000>;
+ 			opp-hz-real = /bits/ 64 <405000000>;
+-			opp-microvolt = <800000>, <800000>;
++			opp-microvolt = <800000>;
+ 			opp-suspend;
+ 		};
+ 
+ 		opp-540000000 {
+ 			opp-hz = /bits/ 64 <540000000>;
+ 			opp-hz-real = /bits/ 64 <540000000>;
+-			opp-microvolt = <800000>, <800000>;
++			opp-microvolt = <800000>;
+ 		};
+ 
+ 		opp-729000000 {
+ 			opp-hz = /bits/ 64 <729000000>;
+ 			opp-hz-real = /bits/ 64 <729000000>;
+-			opp-microvolt = <800000>, <800000>;
++			opp-microvolt = <800000>;
+ 		};
+ 
+ 		opp-850500000 {
+ 			opp-hz = /bits/ 64 <850500000>;
+ 			opp-hz-real = /bits/ 64 <850500000>;
+-			opp-microvolt = <800000>, <800000>;
++			opp-microvolt = <800000>;
+ 		};
+ 	};
+ };

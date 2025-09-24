@@ -1,0 +1,4 @@
+ACTION=="add", SUBSYSTEM=="video4linux", ATTR{name}=="C&M Coda VPU decoder", SYMLINK+="video-dec0"
+ACTION=="add", ATTR{model}=="Coda-dec", SYMLINK+="media-dec0", ENV{MEDIA_DEVICE_TYPE}="decoder"
+ACTION=="add", SUBSYSTEM=="video4linux", ATTR{name}=="RTK Video Engine decoder", SYMLINK+="video-dec1"
+ACTION=="add", ATTR{model}=="rtkve-dec", SYMLINK+="media-dec1", ENV{MEDIA_DEVICE_TYPE}="decoder"

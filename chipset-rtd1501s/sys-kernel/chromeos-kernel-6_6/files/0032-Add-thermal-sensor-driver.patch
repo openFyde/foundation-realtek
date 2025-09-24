@@ -1,0 +1,26 @@
+From 5550018ecde2fb1df230cb89e5617f38d08ce7c1 Mon Sep 17 00:00:00 2001
+From: Cheng-Yu Lee <cylee12@realtek.com>
+Date: Tue, 13 Oct 2020 15:45:51 +0800
+Subject: [PATCH] thermal: realtek: add thermal sensor driver
+
+Change-Id: I248a66f1a822b7ef3ec07ca9f217ec47c9d14cd3
+---
+ drivers/thermal/Kconfig                  |   1 +
+ drivers/thermal/Makefile                 |   2 +
+ 2 files changed, 696 insertions(+)
+
+--- a/drivers/thermal/Kconfig
++++ b/drivers/thermal/Kconfig
+@@ -522,4 +522,5 @@
+ 	  is higher than the high temperature threshold or lower than the low
+ 	  temperature threshold, the interrupt will occur.
+ 
++source "drivers/thermal/realtek/Kconfig"
+ endif
+--- a/drivers/thermal/Makefile
++++ b/drivers/thermal/Makefile
+@@ -64,3 +64,4 @@
+ obj-$(CONFIG_SPRD_THERMAL)	+= sprd_thermal.o
+ obj-$(CONFIG_KHADAS_MCU_FAN_THERMAL)	+= khadas_mcu_fan.o
+ obj-$(CONFIG_LOONGSON2_THERMAL)	+= loongson2_thermal.o
++obj-$(CONFIG_RTK_THERMAL)	+= realtek/

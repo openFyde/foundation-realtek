@@ -1,0 +1,131 @@
+From 5d2029a643ab41d20e333ff1fee5a1bc42510a84 Mon Sep 17 00:00:00 2001
+From: yaozenhu <yaozenhu@realtek.com>
+Date: Wed, 23 Jul 2025 03:48:15 -0400
+Subject: [PATCH] add patch for yocto
+
+---
+ drivers/gpu/drm/realtek/Kconfig         |  6 +++++-
+ drivers/gpu/drm/realtek/rtk_dptx.c      |  2 +-
+ drivers/gpu/drm/realtek/rtk_drm_drv.c   | 10 +++++++---
+ drivers/gpu/drm/realtek/rtk_drm_gem.c   |  2 +-
+ drivers/gpu/drm/realtek/rtk_drm_plane.c |  6 +++---
+ drivers/gpu/drm/realtek/rtk_edp.c       |  2 +-
+ 6 files changed, 18 insertions(+), 10 deletions(-)
+
+--- a/drivers/gpu/drm/realtek/Kconfig
++++ b/drivers/gpu/drm/realtek/Kconfig
+@@ -30,7 +30,11 @@
+ 	bool "Realtek specific METADATA buffer auto judgement"
+ 	default n
+ 
+-if CHROME_PLATFORMS
++config YOCTO_PLATFORMS
++	bool "Realtek Yocto platform heap alloc"
++	default n
++
++if CHROME_PLATFORMS || YOCTO_PLATFORMS
+ 
+ config RTK_DRM_CACHEABLE_HEADER
+ 	bool "Realtek DRM Cacheable Header"
+--- a/drivers/gpu/drm/realtek/rtk_dptx.c
++++ b/drivers/gpu/drm/realtek/rtk_dptx.c
+@@ -207,7 +207,7 @@
+ 
+ static u32 rtk_dptx14_read(struct rtk_dptx *dptx, u32 reg)
+ {
+-	unsigned int val;
++	unsigned int val = 0;
+ 
+ 	if (!dptx->dptx14_reg_base)
+ 		return 0;
+--- a/drivers/gpu/drm/realtek/rtk_drm_drv.c
++++ b/drivers/gpu/drm/realtek/rtk_drm_drv.c
+@@ -28,8 +28,11 @@
+ 
+ #include "../drm_internal.h"
+ 
+-#ifdef CONFIG_CHROME_PLATFORMS
++#if defined(CONFIG_CHROME_PLATFORMS) || defined(CONFIG_YOCTO_PLATFORMS)
+ #include <linux/of_reserved_mem.h>
++#endif
++
++#ifdef CONFIG_CHROME_PLATFORMS
+ #include <drm/realtek_drm.h>
+ #endif
+ 
+@@ -149,7 +152,7 @@
+ 
+ 	dev_set_drvdata(dev, drm);
+ 
+-#ifndef CONFIG_CHROME_PLATFORMS
++#if !defined(CONFIG_CHROME_PLATFORMS) && !defined(CONFIG_YOCTO_PLATFORMS)
+ 	set_dma_ops(dev, &rheap_dma_ops);
+ #endif
+ 
+@@ -162,7 +165,7 @@
+ 		goto err_free_drm;
+ 	}
+ 
+-#ifdef CONFIG_CHROME_PLATFORMS
++#if defined(CONFIG_CHROME_PLATFORMS) || defined(CONFIG_YOCTO_PLATFORMS)
+ 	ret = of_reserved_mem_device_init(dev);
+ 	if (ret)
+ 		dev_warn(dev, "init reserved memory failed");
+@@ -446,5 +449,6 @@
+ module_exit(rtk_drm_fini);
+ 
+ MODULE_AUTHOR("Simon Hsu <simon_hsu@realtek.com>");
++MODULE_IMPORT_NS(DMA_BUF);
+ MODULE_DESCRIPTION("REALTEK DRM Driver");
+ MODULE_LICENSE("GPL v2");
+--- a/drivers/gpu/drm/realtek/rtk_drm_gem.c
++++ b/drivers/gpu/drm/realtek/rtk_drm_gem.c
+@@ -330,7 +330,7 @@
+ 	if (IS_ERR(rtk_obj))
+ 		return ERR_CAST(rtk_obj);
+ 
+-#ifndef CONFIG_CHROME_PLATFORMS
++#if !defined(CONFIG_CHROME_PLATFORMS) && !defined(CONFIG_YOCTO_PLATFORMS)
+ 	if (is_media_heap(flags))
+ 		rheap_setup_dma_pools(dev, "rtk_media_heap",
+ 				get_rtk_flags(flags), __func__);
+--- a/drivers/gpu/drm/realtek/rtk_drm_plane.c
++++ b/drivers/gpu/drm/realtek/rtk_drm_plane.c
+@@ -147,7 +147,7 @@
+ 	return container_of(s, struct rtk_drm_plane_state, state);
+ }
+ 
+-#ifdef CONFIG_CHROME_PLATFORMS
++#if defined(CONFIG_CHROME_PLATFORMS) || defined(CONFIG_YOCTO_PLATFORMS)
+ struct rtkplane_dma_buf_attachment {
+         struct sg_table sgt;
+ };
+@@ -851,7 +851,7 @@
+ 
+ 	unsigned int id;
+ 
+-#ifdef CONFIG_CHROME_PLATFORMS
++#if defined(CONFIG_CHROME_PLATFORMS) || defined(CONFIG_YOCTO_PLATFORMS)
+ 	DEFINE_DMA_BUF_EXPORT_INFO(exp_info);
+ #else
+ 	struct sg_table *table;
+@@ -870,7 +870,7 @@
+ 	else
+ 		flags = RTK_FLAG_NONCACHED | RTK_FLAG_SCPUACC | RTK_FLAG_ACPUACC;
+ 
+-#ifndef CONFIG_CHROME_PLATFORMS
++#if !defined(CONFIG_CHROME_PLATFORMS) && !defined(CONFIG_YOCTO_PLATFORMS)
+ 	rheap_setup_dma_pools(drm->dev, "rtk_audio_heap", flags, __func__);
+ 
+ 	vaddr = dma_alloc_coherent(drm->dev, 65*1024, &rtk_plane->dma_handle,
+--- a/drivers/gpu/drm/realtek/rtk_edp.c
++++ b/drivers/gpu/drm/realtek/rtk_edp.c
+@@ -181,7 +181,7 @@
+ 
+ static u32 rtk_edp_read(struct rtk_edp *edp, u32 reg)
+ {
+-	unsigned int val;
++	unsigned int val = 0;
+ 
+ 	if (!edp->reg_base)
+ 		return 0;
