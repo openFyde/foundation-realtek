@@ -25,7 +25,7 @@ src_compile() {
   for slot in A B; do
     cat ${FILESDIR}/boot-${slot}.cmd | sed -e "s/#REALTEK_DTB#/${CHROMEOS_DTBS}/g" > boot-${slot}.cmd
     cp ${FILESDIR}/boot-${slot}.its .
-    mkimage -f boot-${slot}.its -k ${ROOT}/build/u-boot/rtd1619b/keys -g dev -o sha256,rsa2048 boot-${slot}.scr.uimg
+    mkimage -f boot-${slot}.its -k ${ROOT}/build/u-boot/rtd1625/keys -g dev -o sha256,rsa2048 boot-${slot}.scr.uimg
   done
 }
 
