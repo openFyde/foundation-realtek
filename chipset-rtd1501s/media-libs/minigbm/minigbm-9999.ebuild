@@ -19,18 +19,19 @@ VIDEO_CARDS="
 	amdgpu exynos intel marvell mediatek msm
 	radeon radeonsi rockchip tegra vc4 virgl realtek
 "
-IUSE="-asan linear_align_256"
+IUSE="-asan linear_align_256 test"
 for card in ${VIDEO_CARDS}; do
 	IUSE+=" video_cards_${card}"
 done
 
-MINI_GBM_PLATFORMS_USE=( mt8173 mt8183 mt8186 mt8188g mt8192 mt8195 sc7280)
+MINI_GBM_PLATFORMS_USE=( mt8173 mt8183 mt8186 mt8188g mt8192 mt8195 mt8196 sc7280)
 IUSE+=" ${MINI_GBM_PLATFORMS_USE[*]/#/minigbm_platform_}"
 
 IUSE+=" intel_drm_tile4"
 
 RDEPEND="
 	x11-libs/libdrm
+	test? ( dev-cpp/gtest )
 	!media-libs/mesa[gbm]"
 
 DEPEND="${RDEPEND}
@@ -66,6 +67,7 @@ src_configure() {
 	use minigbm_platform_mt8188g && append-cppflags -DMTK_MT8188G
 	use minigbm_platform_mt8192 && append-cppflags -DMTK_MT8192
 	use minigbm_platform_mt8195 && append-cppflags -DMTK_MT8195
+	use minigbm_platform_mt8196 && append-cppflags -DMTK_MT8196
 	use minigbm_platform_sc7280 && append-cppflags -DSC_7280
 	use video_cards_mediatek && append-cppflags -DDRV_MEDIATEK -DDRV_PANFROST && export DRV_MEDIATEK=1
 	use video_cards_msm && append-cppflags -DDRV_MSM && export DRV_MSM=1
@@ -76,8 +78,14 @@ src_configure() {
 	use video_cards_vc4 && append-cppflags -DDRV_VC4 && export DRV_VC4=1
 	use video_cards_virgl && append-cppflags -DDRV_VIRGL && export DRV_VIRGL=1
 	use linear_align_256 && append-cppflags -DLINEAR_ALIGN_256
-  use video_cards_realtek && append-cppflags -DDRV_REALTEK && export DRV_REALTEK=1
+	use video_cards_realtek && append-cppflags -DDRV_REALTEK && export DRV_REALTEK=1
 	cros-common.mk_src_configure
+}
+
+src_test() {
+	if use amd64 || use x86; then
+		emake tests
+	fi
 }
 
 src_compile() {

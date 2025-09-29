@@ -1,22 +1,16 @@
 #!/bin/bash
+
 modules=(
-	governor_simpleondemand
-	rtk_fw_remoteproc
-	rpmsg_rtk
-	rtk_krpc_agent
-	rtk_urpc_service
-	rtk_rpc_mem
-	rtk_fwdbg
-	gpu_sched
-	panfrost
-	drm_kms_helper
-	rtk_drm
-	rtd_rng
-	rtkve1
-	rtkve2
-	rtk_avcpulog
-	8852be
-	snd_realtek_notify
+  rtk_fw_remoteproc
+  rtk_rpc_mem
+  rtk_krpc_agent
+  rtk_drm
+  mali_kbase
+  rtk_urpc_service
+  rtkve
+  coda9
+  snd_soc_rtk_hifi
+  rtk_avcpulog
 )
 
 for module in ${modules[@]}; do

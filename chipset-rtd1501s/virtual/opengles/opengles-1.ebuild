@@ -9,6 +9,9 @@ SRC_URI=""
 LICENSE="metapackage"
 SLOT="0"
 KEYWORDS="*"
+IUSE="panfrost"
 
-RDEPEND="media-libs/mesa-panfrost"
+RDEPEND="
+ !panfrost? ( media-libs/rtd1501s-mali-bin )
+ panfrost? ( media-libs/mesa-panfrost )"
 DEPEND=""

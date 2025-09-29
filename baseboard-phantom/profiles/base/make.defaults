@@ -1,0 +1,32 @@
+# Copyright 2021 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+CHROMEOS_DTBS="rtd1501s-phantom-chromium-8gb.dtb"
+#CHROMEOS_DTBS="rtd1501s-*.dtb"
+
+USE=""
+USE="${USE} has_chromeos_config_bsp"
+
+# Declare TPM model.
+USE="${USE} -tpm tpm2"
+
+# Enable Chrome's tablet mode
+USE="${USE} touchview -legacy_keyboard -legacy_power_button touch_centric_device stylus"
+
+# Enable for daisydog
+USE="${USE} watchdog"
+
+# Enable eMMC tools
+USE="${USE} mmc"
+
+# Enable USB Type C daemon.
+USE="${USE} typecd"
+
+# Declare enabled consoles
+TTY_CONSOLE="ttyS0"
+
+# Enable LVM stateful partition.
+USE="${USE} lvm_stateful_partition"
+
+CHROME_ORIGIN=LOCAL_SOURCE

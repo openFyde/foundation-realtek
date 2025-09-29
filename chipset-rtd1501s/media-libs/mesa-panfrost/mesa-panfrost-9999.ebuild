@@ -25,7 +25,6 @@ IUSE="debug libglvnd vulkan zstd"
 COMMON_DEPEND="
 	dev-libs/expat:=
 	>=x11-libs/libdrm-2.4.94:=
-	sys-libs/zlib
 "
 
 RDEPEND="${COMMON_DEPEND}
@@ -47,6 +46,7 @@ src_configure() {
 	cros_optimize_package_for_speed
 
 	emesonargs+=(
+		-Dexecmem=false
 		-Dglvnd=$(usex libglvnd true false)
 		-Dllvm=disabled
 		-Ddri3=disabled
@@ -57,7 +57,7 @@ src_configure() {
 		-Dgles1=disabled
 		-Dgles2=enabled
 		-Dshared-glapi=enabled
-		-Ddri-drivers-path=
+		-Ddri-drivers=
 		-Dgallium-drivers=panfrost
 		-Dgallium-vdpau=disabled
 		-Dgallium-xa=disabled

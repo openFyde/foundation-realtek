@@ -1,0 +1,21 @@
+SUBSYSTEM=="thermal", KERNEL=="thermal_zone0", ATTR{type}=="cpu-thermal", \
+  RUN+="/bin/chmod 0664 /sys/class/thermal/thermal_zone0/cdev0_weight", \
+  RUN+="/bin/chown root:power /sys/class/thermal/thermal_zone0/cdev0_weight" \
+  RUN+="/bin/chmod 0664 /sys/class/thermal/thermal_zone0/cdev1_weight", \
+  RUN+="/bin/chown root:power /sys/class/thermal/thermal_zone0/cdev1_weight" \
+  RUN+="/bin/chmod 0664 /sys/class/thermal/thermal_zone0/policy", \
+  RUN+="/bin/chown root:power /sys/class/thermal/thermal_zone0/policy" \
+  RUN+="/bin/chmod 0664 /sys/class/thermal/thermal_zone0/trip_point_0_temp", \
+  RUN+="/bin/chown root:power /sys/class/thermal/thermal_zone0/trip_point_0_temp" \
+  RUN+="/bin/chmod 0664 /sys/class/thermal/thermal_zone0/trip_point_1_temp", \
+  RUN+="/bin/chown root:power /sys/class/thermal/thermal_zone0/trip_point_1_temp" \
+  RUN+="/bin/chmod 0664 /sys/class/thermal/thermal_zone0/trip_point_2_temp", \
+  RUN+="/bin/chown root:power /sys/class/thermal/thermal_zone0/trip_point_2_temp" \
+  RUN+="/bin/chmod 0664 /sys/class/thermal/thermal_zone0/k_po", \
+  RUN+="/bin/chown root:power /sys/class/thermal/thermal_zone0/k_po" \
+  RUN+="/bin/chmod 0664 /sys/class/thermal/thermal_zone0/k_pu", \
+  RUN+="/bin/chown root:power /sys/class/thermal/thermal_zone0/k_pu" \
+  RUN+="/bin/chmod 0664 /sys/class/thermal/thermal_zone0/k_i", \
+  RUN+="/bin/chown root:power /sys/class/thermal/thermal_zone0/k_i" \
+  RUN+="/bin/chmod 0664 /sys/class/thermal/thermal_zone0/k_d", \
+  RUN+="/bin/chown root:power /sys/class/thermal/thermal_zone0/k_d"

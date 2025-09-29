@@ -1,4 +1,4 @@
-cros_post_src_prepare_chipset_rtd1619b_patches() {
+cros_post_src_prepare_chipset_rtd1501s_patches() {
   if [ ${PV} == '9999' ]; then
     return
   fi
