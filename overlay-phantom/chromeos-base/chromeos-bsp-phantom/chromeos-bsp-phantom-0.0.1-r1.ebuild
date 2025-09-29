@@ -15,7 +15,6 @@ RDEPEND="
   chromeos-base/chromeos-bsp-baseboard-phantom
   chromeos-base/device-appid
   app-i18n/chromeos-keyboards
-  net-wireless/rtl8852be
 "
 
 DEPEND="${RDEPEND}"
